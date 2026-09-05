@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>朝神出欠記録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --color-paper: #f6f4ee;
+  --color-panel: #ffffff;
+  --color-ink: #22262b;
+  --color-ink-soft: #5b6168;
+  --color-navy: #1c2b39;
+  --color-navy-soft: #33465a;
+  --color-line: #d9d4c6;
+  --color-present: #2f6f4e;
+  --color-present-bg: #e4efe6;
+  --color-absent: #a8442f;
+  --color-absent-bg: #f5e6e1;
+  --color-gold: #b8863b;
+}
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.font-display { font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif; }
+button { cursor: pointer; font-family: inherit; }
+input, select { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+
+/* ---- ログイン画面 ---- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  padding: 40px 32px;
+}
+.login-card .eyebrow { font-size: 12px; color: var(--color-ink-soft); margin: 0 0 4px; }
+.login-card h1 { font-size: 24px; margin: 0 0 32px; color: var(--color-navy); }
+.login-card label { display:block; font-size: 14px; color: var(--color-ink-soft); margin-bottom: 8px; }
+.login-card input[type=password] {
+  width: 100%; border: 1px solid var(--color-line); border-radius: 2px;
+  padding: 8px 12px; margin-bottom: 16px; background: white;
+}
+.login-card input[type=password]:focus { border-color: var(--color-navy); }
+.login-error { font-size: 14px; color: var(--color-absent); margin: 0 0 16px; }
+.btn-primary {
+  width: 100%; background: var(--color-navy); color: white; border: none;
+  border-radius: 2px; padding: 10px; font-weight: 500; font-size: 14px;
+}
+.btn-primary:hover { background: var(--color-navy-soft); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+/* ---- ナビゲーション ---- */
+nav.app-nav { border-bottom: 1px solid var(--color-line); background: var(--color-panel); }
+nav.app-nav .inner {
+  max-width: 1400px; margin: 0 auto; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+nav.app-nav .tabs { display: flex; }
+nav.app-nav .tab {
+  padding: 12px 16px; font-size: 14px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--color-ink-soft);
+}
+nav.app-nav .tab.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
+nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decoration: underline; background: none; border: none; }
+
+/* ---- 共通ツールバー ---- */
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
+  margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--color-line);
+}
+.toolbar .field label { display:block; font-size: 11px; color: var(--color-ink-soft); margin-bottom: 4px; }
+.toolbar select, .toolbar input[type=text] {
+  border: 1px solid var(--color-line); background: white; border-radius: 2px;
+  padding: 8px 12px; font-size: 14px;
+}
+.btn-dark {
+  background: var(--color-navy); color: white; border: none; border-radius: 2px;
+  padding: 8px 16px; font-size: 14px;
+}
+.btn-dark:hover { background: var(--color-navy-soft); }
+.btn-light {
+  background: white; border: 1px solid var(--color-line); border-radius: 2px;
+  padding: 8px 16px; font-size: 14px; color: var(--color-ink);
+}
+.btn-light:hover { background: var(--color-paper); }
+
+/* ---- 出欠入力グリッド ---- */
+.grid-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
+.grid-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px; }
+.grid-header h1 { font-size: 30px; margin: 0; color: var(--color-navy); }
+.grid-header .eyebrow { font-size: 12px; color: var(--color-ink-soft); margin: 0 0 4px; }
+.category-tabs { display:flex; gap: 2px; margin-bottom: 16px; }
+.category-tabs button {
+  padding: 8px 16px; font-size: 14px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--color-ink-soft);
+}
+.category-tabs button.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
+table.att-table { min-width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-panel); }
+.att-table-wrap { overflow-x: auto; border: 1px solid var(--color-line); background: var(--color-panel); border-radius: 2px; }
+table.att-table thead tr { background: var(--color-navy); color: white; }
+table.att-table th { font-weight: 500; padding: 8px; text-align: left; white-space: nowrap; }
+table.att-table td { padding: 4px; border-top: 1px solid var(--color-line); }
+table.att-table tbody tr:hover { background: #fbfaf6; }
+.att-editable {
+  width: 100%; background: transparent; padding: 4px 6px; border-radius: 2px;
+  border: 1px solid transparent;
+}
+.att-editable:hover { border-color: var(--color-line); }
+.att-editable:focus { border-color: var(--color-navy); background: white; }
+.att-cell-btn {
+  width: 34px; height: 34px; border-radius: 2px; font-weight: 500; font-size: 14px; border: 1px solid var(--color-line);
+  background: white; color: transparent;
+}
+.att-cell-btn.present { background: var(--color-present-bg); color: var(--color-present); border-color: rgba(47,111,78,0.3); }
+.att-cell-btn.absent { background: var(--color-absent-bg); color: var(--color-absent); border-color: rgba(168,68,47,0.3); }
+.icon-btn {
+  width: 24px; height: 24px; display:flex; align-items:center; justify-content:center;
+  border-radius: 2px; font-size: 11px; border: 1px solid var(--color-line); background: white; color: var(--color-ink-soft);
+}
+.icon-btn:disabled { opacity: 0.3; }
+.icon-btn.danger { color: var(--color-absent); }
+.icon-btn.danger:hover { border-color: var(--color-absent); }
+.hint-text { margin-top: 24px; font-size: 12px; color: var(--color-ink-soft); }
+
+/* ---- 印刷共通 ---- */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  @page { size: 176mm 250mm; margin: 0; }
+}
+
+/* ---- 神殿掃除実施報告書（朝神提出） ---- */
+.report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
+.report-page {
+  width: 176mm; height: 250mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  padding: 12mm 10mm; box-sizing: border-box; display:flex; flex-direction:column;
+  font-size: 10.5px; color:#1a1a1a; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
+}
+@media print {
+  .report-page { box-shadow: none; margin: 0; page-break-after: always; }
+  .report-page:last-child { page-break-after: auto; }
+}
+.report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.report-header-left h1 { font-family:'Shippori Mincho','Hiragino Mincho ProN',serif; font-size:17px; font-weight:700; margin:0 0 10px; }
+.report-header-left .org-name { font-size:12px; margin:0 0 14px; }
+.report-header-left .report-date { font-size:12px; margin:0; }
+.report-header-right { display:flex; flex-direction:column; gap:6px; }
+.stamp-table { border-collapse: collapse; }
+.stamp-table th, .stamp-table td { border:1px solid #333; width:22mm; height:6mm; text-align:center; font-size:9px; font-weight:400; padding:1px 2px; }
+.stamp-table td { height: 12mm; }
+.report-summary-line { font-size:11px; font-weight:600; margin:4px 0 10px; }
+.report-columns { display:flex; flex:1; gap:6mm; align-items:flex-start; min-height:0; }
+.report-column { flex:1; min-width:0; }
+.member-table { width:100%; border-collapse: collapse; table-layout: fixed; }
+.member-table th, .member-table td { border:1px solid #333; padding:1.5px 3px; font-size:10px; line-height:1.5; }
+.member-table thead th { background:#f1efe8; font-weight:600; text-align:center; }
+.member-table .col-no { width:8%; text-align:center; }
+.member-table .col-name { width:42%; }
+.member-table .col-position { width:36%; }
+.member-table .col-status { width:14%; text-align:center; }
+.summary-table th { background:#f1efe8; font-weight:600; text-align:center; }
+.summary-table td { padding:3px 6px; }
+.summary-table .num { text-align:right; width:30%; }
+.summary-table .total-row { font-weight:700; }
+.report-page-number { text-align:center; font-size:10px; color:#666; margin-top:auto; padding-top:8px; }
+
+/* ---- 当番表 ---- */
+.roster-wrap { max-width: 1100px; margin: 0 auto; padding: 32px 16px; }
+.roster-doc { background: white; border: 1px solid var(--color-line); padding: 32px; }
+.roster-doc h1 { font-family:'Shippori Mincho','Hiragino Mincho ProN',serif; font-size:24px; margin:0 0 4px; color: var(--color-navy); }
+.roster-doc .sub { font-size:14px; color: var(--color-ink-soft); margin: 0 0 24px; }
+.roster-groups { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px 32px; }
+.roster-group h2 {
+  font-size:14px; font-weight:500; border-bottom: 1px solid var(--color-navy); padding-bottom:4px; margin:0 0 8px; color: var(--color-navy);
+}
+.roster-group ul { list-style:none; margin:0; padding:0; }
+.roster-group li {
+  display:flex; align-items:center; justify-content:space-between; font-size:14px; padding:4px 0;
+  border-bottom: 1px dotted var(--color-line);
+}
+.roster-group li .mark.present { color: var(--color-present); font-weight:500; }
+.roster-group li .mark.absent { color: var(--color-absent); font-weight:500; }
+.roster-group li .mark.none { color: var(--color-ink-soft); }
+
+.loading, .error-msg { padding: 40px; color: var(--color-ink-soft); }
+.error-msg { color: var(--color-absent); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+ * 朝神出欠記録（⑥）- 単一HTMLファイル版
+ * ①〜⑤と同じく、ビルド不要・Supabase JS(CDN)を直接読み込む方式です。
+ * ============================================================ */
+
+// ---- Supabase接続情報（スパーベース・②③④⑤共用プロジェクト） ----
+const SUPABASE_URL = 'https://zhxuntrhxnrssqpvcmvl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoeHVudHJoeG5yc3NxcHZjbXZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDcyNjYsImV4cCI6MjA5NzgyMzI2Nn0.l3pwvKZVVJqDA4HORqt-Op-cTvVF3bkX1ovWgAuSO58';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// テーブル名（スパーベース内の他システムと衝突しないよう asagami_ を付与）
+const T_MEMBERS = 'asagami_members';
+const T_ATTENDANCE = 'asagami_attendance';
+const T_FISCAL_YEARS = 'asagami_fiscal_years';
+const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
+
+const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
+const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤務者','常傭者','３年目ひのきしん者','２年目ひのきしん者','１年目ひのきしん者'];
+const CATEGORY_LABEL = { asagami: '朝神', geppai: '月例参拝' };
+const ROWS_PER_BLOCK = 19;
+
+function calendarMonthToSeq(m) { return m >= 4 ? m - 3 : m + 9; }
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---- アプリ全体の状態 ----
+const state = {
+  unlocked: false,
+  view: 'grid', // 'grid' | 'report' | 'roster'
+  fiscalYears: [],
+  fiscalYearId: null,
+  members: [],
+  attendance: new Map(), // key: `${memberId}-${category}-${monthSeq}` -> '○'|'×'
+  category: 'asagami',
+  reportMonth: new Date().getMonth() + 1,
+  reportOrgName: '営繕部営繕課',
+  rosterMonth: new Date().getMonth() + 1,
+  rosterTitle: '朝の神殿掃除 当番表',
+  rosterDateLabel: '',
+};
+
+function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
+
+const app = document.getElementById('app');
+
+// ==================== 起動処理 ====================
+const UNLOCK_KEY = 'asagami_unlocked';
+
+async function init() {
+  state.unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1';
+  renderRoot();
+}
+
+function renderRoot() {
+  if (!state.unlocked) {
+    renderLogin();
+  } else {
+    renderMainShell();
+  }
+}
+
+// ==================== ログイン画面 ====================
+function renderLogin() {
+  app.innerHTML = `
+    <div class="login-wrap">
+      <form class="login-card" id="login-form">
+        <p class="eyebrow">出欠管理システム</p>
+        <h1 class="font-display">朝神出欠記録</h1>
+        <label for="login-password">合言葉</label>
+        <input id="login-password" type="password" autofocus placeholder="合言葉を入力" />
+        <p class="login-error" id="login-error" style="display:none;"></p>
+        <button type="submit" class="btn-primary" id="login-submit">入室する</button>
+      </form>
+    </div>
+  `;
+
+  const form = document.getElementById('login-form');
+  const input = document.getElementById('login-password');
+  const errorEl = document.getElementById('login-error');
+  const submitBtn = document.getElementById('login-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = input.value;
+    if (!password) return;
+    errorEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '確認中…';
+    try {
+      const { data, error } = await sb.rpc(RPC_VERIFY_PASSWORD, { input_password: password });
+      if (error) throw new Error('接続に失敗しました。しばらくしてからもう一度お試しください。');
+      if (!data) throw new Error('合言葉が違います。');
+      sessionStorage.setItem(UNLOCK_KEY, '1');
+      state.unlocked = true;
+      renderRoot();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = '入室する';
+    }
+  });
+}
+
+// ==================== 全体シェル（ナビ＋各画面） ====================
+async function renderMainShell() {
+  app.innerHTML = `
+    <div>
+      <nav class="app-nav no-print">
+        <div class="inner">
+          <div class="tabs">
+            <button class="tab" data-view="grid">出欠入力</button>
+            <button class="tab" data-view="report">朝神提出（月次報告書）</button>
+            <button class="tab" data-view="roster">当番表</button>
+          </div>
+          <button class="logout" id="logout-btn">ログアウト</button>
+        </div>
+      </nav>
+      <div id="view-container"><div class="loading">読み込み中…</div></div>
+    </div>
+  `;
+
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.view = btn.dataset.view;
+      updateNavActive();
+      renderView();
+    });
+  });
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem(UNLOCK_KEY);
+    state.unlocked = false;
+    renderRoot();
+  });
+
+  updateNavActive();
+  await loadFiscalYearsAndMembers();
+  renderView();
+}
+
+function updateNavActive() {
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === state.view);
+  });
+}
+
+function renderView() {
+  const container = document.getElementById('view-container');
+  if (state.view === 'grid') renderGridView(container);
+  else if (state.view === 'report') renderReportView(container);
+  else if (state.view === 'roster') renderRosterView(container);
+}
+
+// ==================== データ取得 ====================
+async function loadFiscalYearsAndMembers() {
+  const { data: fyData, error: fyError } = await sb
+    .from(T_FISCAL_YEARS).select('*').order('start_reiki_year', { ascending: false });
+  if (fyError) { console.error(fyError); return; }
+  state.fiscalYears = fyData ?? [];
+  state.fiscalYearId = (state.fiscalYears.find(y => y.is_current) ?? state.fiscalYears[0])?.id ?? null;
+
+  const { data: memberData, error: memberError } = await sb
+    .from(T_MEMBERS).select('*').eq('is_active', true).order('sort_order', { ascending: true });
+  if (memberError) { console.error(memberError); return; }
+  state.members = memberData ?? [];
+
+  await loadAttendanceForFiscalYear();
+}
+
+async function loadAttendanceForFiscalYear() {
+  state.attendance = new Map();
+  if (!state.fiscalYearId) return;
+  const { data, error } = await sb
+    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId);
+  if (error) { console.error(error); return; }
+  for (const row of (data ?? [])) {
+    state.attendance.set(attKey(row.member_id, row.category, row.month_seq), row.status);
+  }
+}
+
+function currentFiscalYearLabel() {
+  return state.fiscalYears.find(y => y.id === state.fiscalYearId)?.label ?? '';
+}
+
+// ==================== 出欠入力画面 ====================
+function computeSummary(memberId, category) {
+  let present = 0, absent = 0;
+  for (let seq = 1; seq <= 12; seq++) {
+    const s = state.attendance.get(attKey(memberId, category, seq));
+    if (s === '○') present++;
+    if (s === '×') absent++;
+  }
+  const total = present + absent;
+  return { present, absent, rate: total > 0 ? present / total : null };
+}
+
+function renderGridView(container) {
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+
+  const catTabs = ['asagami', 'geppai'].map(c =>
+    `<button data-cat="${c}" class="${state.category === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  ).join('');
+
+  const rowsHtml = state.members.map((m, index) => {
+    const s = computeSummary(m.id, state.category);
+    const cells = MONTH_SEQUENCE.map((_, i) => {
+      const seq = i + 1;
+      const status = state.attendance.get(attKey(m.id, state.category, seq)) ?? null;
+      const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+      return `<td style="text-align:center;padding:2px;">
+        <button class="att-cell-btn ${cls}" data-member="${m.id}" data-seq="${seq}" aria-label="${MONTH_SEQUENCE[i]}月の出欠">${status ?? ''}</button>
+      </td>`;
+    }).join('');
+
+    return `
+      <tr data-row-member="${m.id}">
+        <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
+        <td><input class="att-editable" data-field="department" data-member="${m.id}" value="${escapeHtml(m.department)}" /></td>
+        <td><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" /></td>
+        <td><input class="att-editable" data-field="position" data-member="${m.id}" value="${escapeHtml(m.position)}" /></td>
+        ${cells}
+        <td style="text-align:center;color:var(--color-present);font-weight:500;">${s.present}</td>
+        <td style="text-align:center;color:var(--color-absent);font-weight:500;">${s.absent}</td>
+        <td style="text-align:center;color:var(--color-ink-soft);">${s.rate != null ? Math.round(s.rate*100)+'%' : '—'}</td>
+        <td style="text-align:center;">
+          <div style="display:flex;gap:4px;justify-content:center;">
+            <button class="icon-btn" data-action="move-up" data-member="${m.id}" ${index === 0 ? 'disabled' : ''} title="上へ">↑</button>
+            <button class="icon-btn" data-action="move-down" data-member="${m.id}" ${index === state.members.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+            <button class="icon-btn danger" data-action="remove" data-member="${m.id}" title="削除">×</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const monthHeaders = MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
+
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header no-print">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">朝神出欠記録</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select id="fy-select">${fyOptions}</select>
+          <button class="btn-light" id="add-fy-btn">＋年度追加</button>
+        </div>
+      </div>
+
+      <div class="category-tabs no-print">${catTabs}</div>
+
+      <div class="att-table-wrap">
+        <table class="att-table">
+          <thead>
+            <tr>
+              <th style="text-align:center;width:40px;">No.</th>
+              <th>部署</th><th>氏名</th><th>立場</th>
+              ${monthHeaders}
+              <th style="text-align:center;">出席</th>
+              <th style="text-align:center;">欠席</th>
+              <th style="text-align:center;">出席率</th>
+              <th style="text-align:center;">操作</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+
+      <button class="btn-light no-print" id="add-member-btn" style="margin-top:16px;">＋ メンバーを追加</button>
+      <p class="hint-text no-print">セルをクリックすると 空欄 → ○ → × → 空欄 の順に切り替わります。変更は自動的に保存されます。</p>
+    </div>
+  `;
+
+  // イベント登録
+  document.getElementById('fy-select').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+
+  document.getElementById('add-fy-btn').addEventListener('click', addFiscalYear);
+
+  document.querySelectorAll('.category-tabs button').forEach(btn => {
+    btn.addEventListener('click', () => { state.category = btn.dataset.cat; renderView(); });
+  });
+
+  document.querySelectorAll('.att-cell-btn').forEach(btn => {
+    btn.addEventListener('click', () => toggleCell(Number(btn.dataset.member), Number(btn.dataset.seq), btn));
+  });
+
+  document.querySelectorAll('.att-editable').forEach(input => {
+    input.addEventListener('blur', () => updateMemberField(Number(input.dataset.member), input.dataset.field, input.value));
+  });
+
+  document.querySelectorAll('[data-action="move-up"]').forEach(btn =>
+    btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), -1)));
+  document.querySelectorAll('[data-action="move-down"]').forEach(btn =>
+    btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), 1)));
+  document.querySelectorAll('[data-action="remove"]').forEach(btn =>
+    btn.addEventListener('click', () => removeMember(Number(btn.dataset.member))));
+
+  document.getElementById('add-member-btn').addEventListener('click', addMember);
+}
+
+async function toggleCell(memberId, seq, btnEl) {
+  const key = attKey(memberId, state.category, seq);
+  const current = state.attendance.get(key) ?? null;
+  const next = current === null ? '○' : current === '○' ? '×' : null;
+
+  if (next === null) state.attendance.delete(key); else state.attendance.set(key, next);
+  btnEl.textContent = next ?? '';
+  btnEl.classList.remove('present', 'absent');
+  if (next === '○') btnEl.classList.add('present');
+  if (next === '×') btnEl.classList.add('absent');
+
+  // 出席/欠席/出席率のセルを更新
+  const row = btnEl.closest('tr');
+  const s = computeSummary(memberId, state.category);
+  const tds = row.querySelectorAll('td');
+  tds[tds.length - 4].textContent = s.present;
+  tds[tds.length - 3].textContent = s.absent;
+  tds[tds.length - 2].textContent = s.rate != null ? Math.round(s.rate * 100) + '%' : '—';
+
+  if (!state.fiscalYearId) return;
+  if (next === null) {
+    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq });
+  } else {
+    await sb.from(T_ATTENDANCE).upsert(
+      { member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq, status: next },
+      { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
+    );
+  }
+}
+
+async function updateMemberField(memberId, field, value) {
+  const m = state.members.find(m => m.id === memberId);
+  if (m) m[field] = value;
+  await sb.from(T_MEMBERS).update({ [field]: value }).eq('id', memberId);
+}
+
+async function addMember() {
+  const nextOrder = state.members.length > 0 ? Math.max(...state.members.map(m => m.sort_order)) + 1 : 1;
+  const { data, error } = await sb.from(T_MEMBERS)
+    .insert({ sort_order: nextOrder, department: '', name: '', position: '' })
+    .select().single();
+  if (!error && data) {
+    state.members.push(data);
+    renderView();
+  }
+}
+
+async function removeMember(memberId) {
+  const m = state.members.find(m => m.id === memberId);
+  const label = m && m.name.trim() ? m.name : 'このメンバー';
+  if (!confirm(`${label} を削除します。よろしいですか？（出欠データも削除されます）`)) return;
+  await sb.from(T_MEMBERS).delete().eq('id', memberId);
+  state.members = state.members.filter(m => m.id !== memberId);
+  renderView();
+}
+
+async function moveMember(memberId, direction) {
+  const index = state.members.findIndex(m => m.id === memberId);
+  const target = index + direction;
+  if (target < 0 || target >= state.members.length) return;
+  const a = state.members[index], b = state.members[target];
+  [state.members[index], state.members[target]] = [b, a];
+  await Promise.all([
+    sb.from(T_MEMBERS).update({ sort_order: b.sort_order }).eq('id', a.id),
+    sb.from(T_MEMBERS).update({ sort_order: a.sort_order }).eq('id', b.id),
+  ]);
+  renderView();
+}
+
+async function addFiscalYear() {
+  const label = prompt('新しい年度の表示名を入力してください（例: 立教190年4月〜191年3月）');
+  if (!label) return;
+  const startYearStr = prompt('立教年度の開始年を数字で入力してください（例: 190）');
+  if (!startYearStr || !/^\d+$/.test(startYearStr)) { alert('数字で入力してください。'); return; }
+  const { data, error } = await sb.from(T_FISCAL_YEARS)
+    .insert({ label, start_reiki_year: Number(startYearStr), is_current: false })
+    .select().single();
+  if (!error && data) {
+    state.fiscalYearId = data.id;
+    await loadFiscalYearsAndMembers();
+    renderView();
+  }
+}
+
+// ==================== 朝神提出（月次報告書） ====================
+function buildReportPages(membersWithNo) {
+  const blocks = [];
+  for (let i = 0; i < membersWithNo.length; i += ROWS_PER_BLOCK) {
+    blocks.push(membersWithNo.slice(i, i + ROWS_PER_BLOCK));
+  }
+  if (blocks.length === 0) blocks.push([]);
+  const pages = [];
+  for (let i = 0; i < blocks.length; i += 2) {
+    pages.push({ left: blocks[i], right: blocks[i + 1] ?? null });
+  }
+  const last = pages[pages.length - 1];
+  if (last.right === null) last.right = 'summary';
+  else pages.push({ left: 'summary', right: null });
+  return pages;
+}
+
+function renderReportView(container) {
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.reportMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('');
+
+  const fiscalYear = state.fiscalYears.find(y => y.id === state.fiscalYearId);
+  const reikiYear = fiscalYear ? (state.reportMonth >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1) : null;
+  const monthSeq = calendarMonthToSeq(state.reportMonth);
+
+  const membersWithNo = state.members.map((m, i) => ({ ...m, no: i + 1 }));
+
+  let presentCount = 0;
+  for (const m of membersWithNo) {
+    if (state.attendance.get(attKey(m.id, 'asagami', monthSeq)) === '○') presentCount++;
+  }
+
+  const posCounts = new Map();
+  for (const m of state.members) posCounts.set(m.position, (posCounts.get(m.position) ?? 0) + 1);
+  const positionCounts = [];
+  for (const p of POSITION_ORDER) { if (posCounts.has(p)) { positionCounts.push({label:p, count:posCounts.get(p)}); posCounts.delete(p); } }
+  for (const [label, count] of posCounts) positionCounts.push({ label, count });
+
+  const pages = buildReportPages(membersWithNo);
+
+  const pagesHtml = pages.map((page, i) => {
+    const headerHtml = i === 0 ? `
+      <header class="report-header">
+        <div class="report-header-left">
+          <h1>神殿掃除実施報告書</h1>
+          <p class="org-name">${escapeHtml(state.reportOrgName)}</p>
+          ${reikiYear != null ? `<p class="report-date">立教${reikiYear}年${state.reportMonth}月</p>` : ''}
+        </div>
+        <div class="report-header-right">
+          <table class="stamp-table">
+            <thead><tr><th>表統領室長</th><th>表統領室次長</th><th>世話課長</th><th>受理</th></tr></thead>
+            <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+          </table>
+          <table class="stamp-table">
+            <thead><tr><th>部長</th><th>次長</th><th>課長</th><th>庶務</th></tr></thead>
+            <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+          </table>
+        </div>
+      </header>
+      <p class="report-summary-line">【総員：${state.members.length}名、出席者：${presentCount}名】</p>
+    ` : '';
+
+    const renderSlot = (slot) => {
+      if (slot === null) return `<div class="report-column"></div>`;
+      if (slot === 'summary') {
+        const rows = positionCounts.map(p => `<tr><td>${escapeHtml(p.label)}</td><td class="num">${p.count}名</td></tr>`).join('');
+        return `
+          <div class="report-column">
+            <table class="member-table summary-table">
+              <thead><tr><th>立場</th><th>人数</th></tr></thead>
+              <tbody>${rows}<tr class="total-row"><td>合　計</td><td class="num">${state.members.length}名</td></tr></tbody>
+            </table>
+          </div>`;
+      }
+      const rows = slot.map((m, idx) => {
+        const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
+        const prevPos = idx > 0 ? slot[idx-1].position : null;
+        const posDisplay = idx > 0 && m.position === prevPos ? '〃' : escapeHtml(m.position);
+        return `<tr><td class="col-no">${m.no}</td><td class="col-name">${escapeHtml(m.name)}</td><td class="col-position">${posDisplay}</td><td class="col-status">${status ?? ''}</td></tr>`;
+      }).join('');
+      return `
+        <div class="report-column">
+          <table class="member-table">
+            <thead><tr><th class="col-no">No</th><th class="col-name">氏　名</th><th class="col-position">立場</th><th class="col-status">出欠</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    };
+
+    return `
+      <section class="report-page">
+        ${headerHtml}
+        <div class="report-columns">
+          ${renderSlot(page.left)}
+          ${renderSlot(page.right)}
+        </div>
+        <div class="report-page-number">－${i+1}－</div>
+      </section>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="padding:32px 16px;">
+      <div class="toolbar no-print" style="max-width:1000px;margin:0 auto;">
+        <div class="field"><label>年度</label><select id="report-fy">${fyOptions}</select></div>
+        <div class="field"><label>対象月</label><select id="report-month">${monthOptions}</select></div>
+        <div class="field" style="flex:1;min-width:200px;"><label>部署名（表題）</label><input type="text" id="report-org" value="${escapeHtml(state.reportOrgName)}" style="width:100%;" /></div>
+        <button class="btn-dark" id="report-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
+      </div>
+      <p class="no-print" style="max-width:1000px;margin:0 auto 24px;font-size:12px;color:var(--color-ink-soft);">
+        用紙サイズ：B5 ／ 両面印刷を想定しています。印刷ダイアログで「用紙サイズ：B5」「両面印刷」を選択してください。
+      </p>
+      <div class="report-preview">${pagesHtml}</div>
+    </div>
+  `;
+
+  document.getElementById('report-fy').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+  document.getElementById('report-month').addEventListener('change', (e) => {
+    state.reportMonth = Number(e.target.value);
+    renderView();
+  });
+  document.getElementById('report-org').addEventListener('input', (e) => {
+    state.reportOrgName = e.target.value;
+  });
+  document.getElementById('report-org').addEventListener('blur', () => renderView());
+  document.getElementById('report-print-btn').addEventListener('click', () => window.print());
+}
+
+// ==================== 当番表 ====================
+function renderRosterView(container) {
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.rosterMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('');
+
+  const monthSeq = calendarMonthToSeq(state.rosterMonth);
+  const groups = new Map();
+  for (const m of state.members) {
+    const key = m.department || '（部署未設定）';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m);
+  }
+
+  const groupsHtml = [...groups.entries()].map(([dept, list]) => {
+    const items = list.map(m => {
+      const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
+      const cls = status === '○' ? 'present' : status === '×' ? 'absent' : 'none';
+      return `<li><span>${escapeHtml(m.name)}</span><span class="mark ${cls}">${status ?? '—'}</span></li>`;
+    }).join('');
+    return `<div class="roster-group"><h2>${escapeHtml(dept)}</h2><ul>${items}</ul></div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="roster-wrap">
+      <div class="toolbar no-print">
+        <div class="field"><label>年度</label><select id="roster-fy">${fyOptions}</select></div>
+        <div class="field"><label>対象月</label><select id="roster-month">${monthOptions}</select></div>
+        <div class="field" style="min-width:200px;"><label>表題</label><input type="text" id="roster-title" value="${escapeHtml(state.rosterTitle)}" style="width:100%;" /></div>
+        <div class="field" style="min-width:160px;"><label>実施日（表示用・任意）</label><input type="text" id="roster-date" value="${escapeHtml(state.rosterDateLabel)}" placeholder="例: 21日・22日・23日" style="width:100%;" /></div>
+        <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
+      </div>
+      <div class="roster-doc">
+        <h1 id="roster-title-display">${escapeHtml(state.rosterTitle)}</h1>
+        <p class="sub">${escapeHtml(currentFiscalYearLabel())}のうち ${state.rosterMonth}月分${state.rosterDateLabel ? `（${escapeHtml(state.rosterDateLabel)}）` : ''}</p>
+        <div class="roster-groups">${groupsHtml}</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('roster-fy').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+  document.getElementById('roster-month').addEventListener('change', (e) => {
+    state.rosterMonth = Number(e.target.value);
+    renderView();
+  });
+  document.getElementById('roster-title').addEventListener('input', (e) => {
+    state.rosterTitle = e.target.value;
+    document.getElementById('roster-title-display').textContent = e.target.value;
+  });
+  document.getElementById('roster-date').addEventListener('input', (e) => {
+    state.rosterDateLabel = e.target.value;
+  });
+  document.getElementById('roster-date').addEventListener('blur', () => renderView());
+  document.getElementById('roster-print-btn').addEventListener('click', () => window.print());
+}
+
+// ==================== 起動 ====================
+init();
+</script>
+</body>
+</html>
