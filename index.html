@@ -22,6 +22,8 @@
   --color-absent: #a8442f;
   --color-absent-bg: #f5e6e1;
   --color-gold: #b8863b;
+  --color-accent: #3a7ca5;
+  --color-accent-hover: #2f6690;
 }
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; }
@@ -95,10 +97,10 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
   padding: 8px 12px; font-size: 14px;
 }
 .btn-dark {
-  background: var(--color-navy); color: white; border: none; border-radius: 2px;
+  background: var(--color-accent); color: white; border: none; border-radius: 2px;
   padding: 8px 16px; font-size: 14px;
 }
-.btn-dark:hover { background: var(--color-navy-soft); }
+.btn-dark:hover { background: var(--color-accent-hover); }
 .btn-light {
   background: white; border: 1px solid var(--color-line); border-radius: 2px;
   padding: 8px 16px; font-size: 14px; color: var(--color-ink);
@@ -119,7 +121,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 table.att-table { min-width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-panel); }
 .att-table-wrap { overflow-x: auto; border: 1px solid var(--color-line); background: var(--color-panel); border-radius: 2px; }
 table.att-table thead tr { background: var(--color-navy); color: white; }
-table.att-table th { font-weight: 500; padding: 8px; text-align: left; white-space: nowrap; }
+table.att-table th { font-weight: 500; padding: 8px; text-align: center; white-space: nowrap; }
 table.att-table td { padding: 4px; border-top: 1px solid var(--color-line); }
 table.att-table tbody tr:hover { background: #fbfaf6; }
 .att-editable {
@@ -363,6 +365,7 @@ async function renderMainShell() {
             <button class="tab" data-view="grid">出欠入力</button>
             <button class="tab" data-view="report">朝神提出（月次報告書）</button>
             <button class="tab" data-view="roster">当番表</button>
+            <button class="tab" data-view="master">マスター</button>
           </div>
           <button class="logout" id="logout-btn">ログアウト</button>
         </div>
@@ -400,6 +403,7 @@ function renderView() {
   if (state.view === 'grid') renderGridView(container);
   else if (state.view === 'report') renderReportView(container);
   else if (state.view === 'roster') renderRosterView(container);
+  else if (state.view === 'master') renderMasterView(container);
 }
 
 // ==================== データ取得 ====================
@@ -437,6 +441,31 @@ async function loadAttendanceForFiscalYear() {
 
 function currentFiscalYearLabel() {
   return state.fiscalYears.find(y => y.id === state.fiscalYearId)?.label ?? '';
+}
+
+// ==================== マスター（部署・立場の編集） ====================
+function renderMasterView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">マスター管理</h1>
+        </div>
+      </div>
+      <p class="hint-text" style="margin-top:0;margin-bottom:20px;">
+        出欠入力で使う「部署」「立場」の一覧を管理します。名前を変更すると、
+        すでに登録されているメンバーの表示も自動的に置き換わります。
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-dark" id="edit-dept-btn">部署を編集</button>
+        <button class="btn-dark" id="edit-pos-btn">立場を編集</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('edit-dept-btn').addEventListener('click', () => openMasterListEditor('department'));
+  document.getElementById('edit-pos-btn').addEventListener('click', () => openMasterListEditor('position'));
 }
 
 // ==================== 出欠入力画面 ====================
@@ -569,6 +598,15 @@ async function bulkMarkMonth(monthCtx, mode) {
   if (mode === 'all-present') {
     if (!confirm(`立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月分を、${CATEGORY_LABEL[state.category]}について全員○にします。すでに入力されている×も上書きされます。よろしいですか？`)) return;
   }
+  if (mode === 'clear') {
+    if (!confirm(`立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月分（${CATEGORY_LABEL[state.category]}）の入力を、全員分まとめて空欄に戻します。よろしいですか？`)) return;
+    for (const m of state.members) {
+      state.attendance.delete(attKey(m.id, state.category, monthSeqValue));
+    }
+    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYear.id, category: state.category, month_seq: monthSeqValue });
+    renderView();
+    return;
+  }
 
   const updates = [];
   for (const m of state.members) {
@@ -643,14 +681,16 @@ function renderGridView(container) {
         <div style="display:flex;align-items:center;gap:8px;">
           <select id="fy-select">${fyOptions}</select>
           <button class="btn-light" id="add-fy-btn">＋年度追加</button>
-          <button class="btn-light" id="edit-dept-btn">部署を編集</button>
-          <button class="btn-light" id="edit-pos-btn">立場を編集</button>
           <button class="btn-dark" id="mark-all-present-btn">立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月 全員出席</button>
-          <button class="btn-light" id="fill-blank-present-btn">未入力を○にする</button>
+          <button class="btn-light" id="fill-blank-present-btn">${monthCtx.calendarMonth}月分未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">この月をクリア</button>
         </div>
       </div>
 
       <div class="category-tabs no-print">${catTabs}</div>
+
+      <button class="btn-light no-print" id="add-member-btn" style="margin-bottom:12px;">＋ メンバーを追加</button>
+      <p class="hint-text no-print" style="margin-top:0;margin-bottom:16px;">セルをクリックすると 空欄 → ○ → × → 空欄 の順に切り替わります。変更は自動的に保存されます。</p>
 
       <div class="att-table-wrap">
         <table class="att-table">
@@ -668,9 +708,6 @@ function renderGridView(container) {
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
-
-      <button class="btn-light no-print" id="add-member-btn" style="margin-top:16px;">＋ メンバーを追加</button>
-      <p class="hint-text no-print">セルをクリックすると 空欄 → ○ → × → 空欄 の順に切り替わります。変更は自動的に保存されます。</p>
     </div>
   `;
 
@@ -698,11 +735,9 @@ function renderGridView(container) {
     sel.addEventListener('change', () => updateMemberField(Number(sel.dataset.member), sel.dataset.field, sel.value));
   });
 
-  document.getElementById('edit-dept-btn').addEventListener('click', () => openMasterListEditor('department'));
-  document.getElementById('edit-pos-btn').addEventListener('click', () => openMasterListEditor('position'));
-
   document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'all-present'));
   document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'fill-blank-present'));
+  document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'clear'));
 
   document.querySelectorAll('[data-action="move-up"]').forEach(btn =>
     btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), -1)));
