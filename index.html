@@ -189,6 +189,11 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 }
 .modal-actions { display: flex; justify-content: flex-end; }
 .modal-list .icon-btn { width: 22px; height: 22px; }
+.master-panel {
+  background: white; border: 1px solid var(--color-line); border-radius: 8px;
+  padding: 16px 20px; min-width: 260px; max-width: 320px; flex: 1;
+}
+.master-panel h2 { font-size: 14px; margin: 0 0 10px; color: var(--color-navy); }
 
 /* ---- 印刷共通 ---- */
 @media print {
@@ -313,6 +318,7 @@ const state = {
   rosterMonth: new Date().getMonth() + 1,
   rosterTitle: '朝の神殿掃除 当番表',
   rosterDateLabel: '',
+  masterOpen: { department: false, position: false },
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -480,15 +486,32 @@ function renderMasterView(container) {
         出欠入力で使う「部署」「立場」の一覧を管理します。名前を変更すると、
         すでに登録されているメンバーの表示も自動的に置き換わります。
       </p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
         <button class="btn-dark" id="edit-dept-btn">部署を編集</button>
         <button class="btn-dark" id="edit-pos-btn">立場を編集</button>
       </div>
+      <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
   `;
 
-  document.getElementById('edit-dept-btn').addEventListener('click', () => openMasterListEditor('department'));
-  document.getElementById('edit-pos-btn').addEventListener('click', () => openMasterListEditor('position'));
+  document.getElementById('edit-dept-btn').addEventListener('click', () => {
+    state.masterOpen.department = !state.masterOpen.department;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-pos-btn').addEventListener('click', () => {
+    state.masterOpen.position = !state.masterOpen.position;
+    renderMasterPanels();
+  });
+
+  renderMasterPanels();
+}
+
+function renderMasterPanels() {
+  const panelsEl = document.getElementById('master-panels');
+  if (!panelsEl) return;
+  panelsEl.innerHTML = '';
+  if (state.masterOpen.department) panelsEl.appendChild(buildMasterPanel('department'));
+  if (state.masterOpen.position) panelsEl.appendChild(buildMasterPanel('position'));
 }
 
 // ==================== 出欠入力画面 ====================
@@ -518,30 +541,23 @@ const MASTER_CONFIG = {
   position: { table: T_POSITIONS, label: '立場', memberField: 'position' },
 };
 
-function openMasterListEditor(kind) {
+function buildMasterPanel(kind) {
   const cfg = MASTER_CONFIG[kind];
   const list = kind === 'department' ? state.departments : state.positions;
 
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <h2>${cfg.label}の編集</h2>
-      <p class="modal-hint">名前を変更すると、すでに登録されているメンバーの${cfg.label}も自動的に置き換わります。</p>
-      <ul class="modal-list" id="modal-list"></ul>
-      <div class="modal-add-row">
-        <input type="text" id="modal-add-input" placeholder="新しい${cfg.label}名" />
-        <button class="btn-dark" id="modal-add-btn">追加</button>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-light" id="modal-close-btn">閉じる</button>
-      </div>
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.innerHTML = `
+    <h2>${cfg.label}一覧</h2>
+    <ul class="modal-list" id="panel-list-${kind}"></ul>
+    <div class="modal-add-row">
+      <input type="text" id="panel-add-input-${kind}" placeholder="新しい${cfg.label}名" />
+      <button class="btn-dark" id="panel-add-btn-${kind}">追加</button>
     </div>
   `;
-  document.body.appendChild(overlay);
 
   function renderList() {
-    const listEl = overlay.querySelector('#modal-list');
+    const listEl = panel.querySelector(`#panel-list-${kind}`);
     listEl.innerHTML = list.map(item => `
       <li data-id="${item.id}">
         <input type="text" class="modal-rename-input" value="${escapeHtml(item.name)}" />
@@ -562,7 +578,7 @@ function openMasterListEditor(kind) {
         item.name = newName;
         await sb.from(T_MEMBERS).update({ [cfg.memberField]: newName }).eq(cfg.memberField, oldName);
         state.members.forEach((m) => { if (m[cfg.memberField] === oldName) m[cfg.memberField] = newName; });
-        renderView();
+        renderList();
       });
     });
 
@@ -576,15 +592,14 @@ function openMasterListEditor(kind) {
         const idx = list.findIndex((i) => i.id === id);
         if (idx >= 0) list.splice(idx, 1);
         renderList();
-        renderView();
       });
     });
   }
 
   renderList();
 
-  overlay.querySelector('#modal-add-btn').addEventListener('click', async () => {
-    const input = overlay.querySelector('#modal-add-input');
+  panel.querySelector(`#panel-add-btn-${kind}`).addEventListener('click', async () => {
+    const input = panel.querySelector(`#panel-add-input-${kind}`);
     const name = input.value.trim();
     if (!name) return;
     const nextOrder = list.length > 0 ? Math.max(...list.map((i) => i.sort_order)) + 1 : 1;
@@ -593,16 +608,9 @@ function openMasterListEditor(kind) {
     list.push(data);
     input.value = '';
     renderList();
-    renderView();
   });
 
-  overlay.querySelector('#modal-close-btn').addEventListener('click', () => {
-    overlay.remove();
-    renderView();
-  });
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) { overlay.remove(); renderView(); }
-  });
+  return panel;
 }
 
 async function bulkMarkMonth(monthCtx, mode) {
