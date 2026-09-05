@@ -125,7 +125,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 /* ---- 出欠入力グリッド ---- */
 .grid-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
 .grid-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px; }
-.grid-header h1 { font-size: 30px; margin: 0; color: var(--color-navy); }
+.grid-header h1 { font-size: 20px; margin: 0; color: var(--color-navy); }
 .grid-header .eyebrow { font-size: 12px; color: var(--color-ink-soft); margin: 0 0 4px; }
 .category-tabs { display:flex; gap: 2px; margin-bottom: 16px; }
 .category-tabs button {
@@ -134,20 +134,26 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 }
 .category-tabs button.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
 table.att-table { min-width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-panel); }
-.att-table-wrap { overflow-x: auto; border: 1px solid var(--color-line); background: var(--color-panel); border-radius: 8px; }
+.att-table-wrap {
+  overflow-x: auto; overflow-y: auto; max-height: 70vh;
+  border: 1px solid var(--color-line); background: var(--color-panel); border-radius: 8px;
+}
 table.att-table thead tr { background: var(--color-accent); color: white; }
 table.att-table thead th { position: sticky; top: 0; z-index: 20; background: var(--color-accent); }
-table.att-table th { font-weight: 500; padding: 8px; text-align: center; white-space: nowrap; }
-table.att-table td { padding: 4px; border-top: 1px solid var(--color-line); }
+table.att-table th { font-weight: 500; padding: 6px 8px; text-align: center; white-space: nowrap; }
+table.att-table td { padding: 1px 4px; border-top: 1px solid var(--color-line); line-height: 1.2; }
 table.att-table tbody tr:hover { background: #fbfaf6; }
 .att-editable {
-  width: 100%; background: transparent; padding: 4px 6px; border-radius: 8px;
-  border: 1px solid transparent;
+  width: 100%; background: transparent; padding: 2px 4px; border-radius: 8px;
+  border: 1px solid transparent; font-size: 13px;
 }
 .att-editable:hover { border-color: var(--color-line); }
 .att-editable:focus { border-color: var(--color-navy); background: white; }
+.att-select {
+  height: 26px; padding: 1px 6px; font-size: 13px;
+}
 .att-cell-btn {
-  width: 34px; height: 34px; border-radius: 8px; font-weight: 500; font-size: 14px; border: 1px solid var(--color-line);
+  width: 26px; height: 26px; border-radius: 6px; font-weight: 500; font-size: 13px; border: 1px solid var(--color-line);
   background: white; color: transparent;
 }
 .att-cell-btn.present { background: var(--color-present-bg); color: var(--color-present); border-color: rgba(47,111,78,0.3); }
@@ -700,15 +706,11 @@ function renderGridView(container) {
           <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
           <button class="btn-light" id="fill-blank-present-btn">${monthCtx.calendarMonth}月分未入力を○にする</button>
           <button class="btn-light" id="clear-month-btn">この月をクリア</button>
+          <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
         </div>
       </div>
 
       <div class="category-tabs no-print">${catTabs}</div>
-
-      <div class="no-print" style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
-        <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
-        <p class="hint-text" style="margin:0;">セルをクリックすると 空欄 → ○ → × → 空欄 の順に切り替わります。変更は自動的に保存されます。</p>
-      </div>
 
       <div class="att-table-wrap">
         <table class="att-table">
