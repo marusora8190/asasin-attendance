@@ -206,7 +206,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
 .report-page {
   width: 176mm; height: 250mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  padding: 12mm 10mm; box-sizing: border-box; display:flex; flex-direction:column;
+  padding: 15mm 10mm 12mm; box-sizing: border-box; display:flex; flex-direction:column;
   font-size: 10.5px; color:#1a1a1a; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
 }
 @media print {
@@ -214,27 +214,30 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   .report-page:last-child { page-break-after: auto; }
 }
 .report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-.report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:900; font-size:17px; margin:0 0 10px; }
-.report-header-left .org-name { font-size:12px; margin:0 0 14px; }
-.report-header-left .report-date { font-size:12px; margin:0; }
+.report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:400; font-size:17px; margin:0 0 10px; }
+.report-header-left .org-name { font-size:10px; font-weight:400; margin:0 0 14px; }
+.report-header-left .report-date { font-size:10px; font-weight:400; margin:0; }
 .report-header-right { display:flex; flex-direction:column; gap:6px; }
 .stamp-table { border-collapse: collapse; }
-.stamp-table th, .stamp-table td { border:1px solid #333; width:22mm; height:6mm; text-align:center; font-size:9px; font-weight:400; padding:1px 2px; }
-.stamp-table td { height: 12mm; }
-.report-summary-line { font-size:11px; font-weight:600; margin:4px 0 10px; }
-.report-columns { display:flex; flex:1; gap:6mm; align-items:flex-start; min-height:0; }
+.stamp-table th, .stamp-table td { border:1px solid #333; width:13mm; height:5mm; text-align:center; font-size:10px; font-weight:400; padding:1px 2px; }
+.stamp-table td { height: 11mm; }
+.report-summary-line { font-size:10px; font-weight:400; margin:4px 0 10px; }
+.report-columns { display:flex; gap:6mm; align-items:flex-start; }
+.report-summary-block { display:flex; justify-content:flex-end; margin-top:4mm; }
+.report-summary-block .summary-table { width:auto; min-width:55mm; }
 .report-column { flex:1; min-width:0; }
 .member-table { width:100%; border-collapse: collapse; table-layout: fixed; }
 .member-table th, .member-table td { border:1px solid #333; padding:1.5px 3px; font-size:10px; line-height:1.5; }
-.member-table thead th { background:#f1efe8; font-weight:600; text-align:center; }
+.member-table thead th { background:#f1efe8; font-weight:400; text-align:center; }
 .member-table .col-no { width:8%; text-align:center; }
-.member-table .col-name { width:42%; }
-.member-table .col-position { width:36%; }
+.member-table .col-name { width:42%; padding-left: 2mm; }
+.member-table .col-position { width:36%; padding-left: 2mm; }
+.member-table td.ditto { text-align: center; padding-left: 0; }
 .member-table .col-status { width:14%; text-align:center; }
-.summary-table th { background:#f1efe8; font-weight:600; text-align:center; }
+.summary-table th { background:#f1efe8; font-weight:400; text-align:center; }
 .summary-table td { padding:3px 6px; }
 .summary-table .num { text-align:right; width:30%; }
-.summary-table .total-row { font-weight:700; }
+.summary-table .total-row { font-weight:400; }
 .report-page-number { text-align:center; font-size:10px; color:#666; margin-top:auto; padding-top:8px; }
 
 /* ---- 当番表 ---- */
@@ -863,20 +866,9 @@ async function addFiscalYear() {
 }
 
 // ==================== 朝神提出（月次報告書） ====================
-function buildReportPages(membersWithNo) {
-  const blocks = [];
-  for (let i = 0; i < membersWithNo.length; i += ROWS_PER_BLOCK) {
-    blocks.push(membersWithNo.slice(i, i + ROWS_PER_BLOCK));
-  }
-  if (blocks.length === 0) blocks.push([]);
-  const pages = [];
-  for (let i = 0; i < blocks.length; i += 2) {
-    pages.push({ left: blocks[i], right: blocks[i + 1] ?? null });
-  }
-  const last = pages[pages.length - 1];
-  if (last.right === null) last.right = 'summary';
-  else pages.push({ left: 'summary', right: null });
-  return pages;
+function splitIntoTwoColumns(membersWithNo) {
+  const half = Math.ceil(membersWithNo.length / 2);
+  return { left: membersWithNo.slice(0, half), right: membersWithNo.slice(half) };
 }
 
 function renderReportView(container) {
@@ -904,10 +896,37 @@ function renderReportView(container) {
   for (const p of POSITION_ORDER) { if (posCounts.has(p)) { positionCounts.push({label:p, count:posCounts.get(p)}); posCounts.delete(p); } }
   for (const [label, count] of posCounts) positionCounts.push({ label, count });
 
-  const pages = buildReportPages(membersWithNo);
+  const { left, right } = splitIntoTwoColumns(membersWithNo);
 
-  const pagesHtml = pages.map((page, i) => {
-    const headerHtml = i === 0 ? `
+  const renderNameColumn = (slot) => {
+    const rows = slot.map((m, idx) => {
+      const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
+      const prevPos = idx > 0 ? slot[idx-1].position : null;
+      const isDitto = idx > 0 && m.position === prevPos;
+      const posDisplay = isDitto ? '〃' : escapeHtml(m.position);
+      const posClass = isDitto ? 'col-position ditto' : 'col-position';
+      return `<tr><td class="col-no">${m.no}</td><td class="col-name">${escapeHtml(m.name)}</td><td class="${posClass}">${posDisplay}</td><td class="col-status">${status ?? ''}</td></tr>`;
+    }).join('');
+    return `
+      <div class="report-column">
+        <table class="member-table">
+          <thead><tr><th class="col-no">No</th><th class="col-name">氏　名</th><th class="col-position">立場</th><th class="col-status">出欠</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  };
+
+  const summaryRows = positionCounts.map(p => `<tr><td>${escapeHtml(p.label)}</td><td class="num">${p.count}名</td></tr>`).join('');
+  const summaryHtml = `
+    <div class="report-summary-block">
+      <table class="member-table summary-table">
+        <thead><tr><th>立場</th><th>人数</th></tr></thead>
+        <tbody>${summaryRows}<tr class="total-row"><td>合　計</td><td class="num">${state.members.length}名</td></tr></tbody>
+      </table>
+    </div>`;
+
+  const pageHtml = `
+    <section class="report-page">
       <header class="report-header">
         <div class="report-header-left">
           <h1>神殿掃除実施報告書</h1>
@@ -920,52 +939,20 @@ function renderReportView(container) {
             <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
           </table>
           <table class="stamp-table">
-            <thead><tr><th>部長</th><th>次長</th><th>課長</th><th>庶務</th></tr></thead>
+            <thead><tr><th>部　長</th><th>次　長</th><th>課　長</th><th>庶　務</th></tr></thead>
             <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
           </table>
         </div>
       </header>
       <p class="report-summary-line">【総員：${state.members.length}名、出席者：${presentCount}名】</p>
-    ` : '';
-
-    const renderSlot = (slot) => {
-      if (slot === null) return `<div class="report-column"></div>`;
-      if (slot === 'summary') {
-        const rows = positionCounts.map(p => `<tr><td>${escapeHtml(p.label)}</td><td class="num">${p.count}名</td></tr>`).join('');
-        return `
-          <div class="report-column">
-            <table class="member-table summary-table">
-              <thead><tr><th>立場</th><th>人数</th></tr></thead>
-              <tbody>${rows}<tr class="total-row"><td>合　計</td><td class="num">${state.members.length}名</td></tr></tbody>
-            </table>
-          </div>`;
-      }
-      const rows = slot.map((m, idx) => {
-        const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
-        const prevPos = idx > 0 ? slot[idx-1].position : null;
-        const posDisplay = idx > 0 && m.position === prevPos ? '〃' : escapeHtml(m.position);
-        return `<tr><td class="col-no">${m.no}</td><td class="col-name">${escapeHtml(m.name)}</td><td class="col-position">${posDisplay}</td><td class="col-status">${status ?? ''}</td></tr>`;
-      }).join('');
-      return `
-        <div class="report-column">
-          <table class="member-table">
-            <thead><tr><th class="col-no">No</th><th class="col-name">氏　名</th><th class="col-position">立場</th><th class="col-status">出欠</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`;
-    };
-
-    return `
-      <section class="report-page">
-        ${headerHtml}
-        <div class="report-columns">
-          ${renderSlot(page.left)}
-          ${renderSlot(page.right)}
-        </div>
-        <div class="report-page-number">－${i+1}－</div>
-      </section>
-    `;
-  }).join('');
+      <div class="report-columns">
+        ${renderNameColumn(left)}
+        ${renderNameColumn(right)}
+      </div>
+      ${summaryHtml}
+      <div class="report-page-number">－1－</div>
+    </section>
+  `;
 
   container.innerHTML = `
     <div style="padding:32px 16px;">
@@ -976,9 +963,9 @@ function renderReportView(container) {
         <button class="btn-dark" id="report-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
       <p class="no-print" style="max-width:1000px;margin:0 auto 24px;font-size:12px;color:var(--color-ink-soft);">
-        用紙サイズ：B5 ／ 両面印刷を想定しています。印刷ダイアログで「用紙サイズ：B5」「両面印刷」を選択してください。
+        用紙サイズ：B5 ／ 片面印刷で1ページに収まる想定です。印刷ダイアログで「用紙サイズ：B5」を選択してください。
       </p>
-      <div class="report-preview">${pagesHtml}</div>
+      <div class="report-preview">${pageHtml}</div>
     </div>
   `;
 
