@@ -199,28 +199,29 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 @media print {
   .no-print { display: none !important; }
   body { background: white; }
-  @page { size: 176mm 250mm; margin: 0; }
+  @page { size: 176mm 250mm; margin: 5mm; }
 }
 
 /* ---- 神殿掃除実施報告書（朝神提出） ---- */
 .report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
 .report-page {
-  width: 176mm; height: 250mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  padding: 15mm 10mm 15mm; box-sizing: border-box; display:flex; flex-direction:column;
+  width: 166mm; height: 240mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  padding: 10mm 5mm 10mm; box-sizing: border-box; display:flex; flex-direction:column;
   font-size: 10.5px; color:#1a1a1a; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
 }
 @media print {
   .report-page { box-shadow: none; margin: 0; page-break-after: always; }
   .report-page:last-child { page-break-after: auto; }
+  .report-preview { min-height: 100vh; justify-content: center; }
 }
 .report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
 .report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:400; font-size:17px; margin:0 0 10px; }
-.report-header-left .org-name { font-size:10px; font-weight:400; margin:0 0 14px; }
-.report-header-left .report-date { font-size:10px; font-weight:400; margin:0; }
+.report-header-left .org-name { font-size:11px; font-weight:400; margin:0 0 14px; }
+.report-header-left .report-date { font-size:11px; font-weight:400; margin:0; }
 .report-header-right { display:flex; flex-direction:column; gap:6px; }
 .stamp-table { border-collapse: collapse; }
-.stamp-table th, .stamp-table td { border:1px solid #333; width:13mm; height:5mm; text-align:center; font-size:7px; font-weight:400; padding:1px 2px; white-space:nowrap; }
-.stamp-table td { height: 11mm; }
+.stamp-table th, .stamp-table td { border:1px solid #333; width:17mm; height:5mm; text-align:center; font-size:8px; font-weight:400; padding:1px 2px; white-space:nowrap; }
+.stamp-table td { height: 17mm; }
 .report-summary-line { font-size:10px; font-weight:400; margin:4px 0 10px; }
 .report-columns { display:flex; gap:6mm; align-items:flex-start; }
 .report-summary-block { display:flex; justify-content:flex-end; margin-top:4mm; }
@@ -229,11 +230,11 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .member-table { width:100%; border-collapse: collapse; table-layout: fixed; }
 .member-table th, .member-table td { border:1px solid #333; padding:6px 3px; font-size:10px; line-height:1.5; }
 .member-table thead th { background:#f1efe8; font-weight:400; text-align:center; }
-.member-table .col-no { width:8%; text-align:center; }
-.member-table .col-name { width:42%; padding-left: 2mm; }
-.member-table .col-position { width:36%; padding-left: 2mm; }
+.member-table .col-no { width:8%; text-align:center; font-size:11px; }
+.member-table .col-name { width:42%; padding-left: 2mm; font-size:12px; }
+.member-table .col-position { width:36%; text-align:center; font-size:11px; }
 .member-table td.ditto { text-align: center; padding-left: 0; }
-.member-table td.small-pos { font-size: 8px; }
+.member-table td.small-pos { font-size: 9px; }
 .member-table .col-status { width:14%; text-align:center; }
 .summary-table th { background:#f1efe8; font-weight:400; text-align:center; }
 .summary-table td { padding:3px 6px; }
