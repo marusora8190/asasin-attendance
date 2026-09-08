@@ -99,6 +99,12 @@ nav.app-nav .tab {
 }
 nav.app-nav .tab.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
 nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decoration: underline; background: none; border: none; }
+.btn-update {
+  background: #c0392b; color: white; border: none; border-radius: 8px;
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+}
+.btn-update:hover { background: #a5301f; }
+.btn-update:active { background: #8a2819; }
 
 /* ---- 共通ツールバー ---- */
 .toolbar {
@@ -206,36 +212,40 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
 .report-page {
   width: 166mm; height: 240mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  padding: 10mm 5mm 10mm; box-sizing: border-box; display:flex; flex-direction:column;
+  padding: 0mm 5mm 4mm; box-sizing: border-box; display:flex; flex-direction:column;
   font-size: 10.5px; color:#1a1a1a; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
 }
 @media print {
-  .report-page { box-shadow: none; margin: 0; page-break-after: always; }
+  .report-page { box-shadow: none; margin: 0; page-break-after: always; transform: translateX(-10mm); }
   .report-page:last-child { page-break-after: auto; }
-  .report-preview { min-height: 100vh; justify-content: center; }
+  .report-preview { min-height: 100vh; justify-content: flex-start; }
 }
-.report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-.report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:400; font-size:17px; margin:0 0 10px; }
-.report-header-left .org-name { font-size:11px; font-weight:400; margin:0 0 14px; }
-.report-header-left .report-date { font-size:11px; font-weight:400; margin:0; }
-.report-header-right { display:flex; flex-direction:column; gap:6px; }
+@media screen {
+  .report-page { width: auto; max-width: 100%; background: transparent; box-shadow: none; }
+}
+
+.report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; }
+.report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:400; font-size:19px; margin:0 0 10px; }
+.report-header-left .org-name { font-size:15px; font-weight:400; margin:0 0 8px; }
+.report-header-left .report-date { font-size:15px; font-weight:400; margin:0; }
+.report-header-right { display:flex; flex-direction:column; gap:6px; margin-right: -21mm; }
 .stamp-table { border-collapse: collapse; }
-.stamp-table th, .stamp-table td { border:1px solid #333; width:17mm; height:5mm; text-align:center; font-size:8px; font-weight:400; padding:1px 2px; white-space:nowrap; }
+.stamp-table th, .stamp-table td { border:1px solid #333; width:20mm; height:5mm; text-align:center; font-size:11px; font-weight:400; padding:1px 2px; white-space:nowrap; }
 .stamp-table td { height: 17mm; }
-.report-summary-line { font-size:10px; font-weight:400; margin:4px 0 10px; }
-.report-columns { display:flex; gap:6mm; align-items:flex-start; }
+.report-summary-line { font-size:14px; font-weight:400; margin: calc(4px - 8mm) 0 10px; }
+.report-columns { display:flex; gap:3mm; align-items:flex-start; }
 .report-summary-block { display:flex; justify-content:flex-end; margin-top:4mm; }
 .report-summary-block .summary-table { width:auto; min-width:55mm; }
-.report-column { flex:1; min-width:0; }
-.member-table { width:100%; border-collapse: collapse; table-layout: fixed; }
-.member-table th, .member-table td { border:1px solid #333; padding:6px 3px; font-size:10px; line-height:1.5; }
+.report-column { flex: 0 0 auto; min-width:0; }
+.member-table { width: 87mm; border-collapse: collapse; table-layout: fixed; }
+.member-table th, .member-table td { border:1px solid #333; padding:0.525mm 3px; font-size:10px; line-height:1.5; }
 .member-table thead th { background:#f1efe8; font-weight:400; text-align:center; }
-.member-table .col-no { width:8%; text-align:center; font-size:11px; }
-.member-table .col-name { width:42%; padding-left: 2mm; font-size:12px; }
-.member-table .col-position { width:36%; text-align:center; font-size:11px; }
+.member-table .col-no { width:8mm; text-align:center; font-size:13px; }
+.member-table .col-name { width:36.5mm; padding-left: 4mm; font-size:14px; }
+.member-table .col-position { width:32mm; text-align:center; font-size:13px; }
 .member-table td.ditto { text-align: center; padding-left: 0; }
-.member-table td.small-pos { font-size: 9px; }
-.member-table .col-status { width:14%; text-align:center; }
+.member-table td.small-pos { font-size: 11px; }
+.member-table .col-status { width:10.5mm; text-align:center; }
 .summary-table th { background:#f1efe8; font-weight:400; text-align:center; }
 .summary-table td { padding:3px 6px; }
 .summary-table .num { text-align:right; width:30%; }
@@ -401,7 +411,11 @@ async function renderMainShell() {
             <button class="tab" data-view="roster">当番表</button>
             <button class="tab" data-view="master">マスター</button>
           </div>
-          <button class="logout" id="logout-btn">ログアウト</button>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn-update" id="hard-refresh-btn">Update</button>
+            <span id="update-message" style="font-size:11px;color:var(--color-ink-soft);"></span>
+            <button class="logout" id="logout-btn">ログアウト</button>
+          </div>
         </div>
       </nav>
       <div id="view-container"><div class="loading">読み込み中…</div></div>
@@ -419,6 +433,15 @@ async function renderMainShell() {
     sessionStorage.removeItem(UNLOCK_KEY);
     state.unlocked = false;
     renderRoot();
+  });
+
+  document.getElementById('hard-refresh-btn').addEventListener('click', () => {
+    const msg = document.getElementById('update-message');
+    msg.textContent = '最新版を読み込んでいます…';
+    setTimeout(() => {
+      const url = window.location.origin + window.location.pathname + '?_=' + Date.now();
+      window.location.href = url;
+    }, 400);
   });
 
   updateNavActive();
@@ -952,7 +975,6 @@ function renderReportView(container) {
         ${renderNameColumn(left)}
         ${renderNameColumn(right)}
       </div>
-      <div class="report-page-number">－1－</div>
     </section>
   `;
 
