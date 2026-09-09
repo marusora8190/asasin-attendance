@@ -261,7 +261,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .roster-doc { background: white; border: 1px solid var(--color-line); padding: 32px; overflow-x: auto; }
 .roster-doc h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:500; font-size:16px; margin:0 0 20px; color: var(--color-ink); }
 
-.duty-days-row { display:flex; gap:16px; align-items:flex-start; min-width: 900px; }
+.duty-days-row { display:flex; gap:8px; align-items:flex-start; min-width: 900px; }
 .duty-day-block { flex:1; min-width:80mm; }
 .duty-day-header {
   position: relative;
@@ -269,11 +269,11 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   border-bottom: 1px solid #333; padding-bottom:6px; margin-bottom: 8mm;
 }
 .duty-day-header::before, .duty-day-header::after {
-  content: ''; position: absolute; top: 100%; width: 1px; height: 5mm; background: #333;
+  content: ''; position: absolute; top: 100%; width: 0; height: 5mm; border-left: 1px solid #333;
 }
 .duty-day-header::before { left: 0; }
 .duty-day-header::after { right: 0; }
-.duty-day-columns { display:flex; gap:12px; align-items:flex-start; }
+.duty-day-columns { display:flex; gap:6px; align-items:flex-start; }
 .duty-subcolumn { flex:1; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
 .duty-dept-label { font-size:12px; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
@@ -284,7 +284,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   border-bottom: 1px solid var(--color-line);
 }
 .duty-dept-box li:last-child { border-bottom: none; }
-.duty-dept-box li .mark { width:16px; height:16px; text-align:center; flex-shrink:0; font-size:14px; line-height:16px; padding-right:8px; border-right:1px solid var(--color-line); }
+.duty-dept-box li .mark { width:16px; height:16px; text-align:center; flex-shrink:0; font-size:14px; line-height:16px; padding-right:8px; border-right:1px solid #999; }
 .duty-dept-box li .mark.present { border:1px solid #333; border-radius:50%; color: transparent; }
 .duty-dept-box li .mark.absent { border:none; color: var(--color-absent); font-weight:600; }
 .duty-dept-box li .name { white-space:nowrap; margin-left: 4mm; }
