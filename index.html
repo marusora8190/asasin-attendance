@@ -1154,12 +1154,12 @@ function splitDeptGroupsIntoColumns(deptGroups, n) {
   let colIdx = 0;
   let running = 0;
   for (const g of deptGroups) {
-    if (colIdx < n - 1 && columns[colIdx].length > 0 && running + g.members.length > target) {
+    columns[colIdx].push(g);
+    running += g.members.length;
+    if (colIdx < n - 1 && running >= target) {
       colIdx++;
       running = 0;
     }
-    columns[colIdx].push(g);
-    running += g.members.length;
   }
   return columns;
 }
@@ -1210,10 +1210,23 @@ function renderRosterView(container) {
     <div class="duty-subcolumn">${groups.map(renderMemberBox).join('')}</div>
   `;
 
-  const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
+function moveGroupToColumnFront(cols, deptName, targetIdx) {
+  for (let i = 0; i < cols.length; i++) {
+    const pos = cols[i].findIndex((g) => g.dept === deptName);
+    if (pos >= 0) {
+      const [group] = cols[i].splice(pos, 1);
+      cols[targetIdx].unshift(group);
+      return;
+    }
+  }
+}
+
+const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
   const dayBlocksHtml = [1, 2, 3].map((dayNum) => {
     const label = dayLabels[dayNum - 1];
-    const [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
+    let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
+    if (dayNum === 2) { [col1, col2] = [col2, col1]; }
+    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); }
     return `
       <div class="duty-day-block">
         <div class="duty-day-header"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>
