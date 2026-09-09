@@ -206,7 +206,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   .no-print { display: none !important; }
   body { background: white; }
   .roster-wrap { padding: 0 !important; max-width: none !important; }
-  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; }
+  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translateX(-1mm); }
   .duty-days-row { min-width: 0 !important; }
   .duty-day-block { flex: 0 1 auto !important; }
 }
@@ -261,8 +261,8 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .roster-doc { background: white; border: 1px solid var(--color-line); padding: 32px; overflow-x: auto; }
 .roster-doc h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:500; font-size:16px; margin:0 0 20px; color: var(--color-ink); }
 
-.duty-days-row { display:flex; gap:3px; align-items:flex-start; }
-.duty-day-block { flex: 0 1 auto; min-width:81mm; }
+.duty-days-row { display:flex; gap:16px; align-items:flex-start; }
+.duty-day-block { flex: 0 1 auto; min-width:77mm; }
 .duty-day-header {
   position: relative;
   text-align:center; font-size:14px; font-weight:500; color: var(--color-ink);
@@ -273,8 +273,8 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 }
 .duty-day-header::before { left: 0; }
 .duty-day-header::after { right: 0; }
-.duty-day-columns { display:flex; gap:2.25px; align-items:flex-start; }
-.duty-subcolumn { flex: 0 1 auto; min-width:40mm; display:flex; flex-direction:column; gap:14px; }
+.duty-day-columns { display:flex; gap:calc(28px - 0.1mm); align-items:flex-start; }
+.duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
 .duty-dept-label { font-size:12px; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
   list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
@@ -287,7 +287,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .duty-dept-box li .mark { width:16px; height:16px; text-align:center; flex-shrink:0; font-size:14px; line-height:16px; padding-right:8px; border-right:1px solid #999; }
 .duty-dept-box li .mark.present { border:1px solid #333; border-radius:50%; color: transparent; }
 .duty-dept-box li .mark.absent { border:none; color: var(--color-absent); font-weight:600; }
-.duty-dept-box li .name { white-space:nowrap; margin-left: 4mm; }
+.duty-dept-box li .name { white-space:nowrap; margin-left: 2mm; }
 
 .loading, .error-msg { padding: 40px; color: var(--color-ink-soft); }
 .error-msg { color: var(--color-absent); }
