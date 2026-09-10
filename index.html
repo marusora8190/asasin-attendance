@@ -317,6 +317,7 @@ const T_ATTENDANCE = 'asagami_attendance';
 const T_FISCAL_YEARS = 'asagami_fiscal_years';
 const T_DEPARTMENTS = 'asagami_departments';
 const T_POSITIONS = 'asagami_positions';
+const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
@@ -342,7 +343,7 @@ function escapeHtml(s) {
 // ---- アプリ全体の状態 ----
 const state = {
   unlocked: false,
-  view: 'grid', // 'grid' | 'report' | 'roster'
+  view: 'grid', // 'grid' | 'report' | 'roster' | 'archive' | 'master'
   fiscalYears: [],
   fiscalYearId: null,
   members: [],
@@ -357,7 +358,12 @@ const state = {
   rosterDay1: '21日',
   rosterDay2: '22日',
   rosterDay3: '23日',
+  rosterShowMonth: true,
   masterOpen: { department: false, position: false, dutyDay: false, leader: false },
+  archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
+  archiveFiscalYearId: null,
+  archiveCategory: 'asagami',
+  archiveRows: [], // 選択中の年度・区分の保管記録
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -444,6 +450,7 @@ async function renderMainShell() {
             <button class="tab" data-view="grid">出欠入力</button>
             <button class="tab" data-view="report">朝神提出（月次報告書）</button>
             <button class="tab" data-view="roster">当番表</button>
+            <button class="tab" data-view="archive">保管記録</button>
             <button class="tab" data-view="master">マスター</button>
           </div>
           <div style="display:flex;align-items:center;gap:12px;">
@@ -495,6 +502,7 @@ function renderView() {
   if (state.view === 'grid') renderGridView(container);
   else if (state.view === 'report') renderReportView(container);
   else if (state.view === 'roster') renderRosterView(container);
+  else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
 }
 
@@ -675,7 +683,150 @@ function buildLeaderPanel() {
   return panel;
 }
 
-// ==================== 出欠入力画面 ====================
+// ==================== 保管記録（閲覧専用） ====================
+async function loadArchiveFiscalYears() {
+  const { data } = await sb.from(T_FISCAL_YEARS)
+    .select('id,label,start_reiki_year')
+    .eq('archived', true)
+    .order('start_reiki_year', { ascending: false });
+  state.archiveFiscalYears = data ?? [];
+  if (!state.archiveFiscalYearId || !state.archiveFiscalYears.some(fy => fy.id === state.archiveFiscalYearId)) {
+    state.archiveFiscalYearId = state.archiveFiscalYears[0]?.id ?? null;
+  }
+}
+
+async function loadArchiveRows() {
+  if (!state.archiveFiscalYearId) { state.archiveRows = []; return; }
+  const { data } = await sb.from(T_ATTENDANCE_ARCHIVE)
+    .select('*')
+    .eq('fiscal_year_id', state.archiveFiscalYearId)
+    .eq('category', state.archiveCategory)
+    .order('member_sort_order', { ascending: true, nullsFirst: false })
+    .order('member_name', { ascending: true });
+  state.archiveRows = data ?? [];
+}
+
+function renderArchiveView(container) {
+  if (!state._archiveLoaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    loadArchiveFiscalYears()
+      .then(() => loadArchiveRows())
+      .then(() => { state._archiveLoaded = true; renderView(); });
+    return;
+  }
+
+  if (state.archiveFiscalYears.length === 0) {
+    container.innerHTML = `
+      <div class="grid-wrap">
+        <div class="grid-header">
+          <div><p class="eyebrow">出欠管理システム</p><h1 class="font-display">保管記録</h1></div>
+        </div>
+        <p class="hint-text" style="margin-top:0;">
+          まだ保管された年度データはありません。年度が終了すると、自動的にここへ記録が保管されます。
+        </p>
+      </div>`;
+    return;
+  }
+
+  const fyOptions = state.archiveFiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.archiveFiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const catTabs = ['asagami', 'geppai'].map(c =>
+    `<button data-cat="${c}" class="${state.archiveCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  ).join('');
+
+  // 部署ごと・メンバーごとにまとめる（登録順=member_sort_orderを維持）
+  const groups = [];
+  const idxMap = new Map();
+  for (const r of state.archiveRows) {
+    const key = r.department || '（部署未設定）';
+    if (!idxMap.has(key)) { idxMap.set(key, groups.length); groups.push({ dept: key, members: new Map() }); }
+    const g = groups[idxMap.get(key)];
+    const memberKey = `${r.member_id ?? 'x'}-${r.member_name}`;
+    if (!g.members.has(memberKey)) g.members.set(memberKey, { name: r.member_name, months: {} });
+    g.members.get(memberKey).months[r.month_seq] = r.status;
+  }
+
+  const monthHeaders = MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
+
+  const bodyHtml = groups.map(g => {
+    const memberRows = Array.from(g.members.values()).map((m) => {
+      let present = 0, absent = 0;
+      const cells = MONTH_SEQUENCE.map((seq) => {
+        const status = m.months[seq] ?? null;
+        if (status === '○') present++;
+        if (status === '×') absent++;
+        const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+        return `<td style="text-align:center;padding:2px;">
+          <span class="att-cell-btn ${cls}" style="display:inline-flex;align-items:center;justify-content:center;">${status ?? ''}</span>
+        </td>`;
+      }).join('');
+      const total = present + absent;
+      const rate = total > 0 ? Math.round((present / total) * 100) + '%' : '—';
+      return `
+        <tr>
+          <td style="padding:2px 8px;">${escapeHtml(m.name)}</td>
+          ${cells}
+          <td style="text-align:center;color:var(--color-present);font-weight:500;">${present}</td>
+          <td style="text-align:center;color:var(--color-absent);font-weight:500;">${absent}</td>
+          <td style="text-align:center;color:var(--color-ink-soft);">${rate}</td>
+        </tr>`;
+    }).join('');
+    return `<tbody>
+      <tr><td colspan="${2 + MONTH_SEQUENCE.length + 2}" style="background:#f1efe8;font-weight:500;padding:4px 8px;">${escapeHtml(g.dept)}</td></tr>
+      ${memberRows}
+    </tbody>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">保管記録</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select id="archive-fy-select">${fyOptions}</select>
+        </div>
+      </div>
+      <p class="hint-text" style="margin-top:0;margin-bottom:16px;">
+        年度が終了すると自動的にここへ記録が保管されます。閲覧専用で、内容の編集はできません。
+      </p>
+      <div class="category-tabs">${catTabs}</div>
+      ${state.archiveRows.length === 0 ? `
+        <p class="hint-text">この年度・区分の保管記録はありません。</p>
+      ` : `
+        <div class="att-table-wrap">
+          <table class="att-table">
+            <thead>
+              <tr>
+                <th>氏名</th>
+                ${monthHeaders}
+                <th style="text-align:center;">出席</th>
+                <th style="text-align:center;">欠席</th>
+                <th style="text-align:center;">出席率</th>
+              </tr>
+            </thead>
+            ${bodyHtml}
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+
+  document.getElementById('archive-fy-select').addEventListener('change', async (e) => {
+    state.archiveFiscalYearId = Number(e.target.value);
+    await loadArchiveRows();
+    renderView();
+  });
+  document.querySelectorAll('.category-tabs button').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      state.archiveCategory = btn.dataset.cat;
+      await loadArchiveRows();
+      renderView();
+    });
+  });
+}
 function computeSummary(memberId, category) {
   let present = 0, absent = 0;
   for (let seq = 1; seq <= 12; seq++) {
@@ -1338,7 +1489,9 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
     </div>
   ` : '';
 
-  const dateSummary = `${state.rosterMonth}月${dayLabels.filter(Boolean).join('・')}`;
+  const dateSummary = state.rosterShowMonth
+    ? `${state.rosterMonth}月${dayLabels.filter(Boolean).join('・')}`
+    : dayLabels.filter(Boolean).join('・');
 
   container.innerHTML = `
     <div class="roster-wrap">
@@ -1349,6 +1502,13 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
         <div class="field" style="min-width:90px;"><label>1日目</label><input type="text" id="roster-day1" value="${escapeHtml(state.rosterDay1)}" placeholder="例: 8/21" style="width:100%;" /></div>
         <div class="field" style="min-width:90px;"><label>2日目</label><input type="text" id="roster-day2" value="${escapeHtml(state.rosterDay2)}" placeholder="例: 8/22" style="width:100%;" /></div>
         <div class="field" style="min-width:90px;"><label>3日目</label><input type="text" id="roster-day3" value="${escapeHtml(state.rosterDay3)}" placeholder="例: 8/23" style="width:100%;" /></div>
+        <div class="field">
+          <label>表題</label>
+          <label style="display:flex;align-items:center;gap:6px;height:38px;white-space:nowrap;font-size:14px;">
+            <input type="checkbox" id="roster-show-month" ${state.rosterShowMonth ? 'checked' : ''} />
+            「○月」を表示する
+          </label>
+        </div>
         <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
       <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
@@ -1380,6 +1540,10 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
   document.getElementById('roster-day2').addEventListener('blur', () => renderView());
   document.getElementById('roster-day3').addEventListener('input', (e) => { state.rosterDay3 = e.target.value; });
   document.getElementById('roster-day3').addEventListener('blur', () => renderView());
+  document.getElementById('roster-show-month').addEventListener('change', (e) => {
+    state.rosterShowMonth = e.target.checked;
+    renderView();
+  });
   document.getElementById('roster-print-btn').addEventListener('click', () => window.print());
 }
 
