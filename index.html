@@ -1210,6 +1210,14 @@ function renderRosterView(container) {
     <div class="duty-subcolumn">${groups.map(renderMemberBox).join('')}</div>
   `;
 
+function swapGroupsInColumn(col, deptA, deptB) {
+  const idxA = col.findIndex((g) => g.dept === deptA);
+  const idxB = col.findIndex((g) => g.dept === deptB);
+  if (idxA >= 0 && idxB >= 0) {
+    [col[idxA], col[idxB]] = [col[idxB], col[idxA]];
+  }
+}
+
 function moveGroupToColumnFront(cols, deptName, targetIdx) {
   for (let i = 0; i < cols.length; i++) {
     const pos = cols[i].findIndex((g) => g.dept === deptName);
@@ -1221,12 +1229,36 @@ function moveGroupToColumnFront(cols, deptName, targetIdx) {
   }
 }
 
+function moveGroupToColumnEnd(cols, deptName, targetIdx) {
+  for (let i = 0; i < cols.length; i++) {
+    const pos = cols[i].findIndex((g) => g.dept === deptName);
+    if (pos >= 0) {
+      const [group] = cols[i].splice(pos, 1);
+      cols[targetIdx].push(group);
+      return;
+    }
+  }
+}
+
+function moveGroupBeforeAnchor(cols, deptToMove, anchorDept) {
+  let moved = null;
+  for (const col of cols) {
+    const pos = col.findIndex((g) => g.dept === deptToMove);
+    if (pos >= 0) { [moved] = col.splice(pos, 1); break; }
+  }
+  if (!moved) return;
+  for (const col of cols) {
+    const anchorPos = col.findIndex((g) => g.dept === anchorDept);
+    if (anchorPos >= 0) { col.splice(anchorPos, 0, moved); return; }
+  }
+}
+
 const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
   const dayBlocksHtml = [1, 2, 3].map((dayNum) => {
     const label = dayLabels[dayNum - 1];
     let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
-    if (dayNum === 2) { [col1, col2] = [col2, col1]; }
-    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); }
+    if (dayNum === 2) { [col1, col2] = [col2, col1]; swapGroupsInColumn(col1, '現場第一班', '木工班'); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
+    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
     return `
       <div class="duty-day-block">
         <div class="duty-day-header"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>
