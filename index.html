@@ -1511,10 +1511,6 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
         </div>
         <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
-      <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
-        名前をクリックすると、その人の担当日が 1日目→2日目→3日目→部署の既定に戻る、の順に切り替わります。
-        部署ごとの既定の担当日は「マスター」タブの「部署を編集」から設定できます。
-      </p>
       <div class="roster-doc">
         <h1 id="roster-title-display">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>
         <div class="duty-days-row">${dayBlocksHtml}</div>
