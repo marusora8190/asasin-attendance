@@ -206,7 +206,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   .no-print { display: none !important; }
   body { background: white; }
   .roster-wrap { padding: 0 !important; max-width: none !important; }
-  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translateX(-1mm); }
+  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translateX(-0.5mm); }
   .duty-days-row { min-width: 0 !important; }
   .duty-day-block { flex: 0 1 auto !important; }
 }
@@ -273,7 +273,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 }
 .duty-day-header::before { left: 0; }
 .duty-day-header::after { right: 0; }
-.duty-day-columns { display:flex; gap:calc(28px - 0.1mm); align-items:flex-start; }
+.duty-day-columns { display:flex; gap:16px; align-items:flex-start; }
 .duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
 .duty-dept-label { font-size:12px; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
@@ -284,9 +284,9 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   border-bottom: 1px solid var(--color-line);
 }
 .duty-dept-box li:last-child { border-bottom: none; }
-.duty-dept-box li .mark { width:16px; height:16px; text-align:center; flex-shrink:0; font-size:14px; line-height:16px; padding-right:8px; border-right:1px solid #999; }
-.duty-dept-box li .mark.present { border:1px solid #333; border-radius:50%; color: transparent; }
-.duty-dept-box li .mark.absent { border:none; color: var(--color-absent); font-weight:600; }
+.duty-dept-box li .mark { width:16px; align-self:stretch; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; padding-right:8px; border-right:1px solid #999; }
+.duty-dept-box li .mark.present svg { display:block; }
+.duty-dept-box li .mark.absent { color: var(--color-absent); font-weight:600; }
 .duty-dept-box li .name { white-space:nowrap; margin-left: 2mm; }
 
 .loading, .error-msg { padding: 40px; color: var(--color-ink-soft); }
@@ -1194,7 +1194,9 @@ function renderRosterView(container) {
     const rows = group.members.map(m => {
       const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
       const cls = status === '×' ? 'absent' : 'present';
-      const mark = status === '×' ? '×' : '○';
+      const mark = status === '×'
+        ? '×'
+        : '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="6.8" fill="none" stroke="#333" stroke-width="1.2"/></svg>';
       return `<li>
         <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
       </li>`;
@@ -1257,7 +1259,7 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
   const dayBlocksHtml = [1, 2, 3].map((dayNum) => {
     const label = dayLabels[dayNum - 1];
     let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
-    if (dayNum === 2) { [col1, col2] = [col2, col1]; swapGroupsInColumn(col1, '現場第一班', '木工班'); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
+    if (dayNum === 2) { [col1, col2] = [col2, col1]; moveGroupToColumnFront([col1, col2], '現場第一班', 0); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
     if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
     return `
       <div class="duty-day-block">
