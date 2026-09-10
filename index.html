@@ -206,7 +206,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   .no-print { display: none !important; }
   body { background: white; }
   .roster-wrap { padding: 0 !important; max-width: none !important; }
-  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translateX(-0.5mm); }
+  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translate(-0.5mm, 2mm); }
   .duty-days-row { min-width: 0 !important; }
   .duty-day-block { flex: 0 1 auto !important; }
 }
@@ -275,12 +275,12 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .duty-day-header::after { right: 0; }
 .duty-day-columns { display:flex; gap:16px; align-items:flex-start; }
 .duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
-.duty-dept-label { font-size:12px; color: var(--color-ink-soft); margin:0 0 4px; }
+.duty-dept-label { font-size:12px; font-weight:500; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
   list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
 }
 .duty-dept-box li {
-  display:flex; align-items:stretch; gap:8px; font-size:14px; padding: 0 8px;
+  display:flex; align-items:stretch; gap:8px; font-size:14px; font-weight:500; padding: 0 8px;
   border-bottom: 1px solid var(--color-line);
 }
 .duty-dept-box li:last-child { border-bottom: none; }
@@ -357,7 +357,7 @@ const state = {
   rosterDay1: '21日',
   rosterDay2: '22日',
   rosterDay3: '23日',
-  masterOpen: { department: false, position: false, dutyDay: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false },
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -553,6 +553,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-dept-btn">部署を編集</button>
         <button class="btn-dark" id="edit-pos-btn">立場を編集</button>
         <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
+        <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -570,6 +571,10 @@ function renderMasterView(container) {
     state.masterOpen.dutyDay = !state.masterOpen.dutyDay;
     renderMasterPanels();
   });
+  document.getElementById('edit-leader-btn').addEventListener('click', () => {
+    state.masterOpen.leader = !state.masterOpen.leader;
+    renderMasterPanels();
+  });
 
   renderMasterPanels();
 }
@@ -581,6 +586,7 @@ function renderMasterPanels() {
   if (state.masterOpen.department) panelsEl.appendChild(buildMasterPanel('department'));
   if (state.masterOpen.position) panelsEl.appendChild(buildMasterPanel('position'));
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
+  if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
 }
 
 function buildDutyDayPanel() {
@@ -621,6 +627,46 @@ function buildDutyDayPanel() {
         const m = state.members.find((mm) => mm.id === id);
         m.duty_day_override = val;
         await sb.from(T_MEMBERS).update({ duty_day_override: val }).eq('id', id);
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildLeaderPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '420px';
+  panel.innerHTML = `
+    <h2>主任の設定</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      チェックした人は、当番表でその部署の名簿の一番上に表示されます
+      （部署ごとに1人を想定していますが、複数チェックした場合は
+      チェックした人が上位にまとまります）。
+    </p>
+    <ul class="modal-list" id="leader-list" style="max-height:400px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#leader-list');
+    listEl.innerHTML = state.members.map((m) => `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" class="leader-checkbox" data-id="${m.id}" ${m.is_leader ? 'checked' : ''} />
+          <span style="white-space:nowrap;">${escapeHtml(m.name)}<span style="color:var(--color-ink-soft);font-size:11px;"> (${escapeHtml(m.department || '未設定')})</span></span>
+        </label>
+      </li>`).join('');
+
+    listEl.querySelectorAll('.leader-checkbox').forEach((cb) => {
+      const id = Number(cb.dataset.id);
+      cb.addEventListener('change', async () => {
+        const val = cb.checked;
+        const m = state.members.find((mm) => mm.id === id);
+        m.is_leader = val;
+        await sb.from(T_MEMBERS).update({ is_leader: val }).eq('id', id);
+        renderView();
       });
     });
   }
@@ -1191,6 +1237,13 @@ function renderRosterView(container) {
       byDay[bucket].push({ dept: key, members: [] });
     }
     byDay[bucket][idxMap.get(key)].members.push(m);
+  }
+
+  // 各部署グループ内で主任を先頭に並べ替え（それ以外は登録順を維持）
+  for (const bucket of Object.values(byDay)) {
+    for (const g of bucket) {
+      g.members.sort((a, b) => (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1));
+    }
   }
 
   const renderMemberBox = (group) => {
