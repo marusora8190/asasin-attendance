@@ -280,14 +280,17 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
 }
 .duty-dept-box li {
-  display:flex; align-items:center; gap:8px; font-size:14px; padding: calc(5px + 0.5mm) 8px;
+  display:flex; align-items:stretch; gap:8px; font-size:14px; padding: 0 8px;
   border-bottom: 1px solid var(--color-line);
 }
 .duty-dept-box li:last-child { border-bottom: none; }
-.duty-dept-box li .mark { width:16px; align-self:stretch; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px; padding-right:8px; border-right:1px solid #999; }
-.duty-dept-box li .mark.present svg { display:block; }
+.duty-dept-box li .mark {
+  width:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  font-size:16px; font-weight:500; padding: calc(5px + 0.5mm) 8px calc(5px + 0.5mm) 0;
+  border-right:1px solid #999; color: var(--color-ink);
+}
 .duty-dept-box li .mark.absent { color: var(--color-absent); font-weight:600; }
-.duty-dept-box li .name { white-space:nowrap; margin-left: 2mm; }
+.duty-dept-box li .name { white-space:nowrap; margin-left: 2mm; align-self:center; padding: calc(5px + 0.5mm) 0; }
 
 .loading, .error-msg { padding: 40px; color: var(--color-ink-soft); }
 .error-msg { color: var(--color-absent); }
@@ -1194,9 +1197,7 @@ function renderRosterView(container) {
     const rows = group.members.map(m => {
       const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
       const cls = status === '×' ? 'absent' : 'present';
-      const mark = status === '×'
-        ? '×'
-        : '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="6.8" fill="none" stroke="#333" stroke-width="1.2"/></svg>';
+      const mark = status === '×' ? '×' : '○';
       return `<li>
         <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
       </li>`;
