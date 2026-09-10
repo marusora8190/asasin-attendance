@@ -1371,9 +1371,10 @@ function renderRosterView(container) {
   ).join('');
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.rosterMonth ? 'selected' : ''}>${m}月</option>`
-  ).join('');
+  ).join('') + `<option value="template" ${state.rosterMonth === 'template' ? 'selected' : ''}>テンプレ</option>`;
 
-  const monthSeq = calendarMonthToSeq(state.rosterMonth);
+  const isTemplate = state.rosterMonth === 'template';
+  const monthSeq = isTemplate ? null : calendarMonthToSeq(state.rosterMonth);
 
   // 担当日（1〜3）ごとにメンバーを振り分け、日ごとに部署でまとめる（登録順を維持）
   const byDay = { 1: [], 2: [], 3: [], none: [] };
@@ -1399,9 +1400,9 @@ function renderRosterView(container) {
 
   const renderMemberBox = (group) => {
     const rows = group.members.map(m => {
-      const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
-      const cls = status === '×' ? 'absent' : 'present';
-      const mark = status === '×' ? '×' : '○';
+      const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null);
+      const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
+      const mark = status === '×' ? '×' : status === '○' ? '○' : '';
       return `<li>
         <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
       </li>`;
@@ -1489,7 +1490,7 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
     </div>
   ` : '';
 
-  const dateSummary = state.rosterShowMonth
+  const dateSummary = (state.rosterShowMonth && !isTemplate)
     ? `${state.rosterMonth}月${dayLabels.filter(Boolean).join('・')}`
     : dayLabels.filter(Boolean).join('・');
 
@@ -1525,7 +1526,7 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
     renderView();
   });
   document.getElementById('roster-month').addEventListener('change', (e) => {
-    state.rosterMonth = Number(e.target.value);
+    state.rosterMonth = e.target.value === 'template' ? 'template' : Number(e.target.value);
     renderView();
   });
   document.getElementById('roster-org').addEventListener('input', (e) => { state.rosterOrgName = e.target.value; });
