@@ -1912,7 +1912,7 @@ function renderGeppaiRosterView(container) {
   // 保存された配置がない部署のための、初期位置（自動6列振り分けを元にした目安）
   const CANVAS_WIDTH_MM = 230;
   const CANVAS_HEIGHT_MM = 140;
-  const DEFAULT_COL_WIDTH = 40;
+  const DEFAULT_COL_WIDTH = (CANVAS_WIDTH_MM - 38) / 5; // 6列がキャンバス幅にちょうど収まるように調整
   const DEFAULT_DEPT_START_Y = 12; // 表題の初期位置とぶつからないよう少し下から始める
   const columnsForDefault = splitDeptGroupsIntoColumns(groups, 6);
   const defaultPositions = new Map();
