@@ -218,7 +218,6 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   body { background: white; }
   .roster-wrap { padding: 0 !important; max-width: none !important; }
   .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translate(-0.5mm, 4mm); }
-  .roster-doc.geppai-doc { transform: translate(0mm, 0mm); }
   .duty-days-row { min-width: 0 !important; }
   .duty-day-block { flex: 0 1 auto !important; }
 }
@@ -271,14 +270,14 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 /* ---- 当番表 ---- */
 .roster-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 16px; }
 .roster-doc { padding: 32px; overflow-x: auto; }
-.roster-doc:not(.geppai-doc) {
+.roster-doc {
   background-image:
     linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
   background-size: 5mm 5mm;
 }
 @media print {
-  .roster-doc:not(.geppai-doc) { background-image: none; }
+  .roster-doc { background-image: none; }
 }
 .roster-doc h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:500; font-size:16px; margin:0 0 20px; color: var(--color-ink); }
 
@@ -298,39 +297,6 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
 .duty-subcolumn .piece-draggable { cursor: grab; position: relative; z-index: 1; background: var(--color-paper); }
 .duty-subcolumn .piece-draggable.dragging-piece { cursor: grabbing; z-index: 20; opacity: 0.85; }
-
-/* 月例参拝当番表：自由配置キャンバス */
-.geppai-canvas {
-  position: relative;
-  margin: 0 auto;
-  background-image:
-    linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
-  background-size: 5mm 5mm;
-}
-@media print {
-  .geppai-canvas { background-image: none; overflow: hidden; margin: 0; }
-}
-.geppai-canvas .geppai-draggable {
-  position: absolute;
-  cursor: grab;
-  background: var(--color-paper);
-}
-.geppai-canvas .geppai-draggable.dragging {
-  cursor: grabbing;
-  z-index: 10;
-  opacity: 0.85;
-}
-.geppai-canvas .geppai-dept-box { width: 38mm; }
-.geppai-canvas .geppai-title-box {
-  white-space: nowrap; margin: 0; padding: 2px 4px;
-  font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
-  font-weight: 500; font-size: 16px; color: var(--color-ink);
-}
-.geppai-canvas .geppai-daylabel-box {
-  white-space: nowrap; padding: 2px 6px; width: 76mm;
-  text-align: center; font-size: 14px; font-weight: 500; color: var(--color-ink);
-}
 .duty-dept-label { font-size:12px; font-weight:500; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
   list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
@@ -374,7 +340,6 @@ const T_FISCAL_YEARS = 'asagami_fiscal_years';
 const T_DEPARTMENTS = 'asagami_departments';
 const T_POSITIONS = 'asagami_positions';
 const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
-const T_GEPPAI_DEPT_POSITIONS = 'asagami_geppai_dept_positions';
 const T_DUTY_POSITIONS = 'asagami_duty_positions';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
@@ -422,11 +387,6 @@ const state = {
   rosterDay2: '22日',
   rosterDay3: '23日',
   rosterShowMonth: true,
-  geppaiRosterMonth: new Date().getMonth() + 1,
-  geppaiRosterOrgName: '営繕課',
-  geppaiRosterDay1: '',
-  geppaiRosterShowMonth: true,
-  geppaiDeptPositions: new Map(), // department名 -> {x, y}（mm単位）
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝神当番表用）
   masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
@@ -521,7 +481,6 @@ async function renderMainShell() {
             <button class="tab" data-view="report">朝神提出（月次報告書）</button>
             <button class="tab" data-view="report-geppai">月例参拝（月次報告書）</button>
             <button class="tab" data-view="roster">朝神当番表</button>
-            <button class="tab" data-view="roster-geppai">月例参拝当番表</button>
             <button class="tab" data-view="archive">保管記録</button>
             <button class="tab" data-view="master">マスター</button>
           </div>
@@ -575,7 +534,6 @@ function renderView() {
   else if (state.view === 'report') renderReportView(container, 'asagami');
   else if (state.view === 'report-geppai') renderReportView(container, 'geppai');
   else if (state.view === 'roster') renderRosterView(container);
-  else if (state.view === 'roster-geppai') renderGeppaiRosterView(container);
   else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
 }
@@ -1435,7 +1393,21 @@ function renderReportView(container, category) {
   const reikiYear = fiscalYear ? (state[monthField] >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1) : null;
   const monthSeq = calendarMonthToSeq(state[monthField]);
 
-  const membersWithNo = state.members.map((m, i) => ({ ...m, no: i + 1 }));
+  let membersForDisplay = state.members;
+  if (isGeppai) {
+    // 月例参拝の報告書専用の並び順（営繕課はここには表記しない）
+    const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
+    const deptOrder = new Map(GEPPAI_REPORT_DEPT_ORDER.map((name, i) => [name, i]));
+    membersForDisplay = state.members
+      .filter((m) => m.department !== '営繕課')
+      .slice()
+      .sort((a, b) => {
+        const orderA = deptOrder.get(a.department) ?? Infinity;
+        const orderB = deptOrder.get(b.department) ?? Infinity;
+        return orderA - orderB;
+      });
+  }
+  const membersWithNo = membersForDisplay.map((m, i) => ({ ...m, no: i + 1 }));
 
   let presentCount = 0;
   for (const m of membersWithNo) {
@@ -1443,7 +1415,7 @@ function renderReportView(container, category) {
   }
 
   const posCounts = new Map();
-  for (const m of state.members) posCounts.set(m.position, (posCounts.get(m.position) ?? 0) + 1);
+  for (const m of membersForDisplay) posCounts.set(m.position, (posCounts.get(m.position) ?? 0) + 1);
   const positionCounts = [];
   for (const p of POSITION_ORDER) { if (posCounts.has(p)) { positionCounts.push({label:p, count:posCounts.get(p)}); posCounts.delete(p); } }
   for (const [label, count] of posCounts) positionCounts.push({ label, count });
@@ -1484,7 +1456,7 @@ function renderReportView(container, category) {
     <div class="report-summary-block">
       <table class="member-table summary-table">
         <thead><tr><th>立場</th><th>人数</th></tr></thead>
-        <tbody>${summaryRows}<tr class="total-row"><td>合　計</td><td class="num">${state.members.length}名</td></tr></tbody>
+        <tbody>${summaryRows}<tr class="total-row"><td>合　計</td><td class="num">${membersForDisplay.length}名</td></tr></tbody>
       </table>
     </div>`;
 
@@ -1514,7 +1486,7 @@ function renderReportView(container, category) {
           `}
         </div>
       </header>
-      <p class="report-summary-line">【総員：${state.members.length}名、出席者：${presentCount}名】</p>
+      <p class="report-summary-line">【総員：${membersForDisplay.length}名、出席者：${presentCount}名】</p>
       <div class="report-columns">
         ${renderNameColumn(left)}
         ${renderNameColumn(right)}
@@ -1530,7 +1502,7 @@ function renderReportView(container, category) {
         <div class="field" style="flex:1;min-width:160px;"><label>部署名（表題）</label><input type="text" id="${idPrefix}-org" value="${escapeHtml(state[orgField])}" style="width:100%;" /></div>
         <div class="field" style="min-width:70px;">
           <label>左：人数</label>
-          <input type="number" id="${idPrefix}-left-count" min="0" max="${state.members.length}" value="${left.length}" style="width:100%;" />
+          <input type="number" id="${idPrefix}-left-count" min="0" max="${membersForDisplay.length}" value="${left.length}" style="width:100%;" />
         </div>
         <div class="field" style="min-width:70px;">
           <label>右：人数</label>
@@ -1561,7 +1533,7 @@ function renderReportView(container, category) {
   document.getElementById(`${idPrefix}-org`).addEventListener('blur', () => renderView());
   document.getElementById(`${idPrefix}-left-count`).addEventListener('change', (e) => {
     const val = Number(e.target.value);
-    state[leftCountField] = Number.isFinite(val) ? Math.min(Math.max(val, 0), state.members.length) : null;
+    state[leftCountField] = Number.isFinite(val) ? Math.min(Math.max(val, 0), membersForDisplay.length) : null;
     renderView();
   });
   document.getElementById(`${idPrefix}-split-reset-btn`).addEventListener('click', () => {
@@ -1873,213 +1845,6 @@ function setupPieceDragAndDrop() {
   });
 }
 
-// ==================== 月例参拝当番表 ====================
-function renderGeppaiRosterView(container) {
-  setPrintPageSize('size: 250mm 176mm; margin: 5mm;');
-
-  if (!state._geppaiPositionsLoaded) {
-    container.innerHTML = `<div class="loading">読み込み中…</div>`;
-    sb.from(T_GEPPAI_DEPT_POSITIONS).select('*').then(({ data }) => {
-      state.geppaiDeptPositions = new Map((data ?? []).map((r) => [r.department, { x: Number(r.x), y: Number(r.y) }]));
-      state._geppaiPositionsLoaded = true;
-      renderView();
-    });
-    return;
-  }
-
-  const fyOptions = state.fiscalYears.map(fy =>
-    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
-  ).join('');
-  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
-    `<option value="${m}" ${m === state.geppaiRosterMonth ? 'selected' : ''}>${m}月</option>`
-  ).join('') + `<option value="template" ${state.geppaiRosterMonth === 'template' ? 'selected' : ''}>テンプレ</option>`;
-
-  const isTemplate = state.geppaiRosterMonth === 'template';
-  const monthSeq = isTemplate ? null : calendarMonthToSeq(state.geppaiRosterMonth);
-
-  // 月例参拝には当番日（1〜3日目）の区別がないため、部署ごとにまとめるだけ（登録順を維持）
-  const groups = [];
-  const idxMap = new Map();
-  for (const m of state.members) {
-    const key = m.department || '（部署未設定）';
-    if (!idxMap.has(key)) { idxMap.set(key, groups.length); groups.push({ dept: key, members: [] }); }
-    groups[idxMap.get(key)].members.push(m);
-  }
-  // 各部署グループ内で主任を先頭に並べ替え（それ以外は登録順を維持）
-  for (const g of groups) {
-    g.members.sort((a, b) => (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1));
-  }
-
-  // 保存された配置がない部署のための、初期位置（自動6列振り分けを元にした目安）
-  const CANVAS_WIDTH_MM = 230;
-  const CANVAS_HEIGHT_MM = 140;
-  const DEFAULT_COL_WIDTH = (CANVAS_WIDTH_MM - 38) / 5; // 6列がキャンバス幅にちょうど収まるように調整
-  const DEFAULT_DEPT_START_Y = 12; // 表題の初期位置とぶつからないよう少し下から始める
-  const columnsForDefault = splitDeptGroupsIntoColumns(groups, 6);
-  const defaultPositions = new Map();
-  defaultPositions.set('__title__', { x: 0, y: 0 });
-  columnsForDefault.forEach((col, colIdx) => {
-    let y = DEFAULT_DEPT_START_Y;
-    const x = colIdx * DEFAULT_COL_WIDTH;
-    col.forEach((g) => {
-      defaultPositions.set(g.dept, { x, y });
-      y += 8 + g.members.length * 6.3 + 4;
-    });
-  });
-
-  const renderDeptBox = (group) => {
-    const pos = state.geppaiDeptPositions.get(group.dept) ?? defaultPositions.get(group.dept) ?? { x: 0, y: 0 };
-    const rows = group.members.map(m => {
-      const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'geppai', monthSeq)) ?? null);
-      const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
-      const mark = status === '×' ? '×' : status === '○' ? '○' : '';
-      return `<li>
-        <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
-      </li>`;
-    }).join('');
-    return `
-      <div class="duty-dept geppai-draggable geppai-dept-box" data-dept="${escapeHtml(group.dept)}" style="left:${pos.x}mm;top:${pos.y}mm;">
-        <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
-        <ul class="duty-dept-box">${rows}</ul>
-      </div>`;
-  };
-
-  const dayLabel = state.geppaiRosterDay1 && state.geppaiRosterDay1.trim();
-
-  const dateSummary = (state.geppaiRosterShowMonth && !isTemplate)
-    ? `${state.geppaiRosterMonth}月${dayLabel || ''}`
-    : (dayLabel || '');
-
-  const TITLE_KEY = '__title__';
-  const titlePos = state.geppaiDeptPositions.get(TITLE_KEY) ?? defaultPositions.get(TITLE_KEY) ?? { x: 0, y: 0 };
-  const titleHtml = `
-    <h1 class="geppai-draggable geppai-title-box" data-dept="${TITLE_KEY}" style="left:${titlePos.x}mm;top:${titlePos.y}mm;">${escapeHtml(state.geppaiRosterOrgName)}　月例参拝出欠表　${escapeHtml(dateSummary)}</h1>`;
-
-  container.innerHTML = `
-    <div class="roster-wrap">
-      <div class="toolbar no-print">
-        <div class="field"><label>年度</label><select id="geppai-roster-fy">${fyOptions}</select></div>
-        <div class="field"><label>対象月</label><select id="geppai-roster-month">${monthOptions}</select></div>
-        <div class="field" style="min-width:160px;"><label>部署名（表題）</label><input type="text" id="geppai-roster-org" value="${escapeHtml(state.geppaiRosterOrgName)}" style="width:100%;" /></div>
-        <div class="field" style="min-width:90px;"><label>日付</label><input type="text" id="geppai-roster-day1" value="${escapeHtml(state.geppaiRosterDay1)}" placeholder="例: 21日" style="width:100%;" /></div>
-        <div class="field">
-          <label>表題</label>
-          <label style="display:flex;align-items:center;gap:6px;height:38px;white-space:nowrap;font-size:14px;">
-            <input type="checkbox" id="geppai-roster-show-month" ${state.geppaiRosterShowMonth ? 'checked' : ''} />
-            「○月」を表示する
-          </label>
-        </div>
-        <div class="field"><label>&nbsp;</label><button class="btn-light" id="geppai-reset-layout-btn">配置をリセット</button></div>
-        <div class="field"><label>&nbsp;</label><button class="btn-dark" id="geppai-save-layout-btn">配置を保存</button></div>
-        <button class="btn-dark" id="geppai-roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
-      </div>
-      <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
-        表題や枠の部分をクリックしたまま掴んで、背景の方眼(5mm四方)に合わせてお好きな位置に配置できます。配置はドラッグのたびに自動保存されますが、「配置を保存」ボタンでまとめて保存し直すこともできます。
-      </p>
-      <div class="roster-doc geppai-doc">
-        <div class="geppai-canvas" id="geppai-canvas" style="width:${CANVAS_WIDTH_MM}mm;height:${CANVAS_HEIGHT_MM}mm;">
-          ${titleHtml}
-          ${groups.map(renderDeptBox).join('')}
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('geppai-roster-fy').addEventListener('change', async (e) => {
-    state.fiscalYearId = Number(e.target.value);
-    await loadAttendanceForFiscalYear();
-    renderView();
-  });
-  document.getElementById('geppai-roster-month').addEventListener('change', (e) => {
-    state.geppaiRosterMonth = e.target.value === 'template' ? 'template' : Number(e.target.value);
-    renderView();
-  });
-  document.getElementById('geppai-roster-org').addEventListener('input', (e) => { state.geppaiRosterOrgName = e.target.value; });
-  document.getElementById('geppai-roster-org').addEventListener('blur', () => renderView());
-  document.getElementById('geppai-roster-day1').addEventListener('input', (e) => { state.geppaiRosterDay1 = e.target.value; });
-  document.getElementById('geppai-roster-day1').addEventListener('blur', () => renderView());
-  document.getElementById('geppai-roster-show-month').addEventListener('change', (e) => {
-    state.geppaiRosterShowMonth = e.target.checked;
-    renderView();
-  });
-  document.getElementById('geppai-reset-layout-btn').addEventListener('click', async () => {
-    if (!confirm('すべての部署の配置を自動配置に戻します。よろしいですか？')) return;
-    await sb.from(T_GEPPAI_DEPT_POSITIONS).delete().neq('department', '__none__');
-    state.geppaiDeptPositions = new Map();
-    renderView();
-  });
-  document.getElementById('geppai-save-layout-btn').addEventListener('click', async () => {
-    const rows = [];
-    document.querySelectorAll('#geppai-canvas .geppai-draggable').forEach((el) => {
-      const dept = el.dataset.dept;
-      const x = parseFloat(el.style.left) || 0;
-      const y = parseFloat(el.style.top) || 0;
-      state.geppaiDeptPositions.set(dept, { x, y });
-      rows.push({ department: dept, x, y });
-    });
-    if (rows.length > 0) {
-      await sb.from(T_GEPPAI_DEPT_POSITIONS).upsert(rows, { onConflict: 'department' });
-    }
-    alert('現在の配置を保存しました。');
-  });
-  document.getElementById('geppai-roster-print-btn').addEventListener('click', () => window.print());
-
-  setupGenericDragAndDrop('geppai-canvas', T_GEPPAI_DEPT_POSITIONS, 'department', state.geppaiDeptPositions);
-}
-
-function setupGenericDragAndDrop(canvasId, table, keyField, positionsMap) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  const GRID_MM = 2.5;
-
-  canvas.querySelectorAll('.geppai-draggable').forEach((box) => {
-    box.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      const key = box.dataset.dept;
-      const canvasRect = canvas.getBoundingClientRect();
-      const mmPerPx = parseFloat(canvas.style.width) / canvasRect.width;
-
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startLeftMm = parseFloat(box.style.left) || 0;
-      const startTopMm = parseFloat(box.style.top) || 0;
-
-      box.classList.add('dragging');
-      document.body.style.userSelect = 'none';
-
-      function onMove(ev) {
-        const dxMm = (ev.clientX - startX) * mmPerPx;
-        const dyMm = (ev.clientY - startY) * mmPerPx;
-        let newX = startLeftMm + dxMm;
-        let newY = startTopMm + dyMm;
-        newX = Math.round(newX / GRID_MM) * GRID_MM;
-        newY = Math.round(newY / GRID_MM) * GRID_MM;
-        // 印刷範囲の外（待機スペース）にも動かせるよう、余裕を持たせた範囲だけ制限する
-        const minX = -100, minY = -60;
-        const maxX = parseFloat(canvas.style.width) + 150;
-        const maxY = parseFloat(canvas.style.height) + 150;
-        newX = Math.min(Math.max(minX, newX), maxX);
-        newY = Math.min(Math.max(minY, newY), maxY);
-        box.style.left = `${newX}mm`;
-        box.style.top = `${newY}mm`;
-      }
-
-      async function onUp() {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        box.classList.remove('dragging');
-        document.body.style.userSelect = '';
-        const finalX = parseFloat(box.style.left) || 0;
-        const finalY = parseFloat(box.style.top) || 0;
-        positionsMap.set(key, { x: finalX, y: finalY });
-        await sb.from(table).upsert({ [keyField]: key, x: finalX, y: finalY }, { onConflict: keyField });
-      }
-
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
-  });
-}
 
 // ==================== 起動 ====================
 init();
