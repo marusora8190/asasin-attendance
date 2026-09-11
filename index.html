@@ -286,6 +286,29 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .duty-day-header::after { right: 0; }
 .duty-day-columns { display:flex; gap:16px; align-items:flex-start; }
 .duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
+
+/* 月例参拝当番表：自由配置キャンバス */
+.geppai-canvas {
+  position: relative;
+  background-image:
+    linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
+  background-size: 5mm 5mm;
+}
+@media print {
+  .geppai-canvas { background-image: none; }
+}
+.geppai-canvas .duty-dept {
+  position: absolute;
+  width: 38mm;
+  cursor: grab;
+  background: var(--color-paper);
+}
+.geppai-canvas .duty-dept.dragging {
+  cursor: grabbing;
+  z-index: 10;
+  opacity: 0.85;
+}
 .duty-dept-label { font-size:12px; font-weight:500; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
   list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
@@ -329,6 +352,7 @@ const T_FISCAL_YEARS = 'asagami_fiscal_years';
 const T_DEPARTMENTS = 'asagami_departments';
 const T_POSITIONS = 'asagami_positions';
 const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
+const T_GEPPAI_DEPT_POSITIONS = 'asagami_geppai_dept_positions';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
@@ -379,6 +403,7 @@ const state = {
   geppaiRosterOrgName: '営繕課',
   geppaiRosterDay1: '',
   geppaiRosterShowMonth: true,
+  geppaiDeptPositions: new Map(), // department名 -> {x, y}（mm単位）
   masterOpen: { department: false, position: false, dutyDay: false, leader: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
@@ -1708,6 +1733,17 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
 // ==================== 月例参拝当番表 ====================
 function renderGeppaiRosterView(container) {
   setPrintPageSize('size: 250mm 176mm; margin: 5mm;');
+
+  if (!state._geppaiPositionsLoaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    sb.from(T_GEPPAI_DEPT_POSITIONS).select('*').then(({ data }) => {
+      state.geppaiDeptPositions = new Map((data ?? []).map((r) => [r.department, { x: Number(r.x), y: Number(r.y) }]));
+      state._geppaiPositionsLoaded = true;
+      renderView();
+    });
+    return;
+  }
+
   const fyOptions = state.fiscalYears.map(fy =>
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
@@ -1731,7 +1767,23 @@ function renderGeppaiRosterView(container) {
     g.members.sort((a, b) => (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1));
   }
 
-  const renderMemberBox = (group) => {
+  // 保存された配置がない部署のための、初期位置（自動6列振り分けを元にした目安）
+  const CANVAS_WIDTH_MM = 240;
+  const CANVAS_HEIGHT_MM = 300;
+  const DEFAULT_COL_WIDTH = 40;
+  const columnsForDefault = splitDeptGroupsIntoColumns(groups, 6);
+  const defaultPositions = new Map();
+  columnsForDefault.forEach((col, colIdx) => {
+    let y = 0;
+    const x = colIdx * DEFAULT_COL_WIDTH;
+    col.forEach((g) => {
+      defaultPositions.set(g.dept, { x, y });
+      y += 8 + g.members.length * 6.3 + 4;
+    });
+  });
+
+  const renderDeptBox = (group) => {
+    const pos = state.geppaiDeptPositions.get(group.dept) ?? defaultPositions.get(group.dept) ?? { x: 0, y: 0 };
     const rows = group.members.map(m => {
       const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'geppai', monthSeq)) ?? null);
       const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
@@ -1741,17 +1793,11 @@ function renderGeppaiRosterView(container) {
       </li>`;
     }).join('');
     return `
-      <div class="duty-dept">
+      <div class="duty-dept geppai-dept-box" data-dept="${escapeHtml(group.dept)}" style="left:${pos.x}mm;top:${pos.y}mm;">
         <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
         <ul class="duty-dept-box">${rows}</ul>
       </div>`;
   };
-
-  const renderSubcolumn = (grps) => `
-    <div class="duty-subcolumn">${grps.map(renderMemberBox).join('')}</div>
-  `;
-
-  const [col1, col2] = splitDeptGroupsIntoColumns(groups, 2);
 
   const dayLabel = state.geppaiRosterDay1 && state.geppaiRosterDay1.trim();
 
@@ -1773,18 +1819,16 @@ function renderGeppaiRosterView(container) {
             「○月」を表示する
           </label>
         </div>
+        <div class="field"><label>&nbsp;</label><button class="btn-light" id="geppai-reset-layout-btn">配置をリセット</button></div>
         <button class="btn-dark" id="geppai-roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
+      <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
+        枠の部分をクリックしたまま掴んで、背景の方眼(5mm四方)に合わせてお好きな位置に配置できます。配置は自動的に保存されます。
+      </p>
       <div class="roster-doc">
         <h1>${escapeHtml(state.geppaiRosterOrgName)}　月例参拝出欠表　${escapeHtml(dateSummary)}</h1>
-        <div class="duty-days-row">
-          <div class="duty-day-block">
-            ${dayLabel ? `<div class="duty-day-header"><span>${escapeHtml(dayLabel)}</span></div>` : ''}
-            <div class="duty-day-columns">
-              ${renderSubcolumn(col1)}
-              ${renderSubcolumn(col2)}
-            </div>
-          </div>
+        <div class="geppai-canvas" id="geppai-canvas" style="width:${CANVAS_WIDTH_MM}mm;height:${CANVAS_HEIGHT_MM}mm;">
+          ${groups.map(renderDeptBox).join('')}
         </div>
       </div>
     </div>
@@ -1807,7 +1851,65 @@ function renderGeppaiRosterView(container) {
     state.geppaiRosterShowMonth = e.target.checked;
     renderView();
   });
+  document.getElementById('geppai-reset-layout-btn').addEventListener('click', async () => {
+    if (!confirm('すべての部署の配置を自動配置に戻します。よろしいですか？')) return;
+    await sb.from(T_GEPPAI_DEPT_POSITIONS).delete().neq('department', '__none__');
+    state.geppaiDeptPositions = new Map();
+    renderView();
+  });
   document.getElementById('geppai-roster-print-btn').addEventListener('click', () => window.print());
+
+  setupGeppaiDragAndDrop();
+}
+
+function setupGeppaiDragAndDrop() {
+  const canvas = document.getElementById('geppai-canvas');
+  if (!canvas) return;
+  const GRID_MM = 5;
+
+  canvas.querySelectorAll('.geppai-dept-box').forEach((box) => {
+    box.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const dept = box.dataset.dept;
+      const canvasRect = canvas.getBoundingClientRect();
+      const mmPerPx = parseFloat(canvas.style.width) / canvasRect.width;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startLeftMm = parseFloat(box.style.left) || 0;
+      const startTopMm = parseFloat(box.style.top) || 0;
+
+      box.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+
+      function onMove(ev) {
+        const dxMm = (ev.clientX - startX) * mmPerPx;
+        const dyMm = (ev.clientY - startY) * mmPerPx;
+        let newX = startLeftMm + dxMm;
+        let newY = startTopMm + dyMm;
+        newX = Math.round(newX / GRID_MM) * GRID_MM;
+        newY = Math.round(newY / GRID_MM) * GRID_MM;
+        newX = Math.max(0, newX);
+        newY = Math.max(0, newY);
+        box.style.left = `${newX}mm`;
+        box.style.top = `${newY}mm`;
+      }
+
+      async function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        box.classList.remove('dragging');
+        document.body.style.userSelect = '';
+        const finalX = parseFloat(box.style.left) || 0;
+        const finalY = parseFloat(box.style.top) || 0;
+        state.geppaiDeptPositions.set(dept, { x: finalX, y: finalY });
+        await sb.from(T_GEPPAI_DEPT_POSITIONS).upsert({ department: dept, x: finalX, y: finalY }, { onConflict: 'department' });
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 // ==================== 起動 ====================
