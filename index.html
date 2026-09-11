@@ -130,6 +130,12 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 
 /* ---- 出欠入力グリッド ---- */
 .grid-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
+.help-view { max-width: 820px; }
+.help-section { margin-top: 28px; }
+.help-section h2 { font-size: 16px; color: var(--color-navy); margin: 0 0 8px; }
+.help-section p { margin: 0 0 8px; color: var(--color-ink); }
+.help-section ul { margin: 0; padding-left: 20px; }
+.help-section li { margin-bottom: 6px; line-height: 1.6; }
 .grid-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px; }
 .grid-header h1 { font-size: 20px; margin: 0; color: var(--color-navy); }
 .grid-header .eyebrow { font-size: 12px; color: var(--color-ink-soft); margin: 0 0 4px; }
@@ -483,6 +489,7 @@ async function renderMainShell() {
             <button class="tab" data-view="roster">朝神当番表</button>
             <button class="tab" data-view="archive">保管記録</button>
             <button class="tab" data-view="master">マスター</button>
+            <button class="tab" data-view="help">使い方</button>
           </div>
           <div style="display:flex;align-items:center;gap:12px;">
             <button class="btn-update" id="hard-refresh-btn">Update</button>
@@ -536,6 +543,7 @@ function renderView() {
   else if (state.view === 'roster') renderRosterView(container);
   else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
+  else if (state.view === 'help') renderHelpView(container);
 }
 
 // ==================== データ取得 ====================
@@ -576,6 +584,86 @@ function currentFiscalYearLabel() {
 }
 
 // ==================== マスター（部署・立場の編集） ====================
+// ==================== 使い方 ====================
+function renderHelpView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap help-view">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">使い方</h1>
+        </div>
+      </div>
+
+      <section class="help-section">
+        <h2>① 出欠入力</h2>
+        <p>メンバーごとに、月ごとの「朝神」「月例参拝」の出欠(○×)を入力する画面です。</p>
+        <ul>
+          <li>上部の「朝神」「月例参拝」タブで、入力する区分を切り替えます。</li>
+          <li>各月のマスをクリックすると、空欄→○→×→空欄の順に切り替わります。</li>
+          <li>氏名・部署・立場はその場で書き換えられます(部署・立場はプルダウンから選択)。</li>
+          <li>行の左端の「⠿」を掴んでドラッグすると、メンバーの並び順を変えられます。「↑」「↓」ボタンでも1つずつ動かせます。</li>
+          <li>「＋年度追加」で新しい年度を追加できます。今年度のデータが消えることはありません。</li>
+          <li>「○月分 全員出席」「○月分未入力を○にする」「この月をクリア」は、対象月を選んでからまとめて操作できます。</li>
+          <li>「×」ボタンは、メンバーを退職扱いにして一覧から外します。<strong>これまでの出欠記録は削除されず、データベースには残ります。</strong></li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>② 朝神提出／月例参拝（月次報告書）</h2>
+        <p>1ヶ月分の出欠を、提出用のB5用紙1枚のレイアウトで印刷するための画面です。</p>
+        <ul>
+          <li>「年度」「対象月」「部署名(表題)」を設定してから、「印刷 / PDFで保存」を押してください。</li>
+          <li>「左：人数」で、氏名一覧を左右どちらに何名ずつ振り分けるか調整できます(「自動(半分ずつ)」で元に戻せます)。</li>
+          <li>人数が多い月は、文字サイズはそのまま、行の余白だけ自動的に少し詰めて1枚に収まるよう調整されます。</li>
+          <li>月例参拝の報告書は、営繕課を除いた部署順(庶務係→現場第一班→…→空調衛生係)で、各部署の主任が一番上に来るように並びます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>③ 朝神当番表</h2>
+        <p>1日目・2日目・3日目ごとに、部署の当番割り当てと出欠を印刷するための当番表です。</p>
+        <ul>
+          <li>「対象月」で出欠結果を反映する月を選べます。「テンプレ」を選ぶと、○×を一切表示しない空欄の状態で印刷できます(配布用の当番表として使えます)。</li>
+          <li>「『○月』を表示する」のチェックを外すと、表題から月の表示だけを消せます。</li>
+          <li>各部署の枠は、クリックしたまま掴んで少しずらして配置を調整できます(自動保存されます)。「配置をリセット」で元の並びに戻せます。</li>
+          <li>担当日を個別に変えたい人は、「マスター」タブの「担当日の個別設定」で設定します。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>④ 保管記録</h2>
+        <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
+        <ul>
+          <li>年度・区分(朝神／月例参拝)を選んで、部署ごとの出欠一覧を確認できます。</li>
+          <li>保管された記録は、保管されてから<strong>3年を過ぎると自動的に完全に削除</strong>されます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑤ マスター</h2>
+        <p>部署・立場など、システム全体で使う基本情報を管理する画面です。</p>
+        <ul>
+          <li><strong>部署を編集</strong>：部署名の追加・変更・削除と、部署ごとの既定の当番日(1〜3日目)を設定します。</li>
+          <li><strong>立場を編集</strong>：立場(役職)名の一覧を管理します。</li>
+          <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
+          <li><strong>主任の設定</strong>：チェックした人は、当番表でその部署の一番上に表示されます。</li>
+          <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>年度と記録の扱いについて</h2>
+        <ul>
+          <li>出欠データは年度ごとに分かれて保存されます。年度が変わっても、過去の年度のデータは消えず、「年度」のプルダウンでいつでも見返せます。</li>
+          <li>年度が終わる(3月末を過ぎる)と、自動的にその年度の記録が「保管記録」にコピーされます。</li>
+          <li>退職者を出欠入力画面で「×」で外しても、記録は削除されず、通常の年度データ・保管記録にそのまま残ります。</li>
+        </ul>
+      </section>
+    </div>
+  `;
+}
+
 function renderMasterView(container) {
   container.innerHTML = `
     <div class="grid-wrap">
@@ -735,7 +823,13 @@ function buildMemberDeptPanel() {
 
   function renderList() {
     const listEl = panel.querySelector('#member-dept-list');
-    listEl.innerHTML = state.members.map((m) => `
+    const deptOrder = new Map(state.departments.map((d, i) => [d.name, i]));
+    const sortedMembers = [...state.members].sort((a, b) => {
+      const orderA = deptOrder.get(a.department) ?? Infinity;
+      const orderB = deptOrder.get(b.department) ?? Infinity;
+      return orderA - orderB;
+    });
+    listEl.innerHTML = sortedMembers.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
         <select class="member-dept-select" data-id="${m.id}" style="flex-shrink:0;min-width:150px;">
@@ -1110,7 +1204,7 @@ function renderGridView(container) {
           <div style="display:flex;gap:4px;justify-content:center;">
             <button class="icon-btn" data-action="move-up" data-member="${m.id}" ${index === 0 ? 'disabled' : ''} title="上へ">↑</button>
             <button class="icon-btn" data-action="move-down" data-member="${m.id}" ${index === state.members.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
-            <button class="icon-btn danger" data-action="remove" data-member="${m.id}" title="削除">×</button>
+            <button class="icon-btn danger" data-action="remove" data-member="${m.id}" title="退職（一覧から非表示。記録は残ります）">×</button>
           </div>
         </td>
       </tr>
@@ -1329,8 +1423,8 @@ async function addMember() {
 async function removeMember(memberId) {
   const m = state.members.find(m => m.id === memberId);
   const label = m && m.name.trim() ? m.name : 'このメンバー';
-  if (!confirm(`${label} を削除します。よろしいですか？（出欠データも削除されます）`)) return;
-  await sb.from(T_MEMBERS).delete().eq('id', memberId);
+  if (!confirm(`${label} を一覧から外します（退職扱い）。よろしいですか？\n※これまでの出欠記録・氏名・部署・立場のデータは削除されず、そのまま残ります。`)) return;
+  await sb.from(T_MEMBERS).update({ is_active: false }).eq('id', memberId);
   state.members = state.members.filter(m => m.id !== memberId);
   renderView();
 }
