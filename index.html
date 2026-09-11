@@ -375,6 +375,10 @@ const state = {
   rosterDay2: '22日',
   rosterDay3: '23日',
   rosterShowMonth: true,
+  geppaiRosterMonth: new Date().getMonth() + 1,
+  geppaiRosterOrgName: '営繕課',
+  geppaiRosterDay1: '',
+  geppaiRosterShowMonth: true,
   masterOpen: { department: false, position: false, dutyDay: false, leader: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
@@ -467,7 +471,8 @@ async function renderMainShell() {
             <button class="tab" data-view="grid">出欠入力</button>
             <button class="tab" data-view="report">朝神提出（月次報告書）</button>
             <button class="tab" data-view="report-geppai">月例参拝（月次報告書）</button>
-            <button class="tab" data-view="roster">当番表</button>
+            <button class="tab" data-view="roster">朝神当番表</button>
+            <button class="tab" data-view="roster-geppai">月例参拝当番表</button>
             <button class="tab" data-view="archive">保管記録</button>
             <button class="tab" data-view="master">マスター</button>
           </div>
@@ -521,6 +526,7 @@ function renderView() {
   else if (state.view === 'report') renderReportView(container, 'asagami');
   else if (state.view === 'report-geppai') renderReportView(container, 'geppai');
   else if (state.view === 'roster') renderRosterView(container);
+  else if (state.view === 'roster-geppai') renderGeppaiRosterView(container);
   else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
 }
@@ -1697,6 +1703,111 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
     renderView();
   });
   document.getElementById('roster-print-btn').addEventListener('click', () => window.print());
+}
+
+// ==================== 月例参拝当番表 ====================
+function renderGeppaiRosterView(container) {
+  setPrintPageSize('size: 250mm 176mm; margin: 5mm;');
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.geppaiRosterMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('') + `<option value="template" ${state.geppaiRosterMonth === 'template' ? 'selected' : ''}>テンプレ</option>`;
+
+  const isTemplate = state.geppaiRosterMonth === 'template';
+  const monthSeq = isTemplate ? null : calendarMonthToSeq(state.geppaiRosterMonth);
+
+  // 月例参拝には当番日（1〜3日目）の区別がないため、部署ごとにまとめるだけ（登録順を維持）
+  const groups = [];
+  const idxMap = new Map();
+  for (const m of state.members) {
+    const key = m.department || '（部署未設定）';
+    if (!idxMap.has(key)) { idxMap.set(key, groups.length); groups.push({ dept: key, members: [] }); }
+    groups[idxMap.get(key)].members.push(m);
+  }
+  // 各部署グループ内で主任を先頭に並べ替え（それ以外は登録順を維持）
+  for (const g of groups) {
+    g.members.sort((a, b) => (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1));
+  }
+
+  const renderMemberBox = (group) => {
+    const rows = group.members.map(m => {
+      const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'geppai', monthSeq)) ?? null);
+      const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
+      const mark = status === '×' ? '×' : status === '○' ? '○' : '';
+      return `<li>
+        <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
+      </li>`;
+    }).join('');
+    return `
+      <div class="duty-dept">
+        <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
+        <ul class="duty-dept-box">${rows}</ul>
+      </div>`;
+  };
+
+  const renderSubcolumn = (grps) => `
+    <div class="duty-subcolumn">${grps.map(renderMemberBox).join('')}</div>
+  `;
+
+  const [col1, col2] = splitDeptGroupsIntoColumns(groups, 2);
+
+  const dayLabel = state.geppaiRosterDay1 && state.geppaiRosterDay1.trim();
+
+  const dateSummary = (state.geppaiRosterShowMonth && !isTemplate)
+    ? `${state.geppaiRosterMonth}月${dayLabel || ''}`
+    : (dayLabel || '');
+
+  container.innerHTML = `
+    <div class="roster-wrap">
+      <div class="toolbar no-print">
+        <div class="field"><label>年度</label><select id="geppai-roster-fy">${fyOptions}</select></div>
+        <div class="field"><label>対象月</label><select id="geppai-roster-month">${monthOptions}</select></div>
+        <div class="field" style="min-width:160px;"><label>部署名（表題）</label><input type="text" id="geppai-roster-org" value="${escapeHtml(state.geppaiRosterOrgName)}" style="width:100%;" /></div>
+        <div class="field" style="min-width:90px;"><label>日付</label><input type="text" id="geppai-roster-day1" value="${escapeHtml(state.geppaiRosterDay1)}" placeholder="例: 21日" style="width:100%;" /></div>
+        <div class="field">
+          <label>表題</label>
+          <label style="display:flex;align-items:center;gap:6px;height:38px;white-space:nowrap;font-size:14px;">
+            <input type="checkbox" id="geppai-roster-show-month" ${state.geppaiRosterShowMonth ? 'checked' : ''} />
+            「○月」を表示する
+          </label>
+        </div>
+        <button class="btn-dark" id="geppai-roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
+      </div>
+      <div class="roster-doc">
+        <h1>${escapeHtml(state.geppaiRosterOrgName)}　月例参拝出欠表　${escapeHtml(dateSummary)}</h1>
+        <div class="duty-days-row">
+          <div class="duty-day-block">
+            ${dayLabel ? `<div class="duty-day-header"><span>${escapeHtml(dayLabel)}</span></div>` : ''}
+            <div class="duty-day-columns">
+              ${renderSubcolumn(col1)}
+              ${renderSubcolumn(col2)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('geppai-roster-fy').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+  document.getElementById('geppai-roster-month').addEventListener('change', (e) => {
+    state.geppaiRosterMonth = e.target.value === 'template' ? 'template' : Number(e.target.value);
+    renderView();
+  });
+  document.getElementById('geppai-roster-org').addEventListener('input', (e) => { state.geppaiRosterOrgName = e.target.value; });
+  document.getElementById('geppai-roster-org').addEventListener('blur', () => renderView());
+  document.getElementById('geppai-roster-day1').addEventListener('input', (e) => { state.geppaiRosterDay1 = e.target.value; });
+  document.getElementById('geppai-roster-day1').addEventListener('blur', () => renderView());
+  document.getElementById('geppai-roster-show-month').addEventListener('change', (e) => {
+    state.geppaiRosterShowMonth = e.target.checked;
+    renderView();
+  });
+  document.getElementById('geppai-roster-print-btn').addEventListener('click', () => window.print());
 }
 
 // ==================== 起動 ====================
