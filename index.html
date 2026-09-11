@@ -302,13 +302,14 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 /* 月例参拝当番表：自由配置キャンバス */
 .geppai-canvas {
   position: relative;
+  margin: 0 auto;
   background-image:
     linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
   background-size: 5mm 5mm;
 }
 @media print {
-  .geppai-canvas { background-image: none; overflow: hidden; }
+  .geppai-canvas { background-image: none; overflow: hidden; margin: 0; }
 }
 .geppai-canvas .geppai-draggable {
   position: absolute;
