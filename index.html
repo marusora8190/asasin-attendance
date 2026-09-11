@@ -1404,7 +1404,8 @@ function renderReportView(container, category) {
       .sort((a, b) => {
         const orderA = deptOrder.get(a.department) ?? Infinity;
         const orderB = deptOrder.get(b.department) ?? Infinity;
-        return orderA - orderB;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1);
       });
   }
   const membersWithNo = membersForDisplay.map((m, i) => ({ ...m, no: i + 1 }));
@@ -1435,17 +1436,18 @@ function renderReportView(container, category) {
   const renderNameColumn = (slot) => {
     const rows = slot.map((m, idx) => {
       const status = state.attendance.get(attKey(m.id, category, monthSeq)) ?? null;
-      const prevPos = idx > 0 ? slot[idx-1].position : null;
-      const isDitto = idx > 0 && m.position === prevPos;
-      const posDisplay = isDitto ? '〃' : escapeHtml(m.position);
-      const isLongPos = !isDitto && m.position && m.position.length > 6;
+      const fieldValue = isGeppai ? m.department : m.position;
+      const prevValue = idx > 0 ? (isGeppai ? slot[idx-1].department : slot[idx-1].position) : null;
+      const isDitto = idx > 0 && fieldValue === prevValue;
+      const posDisplay = isDitto ? '〃' : escapeHtml(fieldValue);
+      const isLongPos = !isDitto && fieldValue && fieldValue.length > 6;
       const posClass = ['col-position', isDitto ? 'ditto' : '', isLongPos ? 'small-pos' : ''].filter(Boolean).join(' ');
       return `<tr><td class="col-no">${m.no}</td><td class="col-name">${escapeHtml(m.name)}</td><td class="${posClass}">${posDisplay}</td><td class="col-status">${status ?? ''}</td></tr>`;
     }).join('');
     return `
       <div class="report-column">
         <table class="member-table">
-          <thead><tr><th class="col-no">No</th><th class="col-name">氏　名</th><th class="col-position">立場</th><th class="col-status">出欠</th></tr></thead>
+          <thead><tr><th class="col-no">No</th><th class="col-name">氏　名</th><th class="col-position">${isGeppai ? '部署' : '立場'}</th><th class="col-status">出欠</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
