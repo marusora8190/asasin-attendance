@@ -1397,6 +1397,12 @@ function renderReportView(container, category) {
           ${reikiYear != null ? `<p class="report-date">立教${reikiYear}年${state[monthField]}月</p>` : ''}
         </div>
         <div class="report-header-right">
+          ${isGeppai ? `
+          <table class="stamp-table">
+            <thead><tr><th>課　長</th><th>庶　務</th></tr></thead>
+            <tbody><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+          </table>
+          ` : `
           <table class="stamp-table">
             <thead><tr><th>表統領室長</th><th>表統領室次長</th><th>世話課長</th><th>受理</th></tr></thead>
             <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
@@ -1405,6 +1411,7 @@ function renderReportView(container, category) {
             <thead><tr><th>部　長</th><th>次　長</th><th>課　長</th><th>庶　務</th></tr></thead>
             <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
           </table>
+          `}
         </div>
       </header>
       <p class="report-summary-line">【総員：${state.members.length}名、出席者：${presentCount}名】</p>
@@ -1417,7 +1424,7 @@ function renderReportView(container, category) {
 
   container.innerHTML = `
     <div class="report-outer" style="padding:32px 16px;">
-      <div class="toolbar no-print" style="max-width:1000px;margin:0 auto;">
+      <div class="toolbar no-print" style="max-width:1180px;margin:0 auto;">
         <div class="field"><label>年度</label><select id="${idPrefix}-fy">${fyOptions}</select></div>
         <div class="field"><label>対象月</label><select id="${idPrefix}-month">${monthOptions}</select></div>
         <div class="field" style="flex:1;min-width:160px;"><label>部署名（表題）</label><input type="text" id="${idPrefix}-org" value="${escapeHtml(state[orgField])}" style="width:100%;" /></div>
@@ -1432,7 +1439,7 @@ function renderReportView(container, category) {
         <div class="field"><label>&nbsp;</label><button class="btn-light" id="${idPrefix}-split-reset-btn">自動（半分ずつ）</button></div>
         <div class="field"><label>&nbsp;</label><button class="btn-dark" id="${idPrefix}-print-btn">印刷 / PDFで保存</button></div>
       </div>
-      <p class="no-print" style="max-width:1000px;margin:0 auto 12px;font-size:12px;color:var(--color-ink-soft);">
+      <p class="no-print" style="max-width:1180px;margin:0 auto 12px;font-size:12px;color:var(--color-ink-soft);">
         用紙サイズ：B5 ／ 片面印刷で1ページに収まる想定です。印刷ダイアログで「用紙サイズ：B5」を選択してください。
       </p>
       <div class="report-preview">${pageHtml}</div>
