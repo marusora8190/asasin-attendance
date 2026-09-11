@@ -271,6 +271,15 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 /* ---- 当番表 ---- */
 .roster-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 16px; }
 .roster-doc { padding: 32px; overflow-x: auto; }
+.roster-doc:not(.geppai-doc) {
+  background-image:
+    linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
+  background-size: 5mm 5mm;
+}
+@media print {
+  .roster-doc:not(.geppai-doc) { background-image: none; }
+}
 .roster-doc h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:500; font-size:16px; margin:0 0 20px; color: var(--color-ink); }
 
 .duty-days-row { display:flex; gap:16px; align-items:flex-start; }
@@ -1818,7 +1827,7 @@ function setupPieceDragAndDrop() {
   const pieces = document.querySelectorAll('.piece-draggable');
   if (pieces.length === 0) return;
   const refCol = document.querySelector('.duty-subcolumn');
-  const GRID_MM = 5;
+  const GRID_MM = 2.5;
 
   pieces.forEach((box) => {
     box.addEventListener('mousedown', (e) => {
@@ -2020,7 +2029,7 @@ function renderGeppaiRosterView(container) {
 function setupGenericDragAndDrop(canvasId, table, keyField, positionsMap) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  const GRID_MM = 5;
+  const GRID_MM = 2.5;
 
   canvas.querySelectorAll('.geppai-draggable').forEach((box) => {
     box.addEventListener('mousedown', (e) => {
