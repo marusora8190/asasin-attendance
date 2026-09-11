@@ -299,16 +299,25 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 @media print {
   .geppai-canvas { background-image: none; overflow: hidden; }
 }
-.geppai-canvas .duty-dept {
+.geppai-canvas .geppai-draggable {
   position: absolute;
-  width: 38mm;
   cursor: grab;
   background: var(--color-paper);
 }
-.geppai-canvas .duty-dept.dragging {
+.geppai-canvas .geppai-draggable.dragging {
   cursor: grabbing;
   z-index: 10;
   opacity: 0.85;
+}
+.geppai-canvas .geppai-dept-box { width: 38mm; }
+.geppai-canvas .geppai-title-box {
+  white-space: nowrap; margin: 0; padding: 2px 4px;
+  font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
+  font-weight: 500; font-size: 16px; color: var(--color-ink);
+}
+.geppai-canvas .geppai-daylabel-box {
+  white-space: nowrap; padding: 2px 6px; width: 76mm;
+  text-align: center; font-size: 14px; font-weight: 500; color: var(--color-ink);
 }
 .duty-dept-label { font-size:12px; font-weight:500; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
@@ -354,6 +363,7 @@ const T_DEPARTMENTS = 'asagami_departments';
 const T_POSITIONS = 'asagami_positions';
 const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
 const T_GEPPAI_DEPT_POSITIONS = 'asagami_geppai_dept_positions';
+const T_DUTY_POSITIONS = 'asagami_duty_positions';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
@@ -405,6 +415,7 @@ const state = {
   geppaiRosterDay1: '',
   geppaiRosterShowMonth: true,
   geppaiDeptPositions: new Map(), // department名 -> {x, y}（mm単位）
+  dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝神当番表用）
   masterOpen: { department: false, position: false, dutyDay: false, leader: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
@@ -1553,6 +1564,17 @@ function splitDeptGroupsIntoColumns(deptGroups, n) {
 
 function renderRosterView(container) {
   setPrintPageSize('size: 250mm 176mm; margin: 5mm;');
+
+  if (!state._dutyPositionsLoaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    sb.from(T_DUTY_POSITIONS).select('*').then(({ data }) => {
+      state.dutyPositions = new Map((data ?? []).map((r) => [r.item_key, { x: Number(r.x), y: Number(r.y) }]));
+      state._dutyPositionsLoaded = true;
+      renderView();
+    });
+    return;
+  }
+
   const fyOptions = state.fiscalYears.map(fy =>
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
@@ -1585,7 +1607,94 @@ function renderRosterView(container) {
     }
   }
 
-  const renderMemberBox = (group) => {
+  function swapGroupsInColumn(col, deptA, deptB) {
+    const idxA = col.findIndex((g) => g.dept === deptA);
+    const idxB = col.findIndex((g) => g.dept === deptB);
+    if (idxA >= 0 && idxB >= 0) {
+      [col[idxA], col[idxB]] = [col[idxB], col[idxA]];
+    }
+  }
+
+  function moveGroupToColumnFront(cols, deptName, targetIdx) {
+    for (let i = 0; i < cols.length; i++) {
+      const pos = cols[i].findIndex((g) => g.dept === deptName);
+      if (pos >= 0) {
+        const [group] = cols[i].splice(pos, 1);
+        cols[targetIdx].unshift(group);
+        return;
+      }
+    }
+  }
+
+  function moveGroupToColumnEnd(cols, deptName, targetIdx) {
+    for (let i = 0; i < cols.length; i++) {
+      const pos = cols[i].findIndex((g) => g.dept === deptName);
+      if (pos >= 0) {
+        const [group] = cols[i].splice(pos, 1);
+        cols[targetIdx].push(group);
+        return;
+      }
+    }
+  }
+
+  function moveGroupBeforeAnchor(cols, deptToMove, anchorDept) {
+    let moved = null;
+    for (const col of cols) {
+      const pos = col.findIndex((g) => g.dept === deptToMove);
+      if (pos >= 0) { [moved] = col.splice(pos, 1); break; }
+    }
+    if (!moved) return;
+    for (const col of cols) {
+      const anchorPos = col.findIndex((g) => g.dept === anchorDept);
+      if (anchorPos >= 0) { col.splice(anchorPos, 0, moved); return; }
+    }
+  }
+
+  const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
+
+  // 各日の2列を、これまでと同じ並び替えロジックで作る（初期配置の目安として使う）
+  const dayColumns = {};
+  [1, 2, 3].forEach((dayNum) => {
+    let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
+    if (dayNum === 2) { [col1, col2] = [col2, col1]; moveGroupToColumnFront([col1, col2], '現場第一班', 0); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
+    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
+    dayColumns[dayNum] = [col1, col2];
+  });
+  const noneColumns = splitDeptGroupsIntoColumns(byDay.none, 3);
+
+  // ---- 初期配置（保存された位置がない場合の目安位置）を計算 ----
+  const CANVAS_WIDTH_MM = 240;
+  const CANVAS_HEIGHT_MM = 140;
+  const DAY_BLOCK_X = { 1: 0, 2: 84, 3: 168 };
+  const SUBCOL_WIDTH = 40;
+  const DEPT_START_Y = 18;
+  const defaultPositions = new Map();
+  defaultPositions.set('title', { x: 0, y: 0 });
+  [1, 2, 3].forEach((dayNum) => {
+    defaultPositions.set(`daylabel-${dayNum}`, { x: DAY_BLOCK_X[dayNum], y: 8 });
+    dayColumns[dayNum].forEach((col, colIdx) => {
+      let y = DEPT_START_Y;
+      const x = DAY_BLOCK_X[dayNum] + colIdx * SUBCOL_WIDTH;
+      col.forEach((g) => {
+        defaultPositions.set(`dept-${dayNum}-${g.dept}`, { x, y });
+        y += 8 + g.members.length * 6.3 + 4;
+      });
+    });
+  });
+  noneColumns.forEach((col, colIdx) => {
+    let y = DEPT_START_Y + 100;
+    const x = colIdx * SUBCOL_WIDTH;
+    col.forEach((g) => {
+      defaultPositions.set(`dept-none-${g.dept}`, { x, y });
+      y += 8 + g.members.length * 6.3 + 4;
+    });
+  });
+
+  const posFor = (key) => state.dutyPositions.get(key) ?? defaultPositions.get(key) ?? { x: 0, y: 0 };
+
+  const renderDeptBox = (dayNum, group) => {
+    const key = `dept-${dayNum}-${group.dept}`;
+    const pos = posFor(key);
     const rows = group.members.map(m => {
       const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null);
       const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
@@ -1595,91 +1704,28 @@ function renderRosterView(container) {
       </li>`;
     }).join('');
     return `
-      <div class="duty-dept">
+      <div class="duty-dept geppai-draggable geppai-dept-box" data-dept="${escapeHtml(key)}" style="left:${pos.x}mm;top:${pos.y}mm;">
         <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
         <ul class="duty-dept-box">${rows}</ul>
       </div>`;
   };
 
-  const renderSubcolumn = (groups) => `
-    <div class="duty-subcolumn">${groups.map(renderMemberBox).join('')}</div>
-  `;
+  const deptBoxesHtml = [1, 2, 3].map((dayNum) =>
+    dayColumns[dayNum].map((col) => col.map((g) => renderDeptBox(dayNum, g)).join('')).join('')
+  ).join('') + noneColumns.map((col) => col.map((g) => renderDeptBox('none', g)).join('')).join('');
 
-function swapGroupsInColumn(col, deptA, deptB) {
-  const idxA = col.findIndex((g) => g.dept === deptA);
-  const idxB = col.findIndex((g) => g.dept === deptB);
-  if (idxA >= 0 && idxB >= 0) {
-    [col[idxA], col[idxB]] = [col[idxB], col[idxA]];
-  }
-}
-
-function moveGroupToColumnFront(cols, deptName, targetIdx) {
-  for (let i = 0; i < cols.length; i++) {
-    const pos = cols[i].findIndex((g) => g.dept === deptName);
-    if (pos >= 0) {
-      const [group] = cols[i].splice(pos, 1);
-      cols[targetIdx].unshift(group);
-      return;
-    }
-  }
-}
-
-function moveGroupToColumnEnd(cols, deptName, targetIdx) {
-  for (let i = 0; i < cols.length; i++) {
-    const pos = cols[i].findIndex((g) => g.dept === deptName);
-    if (pos >= 0) {
-      const [group] = cols[i].splice(pos, 1);
-      cols[targetIdx].push(group);
-      return;
-    }
-  }
-}
-
-function moveGroupBeforeAnchor(cols, deptToMove, anchorDept) {
-  let moved = null;
-  for (const col of cols) {
-    const pos = col.findIndex((g) => g.dept === deptToMove);
-    if (pos >= 0) { [moved] = col.splice(pos, 1); break; }
-  }
-  if (!moved) return;
-  for (const col of cols) {
-    const anchorPos = col.findIndex((g) => g.dept === anchorDept);
-    if (anchorPos >= 0) { col.splice(anchorPos, 0, moved); return; }
-  }
-}
-
-const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
-  const dayBlocksHtml = [1, 2, 3].map((dayNum) => {
+  const dayLabelsHtml = [1, 2, 3].map((dayNum) => {
     const label = dayLabels[dayNum - 1];
-    let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
-    if (dayNum === 2) { [col1, col2] = [col2, col1]; moveGroupToColumnFront([col1, col2], '現場第一班', 0); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
-    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
-    return `
-      <div class="duty-day-block">
-        <div class="duty-day-header"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>
-        <div class="duty-day-columns">
-          ${renderSubcolumn(col1)}
-          ${renderSubcolumn(col2)}
-        </div>
-      </div>
-    `;
+    const pos = posFor(`daylabel-${dayNum}`);
+    return `<div class="geppai-draggable geppai-daylabel-box" data-dept="daylabel-${dayNum}" style="left:${pos.x}mm;top:${pos.y}mm;"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>`;
   }).join('');
-
-  const noneColumns = splitDeptGroupsIntoColumns(byDay.none, 3);
-  const noneHtml = byDay.none.length > 0 ? `
-    <div class="duty-day-block">
-      <div class="duty-day-header"><span>担当日未定</span></div>
-      <div class="duty-day-columns">
-        ${renderSubcolumn(noneColumns[0])}
-        ${renderSubcolumn(noneColumns[1])}
-        ${renderSubcolumn(noneColumns[2])}
-      </div>
-    </div>
-  ` : '';
 
   const dateSummary = (state.rosterShowMonth && !isTemplate)
     ? `${state.rosterMonth}月${dayLabels.filter(Boolean).join('・')}`
     : dayLabels.filter(Boolean).join('・');
+
+  const titlePos = posFor('title');
+  const titleHtml = `<h1 class="geppai-draggable geppai-title-box" data-dept="title" style="left:${titlePos.x}mm;top:${titlePos.y}mm;">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>`;
 
   container.innerHTML = `
     <div class="roster-wrap">
@@ -1697,12 +1743,19 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
             「○月」を表示する
           </label>
         </div>
+        <div class="field"><label>&nbsp;</label><button class="btn-light" id="roster-reset-layout-btn">配置をリセット</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn-dark" id="roster-save-layout-btn">配置を保存</button></div>
         <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
+      <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
+        表題・日付の見出し・部署の枠をクリックしたまま掴んで、背景の方眼(5mm四方)に合わせてお好きな位置に配置できます。配置はドラッグのたびに自動保存されますが、「配置を保存」ボタンでまとめて保存し直すこともできます。
+      </p>
       <div class="roster-doc">
-        <h1 id="roster-title-display">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>
-        <div class="duty-days-row">${dayBlocksHtml}</div>
-        ${noneHtml}
+        <div class="geppai-canvas" id="roster-canvas" style="width:${CANVAS_WIDTH_MM}mm;height:${CANVAS_HEIGHT_MM}mm;">
+          ${titleHtml}
+          ${dayLabelsHtml}
+          ${deptBoxesHtml}
+        </div>
       </div>
     </div>
   `;
@@ -1728,7 +1781,29 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
     state.rosterShowMonth = e.target.checked;
     renderView();
   });
+  document.getElementById('roster-reset-layout-btn').addEventListener('click', async () => {
+    if (!confirm('すべての配置を自動配置に戻します。よろしいですか？')) return;
+    await sb.from(T_DUTY_POSITIONS).delete().neq('item_key', '__none__');
+    state.dutyPositions = new Map();
+    renderView();
+  });
+  document.getElementById('roster-save-layout-btn').addEventListener('click', async () => {
+    const rows = [];
+    document.querySelectorAll('#roster-canvas .geppai-draggable').forEach((el) => {
+      const key = el.dataset.dept;
+      const x = parseFloat(el.style.left) || 0;
+      const y = parseFloat(el.style.top) || 0;
+      state.dutyPositions.set(key, { x, y });
+      rows.push({ item_key: key, x, y });
+    });
+    if (rows.length > 0) {
+      await sb.from(T_DUTY_POSITIONS).upsert(rows, { onConflict: 'item_key' });
+    }
+    alert('現在の配置を保存しました。');
+  });
   document.getElementById('roster-print-btn').addEventListener('click', () => window.print());
+
+  setupGenericDragAndDrop('roster-canvas', T_DUTY_POSITIONS, 'item_key', state.dutyPositions);
 }
 
 // ==================== 月例参拝当番表 ====================
@@ -1772,10 +1847,12 @@ function renderGeppaiRosterView(container) {
   const CANVAS_WIDTH_MM = 240;
   const CANVAS_HEIGHT_MM = 140;
   const DEFAULT_COL_WIDTH = 40;
+  const DEFAULT_DEPT_START_Y = 12; // 表題の初期位置とぶつからないよう少し下から始める
   const columnsForDefault = splitDeptGroupsIntoColumns(groups, 6);
   const defaultPositions = new Map();
+  defaultPositions.set('__title__', { x: 0, y: 0 });
   columnsForDefault.forEach((col, colIdx) => {
-    let y = 0;
+    let y = DEFAULT_DEPT_START_Y;
     const x = colIdx * DEFAULT_COL_WIDTH;
     col.forEach((g) => {
       defaultPositions.set(g.dept, { x, y });
@@ -1794,7 +1871,7 @@ function renderGeppaiRosterView(container) {
       </li>`;
     }).join('');
     return `
-      <div class="duty-dept geppai-dept-box" data-dept="${escapeHtml(group.dept)}" style="left:${pos.x}mm;top:${pos.y}mm;">
+      <div class="duty-dept geppai-draggable geppai-dept-box" data-dept="${escapeHtml(group.dept)}" style="left:${pos.x}mm;top:${pos.y}mm;">
         <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
         <ul class="duty-dept-box">${rows}</ul>
       </div>`;
@@ -1805,6 +1882,11 @@ function renderGeppaiRosterView(container) {
   const dateSummary = (state.geppaiRosterShowMonth && !isTemplate)
     ? `${state.geppaiRosterMonth}月${dayLabel || ''}`
     : (dayLabel || '');
+
+  const TITLE_KEY = '__title__';
+  const titlePos = state.geppaiDeptPositions.get(TITLE_KEY) ?? defaultPositions.get(TITLE_KEY) ?? { x: 0, y: 0 };
+  const titleHtml = `
+    <h1 class="geppai-draggable geppai-title-box" data-dept="${TITLE_KEY}" style="left:${titlePos.x}mm;top:${titlePos.y}mm;">${escapeHtml(state.geppaiRosterOrgName)}　月例参拝出欠表　${escapeHtml(dateSummary)}</h1>`;
 
   container.innerHTML = `
     <div class="roster-wrap">
@@ -1821,14 +1903,15 @@ function renderGeppaiRosterView(container) {
           </label>
         </div>
         <div class="field"><label>&nbsp;</label><button class="btn-light" id="geppai-reset-layout-btn">配置をリセット</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn-dark" id="geppai-save-layout-btn">配置を保存</button></div>
         <button class="btn-dark" id="geppai-roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
       <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
-        枠の部分をクリックしたまま掴んで、背景の方眼(5mm四方)に合わせてお好きな位置に配置できます。配置は自動的に保存されます。
+        表題や枠の部分をクリックしたまま掴んで、背景の方眼(5mm四方)に合わせてお好きな位置に配置できます。配置はドラッグのたびに自動保存されますが、「配置を保存」ボタンでまとめて保存し直すこともできます。
       </p>
       <div class="roster-doc geppai-doc">
-        <h1>${escapeHtml(state.geppaiRosterOrgName)}　月例参拝出欠表　${escapeHtml(dateSummary)}</h1>
         <div class="geppai-canvas" id="geppai-canvas" style="width:${CANVAS_WIDTH_MM}mm;height:${CANVAS_HEIGHT_MM}mm;">
+          ${titleHtml}
           ${groups.map(renderDeptBox).join('')}
         </div>
       </div>
@@ -1858,20 +1941,34 @@ function renderGeppaiRosterView(container) {
     state.geppaiDeptPositions = new Map();
     renderView();
   });
+  document.getElementById('geppai-save-layout-btn').addEventListener('click', async () => {
+    const rows = [];
+    document.querySelectorAll('#geppai-canvas .geppai-draggable').forEach((el) => {
+      const dept = el.dataset.dept;
+      const x = parseFloat(el.style.left) || 0;
+      const y = parseFloat(el.style.top) || 0;
+      state.geppaiDeptPositions.set(dept, { x, y });
+      rows.push({ department: dept, x, y });
+    });
+    if (rows.length > 0) {
+      await sb.from(T_GEPPAI_DEPT_POSITIONS).upsert(rows, { onConflict: 'department' });
+    }
+    alert('現在の配置を保存しました。');
+  });
   document.getElementById('geppai-roster-print-btn').addEventListener('click', () => window.print());
 
-  setupGeppaiDragAndDrop();
+  setupGenericDragAndDrop('geppai-canvas', T_GEPPAI_DEPT_POSITIONS, 'department', state.geppaiDeptPositions);
 }
 
-function setupGeppaiDragAndDrop() {
-  const canvas = document.getElementById('geppai-canvas');
+function setupGenericDragAndDrop(canvasId, table, keyField, positionsMap) {
+  const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const GRID_MM = 5;
 
-  canvas.querySelectorAll('.geppai-dept-box').forEach((box) => {
+  canvas.querySelectorAll('.geppai-draggable').forEach((box) => {
     box.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      const dept = box.dataset.dept;
+      const key = box.dataset.dept;
       const canvasRect = canvas.getBoundingClientRect();
       const mmPerPx = parseFloat(canvas.style.width) / canvasRect.width;
 
@@ -1905,8 +2002,8 @@ function setupGeppaiDragAndDrop() {
         document.body.style.userSelect = '';
         const finalX = parseFloat(box.style.left) || 0;
         const finalY = parseFloat(box.style.top) || 0;
-        state.geppaiDeptPositions.set(dept, { x: finalX, y: finalY });
-        await sb.from(T_GEPPAI_DEPT_POSITIONS).upsert({ department: dept, x: finalX, y: finalY }, { onConflict: 'department' });
+        positionsMap.set(key, { x: finalX, y: finalY });
+        await sb.from(table).upsert({ [keyField]: key, x: finalX, y: finalY }, { onConflict: keyField });
       }
 
       document.addEventListener('mousemove', onMove);
