@@ -239,7 +239,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   .report-page { width: auto; max-width: 100%; background: transparent; box-shadow: none; }
 }
 
-.report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; }
+.report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; min-height:42mm; }
 .report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:400; font-size:19px; margin:0 0 10px; }
 .report-header-left .org-name { font-size:15px; font-weight:400; margin:0 0 8px; }
 .report-header-left .report-date { font-size:15px; font-weight:400; margin:0; }
@@ -1066,7 +1066,7 @@ function renderGridView(container) {
       <div class="grid-header no-print">
         <div>
           <p class="eyebrow">出欠管理システム</p>
-          <h1 class="font-display">朝神出欠記録</h1>
+          <h1 class="font-display">${CATEGORY_LABEL[state.category]}出欠記録</h1>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <select id="fy-select">${fyOptions}</select>
