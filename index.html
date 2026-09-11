@@ -287,6 +287,8 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .duty-day-header::after { right: 0; }
 .duty-day-columns { display:flex; gap:16px; align-items:flex-start; }
 .duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
+.duty-subcolumn .piece-draggable { cursor: grab; position: relative; z-index: 1; background: var(--color-paper); }
+.duty-subcolumn .piece-draggable.dragging-piece { cursor: grabbing; z-index: 20; opacity: 0.85; }
 
 /* 月例参拝当番表：自由配置キャンバス */
 .geppai-canvas {
@@ -416,7 +418,7 @@ const state = {
   geppaiRosterShowMonth: true,
   geppaiDeptPositions: new Map(), // department名 -> {x, y}（mm単位）
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝神当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -624,6 +626,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-pos-btn">立場を編集</button>
         <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
+        <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -645,6 +648,10 @@ function renderMasterView(container) {
     state.masterOpen.leader = !state.masterOpen.leader;
     renderMasterPanels();
   });
+  document.getElementById('edit-member-dept-btn').addEventListener('click', () => {
+    state.masterOpen.memberDept = !state.masterOpen.memberDept;
+    renderMasterPanels();
+  });
 
   renderMasterPanels();
 }
@@ -657,6 +664,7 @@ function renderMasterPanels() {
   if (state.masterOpen.position) panelsEl.appendChild(buildMasterPanel('position'));
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
+  if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
 }
 
 function buildDutyDayPanel() {
@@ -736,6 +744,45 @@ function buildLeaderPanel() {
         const m = state.members.find((mm) => mm.id === id);
         m.is_leader = val;
         await sb.from(T_MEMBERS).update({ is_leader: val }).eq('id', id);
+        renderView();
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildMemberDeptPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '420px';
+  panel.innerHTML = `
+    <h2>メンバーの部署を変更</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      選んだ部署に応じて、当番表の担当日や当番表への振り分けも自動的に変わります。
+    </p>
+    <ul class="modal-list" id="member-dept-list" style="max-height:400px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#member-dept-list');
+    listEl.innerHTML = state.members.map((m) => `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
+        <select class="member-dept-select" data-id="${m.id}" style="flex-shrink:0;min-width:150px;">
+          <option value="" ${!m.department ? 'selected' : ''}>（部署未設定）</option>
+          ${state.departments.map((d) => `<option value="${escapeHtml(d.name)}" ${m.department === d.name ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('')}
+        </select>
+      </li>`).join('');
+
+    listEl.querySelectorAll('.member-dept-select').forEach((sel) => {
+      const id = Number(sel.dataset.id);
+      sel.addEventListener('change', async () => {
+        const val = sel.value || null;
+        const m = state.members.find((mm) => mm.id === id);
+        m.department = val;
+        await sb.from(T_MEMBERS).update({ department: val }).eq('id', id);
         renderView();
       });
     });
@@ -1607,94 +1654,7 @@ function renderRosterView(container) {
     }
   }
 
-  function swapGroupsInColumn(col, deptA, deptB) {
-    const idxA = col.findIndex((g) => g.dept === deptA);
-    const idxB = col.findIndex((g) => g.dept === deptB);
-    if (idxA >= 0 && idxB >= 0) {
-      [col[idxA], col[idxB]] = [col[idxB], col[idxA]];
-    }
-  }
-
-  function moveGroupToColumnFront(cols, deptName, targetIdx) {
-    for (let i = 0; i < cols.length; i++) {
-      const pos = cols[i].findIndex((g) => g.dept === deptName);
-      if (pos >= 0) {
-        const [group] = cols[i].splice(pos, 1);
-        cols[targetIdx].unshift(group);
-        return;
-      }
-    }
-  }
-
-  function moveGroupToColumnEnd(cols, deptName, targetIdx) {
-    for (let i = 0; i < cols.length; i++) {
-      const pos = cols[i].findIndex((g) => g.dept === deptName);
-      if (pos >= 0) {
-        const [group] = cols[i].splice(pos, 1);
-        cols[targetIdx].push(group);
-        return;
-      }
-    }
-  }
-
-  function moveGroupBeforeAnchor(cols, deptToMove, anchorDept) {
-    let moved = null;
-    for (const col of cols) {
-      const pos = col.findIndex((g) => g.dept === deptToMove);
-      if (pos >= 0) { [moved] = col.splice(pos, 1); break; }
-    }
-    if (!moved) return;
-    for (const col of cols) {
-      const anchorPos = col.findIndex((g) => g.dept === anchorDept);
-      if (anchorPos >= 0) { col.splice(anchorPos, 0, moved); return; }
-    }
-  }
-
-  const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
-
-  // 各日の2列を、これまでと同じ並び替えロジックで作る（初期配置の目安として使う）
-  const dayColumns = {};
-  [1, 2, 3].forEach((dayNum) => {
-    let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
-    if (dayNum === 2) { [col1, col2] = [col2, col1]; moveGroupToColumnFront([col1, col2], '現場第一班', 0); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
-    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
-    dayColumns[dayNum] = [col1, col2];
-  });
-  const noneColumns = splitDeptGroupsIntoColumns(byDay.none, 3);
-
-  // ---- 初期配置（保存された位置がない場合の目安位置）を計算 ----
-  const CANVAS_WIDTH_MM = 240;
-  const CANVAS_HEIGHT_MM = 140;
-  const DAY_BLOCK_X = { 1: 0, 2: 84, 3: 168 };
-  const SUBCOL_WIDTH = 40;
-  const DEPT_START_Y = 18;
-  const defaultPositions = new Map();
-  defaultPositions.set('title', { x: 0, y: 0 });
-  [1, 2, 3].forEach((dayNum) => {
-    defaultPositions.set(`daylabel-${dayNum}`, { x: DAY_BLOCK_X[dayNum], y: 8 });
-    dayColumns[dayNum].forEach((col, colIdx) => {
-      let y = DEPT_START_Y;
-      const x = DAY_BLOCK_X[dayNum] + colIdx * SUBCOL_WIDTH;
-      col.forEach((g) => {
-        defaultPositions.set(`dept-${dayNum}-${g.dept}`, { x, y });
-        y += 8 + g.members.length * 6.3 + 4;
-      });
-    });
-  });
-  noneColumns.forEach((col, colIdx) => {
-    let y = DEPT_START_Y + 100;
-    const x = colIdx * SUBCOL_WIDTH;
-    col.forEach((g) => {
-      defaultPositions.set(`dept-none-${g.dept}`, { x, y });
-      y += 8 + g.members.length * 6.3 + 4;
-    });
-  });
-
-  const posFor = (key) => state.dutyPositions.get(key) ?? defaultPositions.get(key) ?? { x: 0, y: 0 };
-
-  const renderDeptBox = (dayNum, group) => {
-    const key = `dept-${dayNum}-${group.dept}`;
-    const pos = posFor(key);
+  const renderMemberBox = (group, dayKey) => {
     const rows = group.members.map(m => {
       const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null);
       const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
@@ -1703,29 +1663,94 @@ function renderRosterView(container) {
         <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
       </li>`;
     }).join('');
+    const dragKey = `dept-${dayKey}-${group.dept}`;
+    const pos = state.dutyPositions.get(dragKey) ?? { x: 0, y: 0 };
     return `
-      <div class="duty-dept geppai-draggable geppai-dept-box" data-dept="${escapeHtml(key)}" style="left:${pos.x}mm;top:${pos.y}mm;">
+      <div class="duty-dept piece-draggable" data-drag-key="${escapeHtml(dragKey)}" style="transform: translate(${pos.x}mm, ${pos.y}mm);">
         <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
         <ul class="duty-dept-box">${rows}</ul>
       </div>`;
   };
 
-  const deptBoxesHtml = [1, 2, 3].map((dayNum) =>
-    dayColumns[dayNum].map((col) => col.map((g) => renderDeptBox(dayNum, g)).join('')).join('')
-  ).join('') + noneColumns.map((col) => col.map((g) => renderDeptBox('none', g)).join('')).join('');
+  const renderSubcolumn = (groups, dayKey) => `
+    <div class="duty-subcolumn">${groups.map((g) => renderMemberBox(g, dayKey)).join('')}</div>
+  `;
 
-  const dayLabelsHtml = [1, 2, 3].map((dayNum) => {
+function swapGroupsInColumn(col, deptA, deptB) {
+  const idxA = col.findIndex((g) => g.dept === deptA);
+  const idxB = col.findIndex((g) => g.dept === deptB);
+  if (idxA >= 0 && idxB >= 0) {
+    [col[idxA], col[idxB]] = [col[idxB], col[idxA]];
+  }
+}
+
+function moveGroupToColumnFront(cols, deptName, targetIdx) {
+  for (let i = 0; i < cols.length; i++) {
+    const pos = cols[i].findIndex((g) => g.dept === deptName);
+    if (pos >= 0) {
+      const [group] = cols[i].splice(pos, 1);
+      cols[targetIdx].unshift(group);
+      return;
+    }
+  }
+}
+
+function moveGroupToColumnEnd(cols, deptName, targetIdx) {
+  for (let i = 0; i < cols.length; i++) {
+    const pos = cols[i].findIndex((g) => g.dept === deptName);
+    if (pos >= 0) {
+      const [group] = cols[i].splice(pos, 1);
+      cols[targetIdx].push(group);
+      return;
+    }
+  }
+}
+
+function moveGroupBeforeAnchor(cols, deptToMove, anchorDept) {
+  let moved = null;
+  for (const col of cols) {
+    const pos = col.findIndex((g) => g.dept === deptToMove);
+    if (pos >= 0) { [moved] = col.splice(pos, 1); break; }
+  }
+  if (!moved) return;
+  for (const col of cols) {
+    const anchorPos = col.findIndex((g) => g.dept === anchorDept);
+    if (anchorPos >= 0) { col.splice(anchorPos, 0, moved); return; }
+  }
+}
+
+const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
+  const dayBlocksHtml = [1, 2, 3].map((dayNum) => {
     const label = dayLabels[dayNum - 1];
-    const pos = posFor(`daylabel-${dayNum}`);
-    return `<div class="geppai-draggable geppai-daylabel-box" data-dept="daylabel-${dayNum}" style="left:${pos.x}mm;top:${pos.y}mm;"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>`;
+    let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
+    if (dayNum === 2) { [col1, col2] = [col2, col1]; moveGroupToColumnFront([col1, col2], '現場第一班', 0); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
+    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
+    return `
+      <div class="duty-day-block">
+        <div class="duty-day-header"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>
+        <div class="duty-day-columns">
+          ${renderSubcolumn(col1, dayNum)}
+          ${renderSubcolumn(col2, dayNum)}
+        </div>
+      </div>
+    `;
   }).join('');
+
+  const noneColumns = splitDeptGroupsIntoColumns(byDay.none, 3);
+  const noneHtml = byDay.none.length > 0 ? `
+    <div class="duty-day-block">
+      <div class="duty-day-header"><span>担当日未定</span></div>
+      <div class="duty-day-columns">
+        ${renderSubcolumn(noneColumns[0], 'none')}
+        ${renderSubcolumn(noneColumns[1], 'none')}
+        ${renderSubcolumn(noneColumns[2], 'none')}
+      </div>
+    </div>
+  ` : '';
 
   const dateSummary = (state.rosterShowMonth && !isTemplate)
     ? `${state.rosterMonth}月${dayLabels.filter(Boolean).join('・')}`
     : dayLabels.filter(Boolean).join('・');
-
-  const titlePos = posFor('title');
-  const titleHtml = `<h1 class="geppai-draggable geppai-title-box" data-dept="title" style="left:${titlePos.x}mm;top:${titlePos.y}mm;">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>`;
 
   container.innerHTML = `
     <div class="roster-wrap">
@@ -1744,18 +1769,15 @@ function renderRosterView(container) {
           </label>
         </div>
         <div class="field"><label>&nbsp;</label><button class="btn-light" id="roster-reset-layout-btn">配置をリセット</button></div>
-        <div class="field"><label>&nbsp;</label><button class="btn-dark" id="roster-save-layout-btn">配置を保存</button></div>
         <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
       <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
-        表題・日付の見出し・部署の枠をクリックしたまま掴んで、背景の方眼(5mm四方)に合わせてお好きな位置に配置できます。配置はドラッグのたびに自動保存されますが、「配置を保存」ボタンでまとめて保存し直すこともできます。
+        班の枠をクリックしたまま掴むと、位置をずらして配置できます(自動的に保存されます)。
       </p>
       <div class="roster-doc">
-        <div class="geppai-canvas" id="roster-canvas" style="width:${CANVAS_WIDTH_MM}mm;height:${CANVAS_HEIGHT_MM}mm;">
-          ${titleHtml}
-          ${dayLabelsHtml}
-          ${deptBoxesHtml}
-        </div>
+        <h1 id="roster-title-display">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>
+        <div class="duty-days-row">${dayBlocksHtml}</div>
+        ${noneHtml}
       </div>
     </div>
   `;
@@ -1782,28 +1804,63 @@ function renderRosterView(container) {
     renderView();
   });
   document.getElementById('roster-reset-layout-btn').addEventListener('click', async () => {
-    if (!confirm('すべての配置を自動配置に戻します。よろしいですか？')) return;
+    if (!confirm('班の位置ずらしをすべて元に戻します。よろしいですか？')) return;
     await sb.from(T_DUTY_POSITIONS).delete().neq('item_key', '__none__');
     state.dutyPositions = new Map();
     renderView();
   });
-  document.getElementById('roster-save-layout-btn').addEventListener('click', async () => {
-    const rows = [];
-    document.querySelectorAll('#roster-canvas .geppai-draggable').forEach((el) => {
-      const key = el.dataset.dept;
-      const x = parseFloat(el.style.left) || 0;
-      const y = parseFloat(el.style.top) || 0;
-      state.dutyPositions.set(key, { x, y });
-      rows.push({ item_key: key, x, y });
-    });
-    if (rows.length > 0) {
-      await sb.from(T_DUTY_POSITIONS).upsert(rows, { onConflict: 'item_key' });
-    }
-    alert('現在の配置を保存しました。');
-  });
   document.getElementById('roster-print-btn').addEventListener('click', () => window.print());
 
-  setupGenericDragAndDrop('roster-canvas', T_DUTY_POSITIONS, 'item_key', state.dutyPositions);
+  setupPieceDragAndDrop();
+}
+
+function setupPieceDragAndDrop() {
+  const pieces = document.querySelectorAll('.piece-draggable');
+  if (pieces.length === 0) return;
+  const refCol = document.querySelector('.duty-subcolumn');
+  const GRID_MM = 5;
+
+  pieces.forEach((box) => {
+    box.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const key = box.dataset.dragKey;
+      const refRect = (refCol || box).getBoundingClientRect();
+      const mmPerPx = 38 / refRect.width; // .duty-subcolumn の min-width: 38mm を基準に換算
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const currentTransform = box.style.transform || '';
+      const match = /translate\(([-\d.]+)mm,\s*([-\d.]+)mm\)/.exec(currentTransform);
+      const startDx = match ? parseFloat(match[1]) : 0;
+      const startDy = match ? parseFloat(match[2]) : 0;
+
+      box.classList.add('dragging-piece');
+      document.body.style.userSelect = 'none';
+
+      function onMove(ev) {
+        const dxMm = (ev.clientX - startX) * mmPerPx;
+        const dyMm = (ev.clientY - startY) * mmPerPx;
+        let newX = Math.round((startDx + dxMm) / GRID_MM) * GRID_MM;
+        let newY = Math.round((startDy + dyMm) / GRID_MM) * GRID_MM;
+        box.style.transform = `translate(${newX}mm, ${newY}mm)`;
+      }
+
+      async function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        box.classList.remove('dragging-piece');
+        document.body.style.userSelect = '';
+        const m = /translate\(([-\d.]+)mm,\s*([-\d.]+)mm\)/.exec(box.style.transform);
+        const finalX = m ? parseFloat(m[1]) : 0;
+        const finalY = m ? parseFloat(m[2]) : 0;
+        state.dutyPositions.set(key, { x: finalX, y: finalY });
+        await sb.from(T_DUTY_POSITIONS).upsert({ item_key: key, x: finalX, y: finalY }, { onConflict: 'item_key' });
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 // ==================== 月例参拝当番表 ====================
