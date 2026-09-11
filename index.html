@@ -171,6 +171,15 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .icon-btn:disabled { opacity: 0.3; }
 .icon-btn.danger { color: var(--color-absent); }
 .icon-btn.danger:hover { border-color: var(--color-absent); }
+.drag-handle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; height: 28px; cursor: grab; color: var(--color-ink-soft);
+  font-size: 14px; user-select: none; touch-action: none;
+}
+.drag-handle:active { cursor: grabbing; }
+tr[data-row-member].dragging { opacity: 0.4; }
+tr[data-row-member].drag-over-top { box-shadow: inset 0 2px 0 0 var(--color-navy); }
+tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-navy); }
 .hint-text { margin-top: 24px; font-size: 12px; color: var(--color-ink-soft); }
 
 /* ---- モーダル（部署・立場の編集） ---- */
@@ -186,6 +195,8 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .modal-hint { font-size: 11px; color: var(--color-ink-soft); margin: 0 0 10px; }
 .modal-list { list-style: none; margin: 0 0 8px; padding: 0; }
 .modal-list li { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.modal-list .duty-day-select { flex-shrink: 0; width: 78px; font-size: 12px; padding: 3px 2px; }
+.modal-list input[type=text] { min-width: 0; }
 .modal-list input[type=text] {
   flex: 1; border: 1px solid var(--color-line); border-radius: 8px; padding: 3px 8px; font-size: 13px;
 }
@@ -197,7 +208,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .modal-list .icon-btn { width: 22px; height: 22px; }
 .master-panel {
   background: white; border: 1px solid var(--color-line); border-radius: 8px;
-  padding: 16px 20px; min-width: 260px; max-width: 320px; flex: 1;
+  padding: 16px 20px; min-width: 220px; max-width: 260px; flex: 1;
 }
 .master-panel h2 { font-size: 14px; margin: 0 0 10px; color: var(--color-navy); }
 
@@ -242,7 +253,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
 .report-summary-block .summary-table { width:auto; min-width:55mm; }
 .report-column { flex: 0 0 auto; min-width:0; }
 .member-table { width: 75.5mm; border-collapse: collapse; table-layout: fixed; }
-.member-table th, .member-table td { border:1px solid #333; padding:0.7mm 3px; font-size:10px; line-height:1.5; }
+.member-table th, .member-table td { border:1px solid #333; padding:calc(0.7mm * var(--report-row-scale, 1)) 3px; font-size:10px; line-height:calc(1.5 * var(--report-row-scale, 1)); }
 .member-table thead th { background:#f1efe8; font-weight:400; text-align:center; }
 .member-table .col-no { width:7mm; text-align:center; font-size:13px; }
 .member-table .col-name { width:28mm; padding-left: 4mm; font-size:14px; }
@@ -327,12 +338,13 @@ const ROWS_PER_BLOCK = 19;
 
 function calendarMonthToSeq(m) { return m >= 4 ? m - 3 : m + 9; }
 function getCurrentReikiMonthContext() {
-  const now = new Date();
-  const westernYear = now.getFullYear();
-  const calendarMonth = now.getMonth() + 1;
-  const reikiYear = westernYear - 1837; // 立教年 = 西暦 - 1837
-  const fiscalStart = calendarMonth >= 4 ? reikiYear : reikiYear - 1;
-  const fiscalYear = state.fiscalYears.find(y => y.start_reiki_year === fiscalStart) || null;
+  return getReikiMonthContext(new Date().getMonth() + 1);
+}
+function getReikiMonthContext(calendarMonth) {
+  const fiscalYear = state.fiscalYears.find(y => y.id === state.fiscalYearId) || null;
+  const reikiYear = fiscalYear
+    ? (calendarMonth >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1)
+    : null;
   const monthSeq = calendarMonthToSeq(calendarMonth);
   return { reikiYear, calendarMonth, fiscalYear, monthSeq };
 }
@@ -353,6 +365,7 @@ const state = {
   category: 'asagami',
   reportMonth: new Date().getMonth() + 1,
   reportOrgName: '営繕部営繕課',
+  reportLeftCount: null, // nullなら自動（半分ずつ）。数値をセットすると左の人数を固定できる
   rosterMonth: new Date().getMonth() + 1,
   rosterOrgName: '営繕課',
   rosterDay1: '21日',
@@ -364,6 +377,7 @@ const state = {
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
   archiveRows: [], // 選択中の年度・区分の保管記録
+  bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -600,7 +614,7 @@ function renderMasterPanels() {
 function buildDutyDayPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '420px';
+  panel.style.maxWidth = '480px';
   panel.innerHTML = `
     <h2>担当日の個別設定</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
@@ -618,8 +632,8 @@ function buildDutyDayPanel() {
       const defaultLabel = deptDefault ? `部署の既定（${dayLabel(deptDefault)}）を使う` : '部署の既定（未設定）を使う';
       return `
         <li data-id="${m.id}" style="justify-content:space-between;">
-          <span style="white-space:nowrap;">${escapeHtml(m.name)}<span style="color:var(--color-ink-soft);font-size:11px;"> (${escapeHtml(m.department || '未設定')})</span></span>
-          <select class="duty-override-select" data-id="${m.id}">
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}<span style="color:var(--color-ink-soft);font-size:11px;"> (${escapeHtml(m.department || '未設定')})</span></span>
+          <select class="duty-override-select" data-id="${m.id}" style="flex-shrink:0;min-width:200px;">
             <option value="" ${!m.duty_day_override ? 'selected' : ''}>${defaultLabel}</option>
             <option value="1" ${m.duty_day_override === 1 ? 'selected' : ''}>${dayLabel(1)}</option>
             <option value="2" ${m.duty_day_override === 2 ? 'selected' : ''}>${dayLabel(2)}</option>
@@ -993,7 +1007,10 @@ async function bulkMarkMonth(monthCtx, mode) {
 }
 
 function renderGridView(container) {
-  const monthCtx = getCurrentReikiMonthContext();
+  const monthCtx = getReikiMonthContext(state.bulkActionMonth);
+  const bulkMonthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.bulkActionMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('');
   const fyOptions = state.fiscalYears.map(fy =>
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
@@ -1015,6 +1032,9 @@ function renderGridView(container) {
 
     return `
       <tr data-row-member="${m.id}">
+        <td style="text-align:center;padding:0;">
+          <span class="drag-handle" data-member="${m.id}" title="ドラッグで並び替え">⠿</span>
+        </td>
         <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
         <td><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" /></td>
         <td>${renderMasterSelect('department', m.id, m.department, state.departments)}</td>
@@ -1046,6 +1066,7 @@ function renderGridView(container) {
         <div style="display:flex;align-items:center;gap:8px;">
           <select id="fy-select">${fyOptions}</select>
           <button class="btn-light" id="add-fy-btn">＋年度追加</button>
+          <select id="bulk-month-select">${bulkMonthOptions}</select>
           <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
           <button class="btn-light" id="fill-blank-present-btn">${monthCtx.calendarMonth}月分未入力を○にする</button>
           <button class="btn-light" id="clear-month-btn">この月をクリア</button>
@@ -1059,6 +1080,7 @@ function renderGridView(container) {
         <table class="att-table">
           <thead>
             <tr>
+              <th style="text-align:center;width:28px;"></th>
               <th style="text-align:center;width:40px;">No.</th>
               <th>氏名</th><th>部署</th><th>立場</th>
               ${monthHeaders}
@@ -1068,7 +1090,7 @@ function renderGridView(container) {
               <th style="text-align:center;">操作</th>
             </tr>
           </thead>
-          <tbody>${rowsHtml}</tbody>
+          <tbody id="att-rows-body">${rowsHtml}</tbody>
         </table>
       </div>
     </div>
@@ -1101,6 +1123,10 @@ function renderGridView(container) {
   document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'all-present'));
   document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'fill-blank-present'));
   document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'clear'));
+  document.getElementById('bulk-month-select').addEventListener('change', (e) => {
+    state.bulkActionMonth = Number(e.target.value);
+    renderView();
+  });
 
   document.querySelectorAll('[data-action="move-up"]').forEach(btn =>
     btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), -1)));
@@ -1110,6 +1136,84 @@ function renderGridView(container) {
     btn.addEventListener('click', () => removeMember(Number(btn.dataset.member))));
 
   document.getElementById('add-member-btn').addEventListener('click', addMember);
+
+  setupRowDragAndDrop();
+}
+
+function setupRowDragAndDrop() {
+  const tbody = document.getElementById('att-rows-body');
+  if (!tbody) return;
+
+  // ハンドルを掴んでいる間だけ、その行を draggable にする
+  tbody.querySelectorAll('.drag-handle').forEach((handle) => {
+    handle.addEventListener('mousedown', () => {
+      const tr = handle.closest('tr[data-row-member]');
+      if (tr) tr.draggable = true;
+    });
+  });
+  const resetDraggable = () => {
+    tbody.querySelectorAll('tr[data-row-member]').forEach((tr) => { tr.draggable = false; });
+  };
+  document.addEventListener('mouseup', resetDraggable);
+
+  let draggedId = null;
+
+  tbody.addEventListener('dragstart', (e) => {
+    const tr = e.target.closest('tr[data-row-member]');
+    if (!tr) return;
+    draggedId = Number(tr.dataset.rowMember);
+    tr.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  tbody.addEventListener('dragover', (e) => {
+    const tr = e.target.closest('tr[data-row-member]');
+    if (!tr || draggedId === null) return;
+    e.preventDefault();
+    tbody.querySelectorAll('tr[data-row-member]').forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom'));
+    const rect = tr.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+    tr.classList.add(isAfter ? 'drag-over-bottom' : 'drag-over-top');
+  });
+
+  tbody.addEventListener('drop', (e) => {
+    const tr = e.target.closest('tr[data-row-member]');
+    tbody.querySelectorAll('tr[data-row-member]').forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging'));
+    if (!tr || draggedId === null) return;
+    e.preventDefault();
+    const targetId = Number(tr.dataset.rowMember);
+    const rect = tr.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+    const droppedId = draggedId;
+    draggedId = null;
+    reorderMember(droppedId, targetId, isAfter);
+  });
+
+  tbody.addEventListener('dragend', () => {
+    tbody.querySelectorAll('tr[data-row-member]').forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging'));
+    draggedId = null;
+    resetDraggable();
+  });
+}
+
+async function reorderMember(draggedId, targetId, insertAfter) {
+  if (draggedId === targetId) return;
+  const fromIndex = state.members.findIndex((m) => m.id === draggedId);
+  let toIndex = state.members.findIndex((m) => m.id === targetId);
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  const reordered = [...state.members];
+  const [moved] = reordered.splice(fromIndex, 1);
+  toIndex = reordered.findIndex((m) => m.id === targetId);
+  reordered.splice(insertAfter ? toIndex + 1 : toIndex, 0, moved);
+
+  reordered.forEach((m, i) => { m.sort_order = i + 1; });
+  state.members = reordered;
+  renderView();
+
+  await Promise.all(reordered.map((m, i) =>
+    sb.from(T_MEMBERS).update({ sort_order: i + 1 }).eq('id', m.id)
+  ));
 }
 
 async function toggleCell(memberId, seq, btnEl) {
@@ -1197,8 +1301,12 @@ async function addFiscalYear() {
 }
 
 // ==================== 朝神提出（月次報告書） ====================
-function splitIntoTwoColumns(membersWithNo) {
-  const half = Math.ceil(membersWithNo.length / 2);
+function splitIntoTwoColumns(membersWithNo, leftCountOverride) {
+  const total = membersWithNo.length;
+  let half = Math.ceil(total / 2);
+  if (leftCountOverride != null && Number.isFinite(leftCountOverride)) {
+    half = Math.min(Math.max(leftCountOverride, 0), total);
+  }
   return { left: membersWithNo.slice(0, half), right: membersWithNo.slice(half) };
 }
 
@@ -1228,7 +1336,17 @@ function renderReportView(container) {
   for (const p of POSITION_ORDER) { if (posCounts.has(p)) { positionCounts.push({label:p, count:posCounts.get(p)}); posCounts.delete(p); } }
   for (const [label, count] of posCounts) positionCounts.push({ label, count });
 
-  const { left, right } = splitIntoTwoColumns(membersWithNo);
+  const { left, right } = splitIntoTwoColumns(membersWithNo, state.reportLeftCount);
+
+  // 1列あたりの人数が基準（26名）を超えたら、行の高さ（余白・行間）だけを自動で縮めて収まるようにする。
+  // 文字サイズ・表題部分（社名・年月・印影欄）は変更しない。
+  // ※この数値はCSSからの計算による目安で、実際の印刷結果を保証するものではありません。
+  const BASELINE_ROWS_PER_COLUMN = 26;
+  const MIN_ROW_SCALE = 0.62; // これ以上は行が詰まりすぎて読みにくくなるため下限とする
+  const maxRowsInColumn = Math.max(left.length, right.length);
+  const reportRowScale = maxRowsInColumn > BASELINE_ROWS_PER_COLUMN
+    ? Math.max(MIN_ROW_SCALE, BASELINE_ROWS_PER_COLUMN / maxRowsInColumn)
+    : 1;
 
   const renderNameColumn = (slot) => {
     const rows = slot.map((m, idx) => {
@@ -1259,7 +1377,7 @@ function renderReportView(container) {
     </div>`;
 
   const pageHtml = `
-    <section class="report-page">
+    <section class="report-page" style="--report-row-scale: ${reportRowScale};">
       <header class="report-header">
         <div class="report-header-left">
           <h1>神殿掃除実施報告書</h1>
@@ -1290,7 +1408,16 @@ function renderReportView(container) {
       <div class="toolbar no-print" style="max-width:1000px;margin:0 auto;">
         <div class="field"><label>年度</label><select id="report-fy">${fyOptions}</select></div>
         <div class="field"><label>対象月</label><select id="report-month">${monthOptions}</select></div>
-        <div class="field" style="flex:1;min-width:200px;"><label>部署名（表題）</label><input type="text" id="report-org" value="${escapeHtml(state.reportOrgName)}" style="width:100%;" /></div>
+        <div class="field" style="flex:1;min-width:160px;"><label>部署名（表題）</label><input type="text" id="report-org" value="${escapeHtml(state.reportOrgName)}" style="width:100%;" /></div>
+        <div class="field" style="min-width:70px;">
+          <label>左：人数</label>
+          <input type="number" id="report-left-count" min="0" max="${state.members.length}" value="${left.length}" style="width:100%;" />
+        </div>
+        <div class="field" style="min-width:70px;">
+          <label>右：人数</label>
+          <input type="text" id="report-right-count" value="${right.length}名" readonly style="width:100%;background:#f1efe8;" />
+        </div>
+        <div class="field"><label>&nbsp;</label><button class="btn-light" id="report-split-reset-btn">自動（半分ずつ）</button></div>
         <button class="btn-dark" id="report-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
       </div>
       <p class="no-print" style="max-width:1000px;margin:0 auto 24px;font-size:12px;color:var(--color-ink-soft);">
@@ -1313,6 +1440,15 @@ function renderReportView(container) {
     state.reportOrgName = e.target.value;
   });
   document.getElementById('report-org').addEventListener('blur', () => renderView());
+  document.getElementById('report-left-count').addEventListener('change', (e) => {
+    const val = Number(e.target.value);
+    state.reportLeftCount = Number.isFinite(val) ? Math.min(Math.max(val, 0), state.members.length) : null;
+    renderView();
+  });
+  document.getElementById('report-split-reset-btn').addEventListener('click', () => {
+    state.reportLeftCount = null;
+    renderView();
+  });
   document.getElementById('report-print-btn').addEventListener('click', () => window.print());
 }
 
