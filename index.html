@@ -366,6 +366,9 @@ const state = {
   reportMonth: new Date().getMonth() + 1,
   reportOrgName: '営繕部営繕課',
   reportLeftCount: null, // nullなら自動（半分ずつ）。数値をセットすると左の人数を固定できる
+  reportGeppaiMonth: new Date().getMonth() + 1,
+  reportGeppaiOrgName: '営繕部営繕課',
+  reportGeppaiLeftCount: null,
   rosterMonth: new Date().getMonth() + 1,
   rosterOrgName: '営繕課',
   rosterDay1: '21日',
@@ -463,6 +466,7 @@ async function renderMainShell() {
           <div class="tabs">
             <button class="tab" data-view="grid">出欠入力</button>
             <button class="tab" data-view="report">朝神提出（月次報告書）</button>
+            <button class="tab" data-view="report-geppai">月例参拝（月次報告書）</button>
             <button class="tab" data-view="roster">当番表</button>
             <button class="tab" data-view="archive">保管記録</button>
             <button class="tab" data-view="master">マスター</button>
@@ -514,7 +518,8 @@ function updateNavActive() {
 function renderView() {
   const container = document.getElementById('view-container');
   if (state.view === 'grid') renderGridView(container);
-  else if (state.view === 'report') renderReportView(container);
+  else if (state.view === 'report') renderReportView(container, 'asagami');
+  else if (state.view === 'report-geppai') renderReportView(container, 'geppai');
   else if (state.view === 'roster') renderRosterView(container);
   else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
@@ -1310,24 +1315,31 @@ function splitIntoTwoColumns(membersWithNo, leftCountOverride) {
   return { left: membersWithNo.slice(0, half), right: membersWithNo.slice(half) };
 }
 
-function renderReportView(container) {
+function renderReportView(container, category) {
   setPrintPageSize('size: 176mm 250mm; margin: 5mm;');
+  const isGeppai = category === 'geppai';
+  const titleText = isGeppai ? '月例参拝出欠報告書' : '神殿掃除実施報告書';
+  const monthField = isGeppai ? 'reportGeppaiMonth' : 'reportMonth';
+  const orgField = isGeppai ? 'reportGeppaiOrgName' : 'reportOrgName';
+  const leftCountField = isGeppai ? 'reportGeppaiLeftCount' : 'reportLeftCount';
+  const idPrefix = isGeppai ? 'report-geppai' : 'report';
+
   const fyOptions = state.fiscalYears.map(fy =>
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
-    `<option value="${m}" ${m === state.reportMonth ? 'selected' : ''}>${m}月</option>`
+    `<option value="${m}" ${m === state[monthField] ? 'selected' : ''}>${m}月</option>`
   ).join('');
 
   const fiscalYear = state.fiscalYears.find(y => y.id === state.fiscalYearId);
-  const reikiYear = fiscalYear ? (state.reportMonth >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1) : null;
-  const monthSeq = calendarMonthToSeq(state.reportMonth);
+  const reikiYear = fiscalYear ? (state[monthField] >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1) : null;
+  const monthSeq = calendarMonthToSeq(state[monthField]);
 
   const membersWithNo = state.members.map((m, i) => ({ ...m, no: i + 1 }));
 
   let presentCount = 0;
   for (const m of membersWithNo) {
-    if (state.attendance.get(attKey(m.id, 'asagami', monthSeq)) === '○') presentCount++;
+    if (state.attendance.get(attKey(m.id, category, monthSeq)) === '○') presentCount++;
   }
 
   const posCounts = new Map();
@@ -1336,7 +1348,7 @@ function renderReportView(container) {
   for (const p of POSITION_ORDER) { if (posCounts.has(p)) { positionCounts.push({label:p, count:posCounts.get(p)}); posCounts.delete(p); } }
   for (const [label, count] of posCounts) positionCounts.push({ label, count });
 
-  const { left, right } = splitIntoTwoColumns(membersWithNo, state.reportLeftCount);
+  const { left, right } = splitIntoTwoColumns(membersWithNo, state[leftCountField]);
 
   // 1列あたりの人数が基準（26名）を超えたら、行の高さ（余白・行間）だけを自動で縮めて収まるようにする。
   // 文字サイズ・表題部分（社名・年月・印影欄）は変更しない。
@@ -1350,7 +1362,7 @@ function renderReportView(container) {
 
   const renderNameColumn = (slot) => {
     const rows = slot.map((m, idx) => {
-      const status = state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null;
+      const status = state.attendance.get(attKey(m.id, category, monthSeq)) ?? null;
       const prevPos = idx > 0 ? slot[idx-1].position : null;
       const isDitto = idx > 0 && m.position === prevPos;
       const posDisplay = isDitto ? '〃' : escapeHtml(m.position);
@@ -1380,9 +1392,9 @@ function renderReportView(container) {
     <section class="report-page" style="--report-row-scale: ${reportRowScale};">
       <header class="report-header">
         <div class="report-header-left">
-          <h1>神殿掃除実施報告書</h1>
-          <p class="org-name">${escapeHtml(state.reportOrgName)}</p>
-          ${reikiYear != null ? `<p class="report-date">立教${reikiYear}年${state.reportMonth}月</p>` : ''}
+          <h1>${titleText}</h1>
+          <p class="org-name">${escapeHtml(state[orgField])}</p>
+          ${reikiYear != null ? `<p class="report-date">立教${reikiYear}年${state[monthField]}月</p>` : ''}
         </div>
         <div class="report-header-right">
           <table class="stamp-table">
@@ -1406,50 +1418,50 @@ function renderReportView(container) {
   container.innerHTML = `
     <div class="report-outer" style="padding:32px 16px;">
       <div class="toolbar no-print" style="max-width:1000px;margin:0 auto;">
-        <div class="field"><label>年度</label><select id="report-fy">${fyOptions}</select></div>
-        <div class="field"><label>対象月</label><select id="report-month">${monthOptions}</select></div>
-        <div class="field" style="flex:1;min-width:160px;"><label>部署名（表題）</label><input type="text" id="report-org" value="${escapeHtml(state.reportOrgName)}" style="width:100%;" /></div>
+        <div class="field"><label>年度</label><select id="${idPrefix}-fy">${fyOptions}</select></div>
+        <div class="field"><label>対象月</label><select id="${idPrefix}-month">${monthOptions}</select></div>
+        <div class="field" style="flex:1;min-width:160px;"><label>部署名（表題）</label><input type="text" id="${idPrefix}-org" value="${escapeHtml(state[orgField])}" style="width:100%;" /></div>
         <div class="field" style="min-width:70px;">
           <label>左：人数</label>
-          <input type="number" id="report-left-count" min="0" max="${state.members.length}" value="${left.length}" style="width:100%;" />
+          <input type="number" id="${idPrefix}-left-count" min="0" max="${state.members.length}" value="${left.length}" style="width:100%;" />
         </div>
         <div class="field" style="min-width:70px;">
           <label>右：人数</label>
-          <input type="text" id="report-right-count" value="${right.length}名" readonly style="width:100%;background:#f1efe8;" />
+          <input type="text" id="${idPrefix}-right-count" value="${right.length}名" readonly style="width:100%;background:#f1efe8;" />
         </div>
-        <div class="field"><label>&nbsp;</label><button class="btn-light" id="report-split-reset-btn">自動（半分ずつ）</button></div>
-        <button class="btn-dark" id="report-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
+        <div class="field"><label>&nbsp;</label><button class="btn-light" id="${idPrefix}-split-reset-btn">自動（半分ずつ）</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn-dark" id="${idPrefix}-print-btn">印刷 / PDFで保存</button></div>
       </div>
-      <p class="no-print" style="max-width:1000px;margin:0 auto 24px;font-size:12px;color:var(--color-ink-soft);">
+      <p class="no-print" style="max-width:1000px;margin:0 auto 12px;font-size:12px;color:var(--color-ink-soft);">
         用紙サイズ：B5 ／ 片面印刷で1ページに収まる想定です。印刷ダイアログで「用紙サイズ：B5」を選択してください。
       </p>
       <div class="report-preview">${pageHtml}</div>
     </div>
   `;
 
-  document.getElementById('report-fy').addEventListener('change', async (e) => {
+  document.getElementById(`${idPrefix}-fy`).addEventListener('change', async (e) => {
     state.fiscalYearId = Number(e.target.value);
     await loadAttendanceForFiscalYear();
     renderView();
   });
-  document.getElementById('report-month').addEventListener('change', (e) => {
-    state.reportMonth = Number(e.target.value);
+  document.getElementById(`${idPrefix}-month`).addEventListener('change', (e) => {
+    state[monthField] = Number(e.target.value);
     renderView();
   });
-  document.getElementById('report-org').addEventListener('input', (e) => {
-    state.reportOrgName = e.target.value;
+  document.getElementById(`${idPrefix}-org`).addEventListener('input', (e) => {
+    state[orgField] = e.target.value;
   });
-  document.getElementById('report-org').addEventListener('blur', () => renderView());
-  document.getElementById('report-left-count').addEventListener('change', (e) => {
+  document.getElementById(`${idPrefix}-org`).addEventListener('blur', () => renderView());
+  document.getElementById(`${idPrefix}-left-count`).addEventListener('change', (e) => {
     const val = Number(e.target.value);
-    state.reportLeftCount = Number.isFinite(val) ? Math.min(Math.max(val, 0), state.members.length) : null;
+    state[leftCountField] = Number.isFinite(val) ? Math.min(Math.max(val, 0), state.members.length) : null;
     renderView();
   });
-  document.getElementById('report-split-reset-btn').addEventListener('click', () => {
-    state.reportLeftCount = null;
+  document.getElementById(`${idPrefix}-split-reset-btn`).addEventListener('click', () => {
+    state[leftCountField] = null;
     renderView();
   });
-  document.getElementById('report-print-btn').addEventListener('click', () => window.print());
+  document.getElementById(`${idPrefix}-print-btn`).addEventListener('click', () => window.print());
 }
 
 // ==================== 当番表 ====================
