@@ -1987,10 +1987,12 @@ function setupGenericDragAndDrop(canvasId, table, keyField, positionsMap) {
         let newY = startTopMm + dyMm;
         newX = Math.round(newX / GRID_MM) * GRID_MM;
         newY = Math.round(newY / GRID_MM) * GRID_MM;
-        const maxX = parseFloat(canvas.style.width) - 38;
-        const maxY = parseFloat(canvas.style.height) - 15;
-        newX = Math.min(Math.max(0, newX), Math.max(0, maxX));
-        newY = Math.min(Math.max(0, newY), Math.max(0, maxY));
+        // 印刷範囲の外（待機スペース）にも動かせるよう、余裕を持たせた範囲だけ制限する
+        const minX = -100, minY = -60;
+        const maxX = parseFloat(canvas.style.width) + 150;
+        const maxY = parseFloat(canvas.style.height) + 150;
+        newX = Math.min(Math.max(minX, newX), maxX);
+        newY = Math.min(Math.max(minY, newY), maxY);
         box.style.left = `${newX}mm`;
         box.style.top = `${newY}mm`;
       }
