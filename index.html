@@ -296,7 +296,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   background-size: 5mm 5mm;
 }
 @media print {
-  .geppai-canvas { background-image: none; }
+  .geppai-canvas { background-image: none; overflow: hidden; }
 }
 .geppai-canvas .duty-dept {
   position: absolute;
@@ -1769,7 +1769,7 @@ function renderGeppaiRosterView(container) {
 
   // 保存された配置がない部署のための、初期位置（自動6列振り分けを元にした目安）
   const CANVAS_WIDTH_MM = 240;
-  const CANVAS_HEIGHT_MM = 300;
+  const CANVAS_HEIGHT_MM = 160;
   const DEFAULT_COL_WIDTH = 40;
   const columnsForDefault = splitDeptGroupsIntoColumns(groups, 6);
   const defaultPositions = new Map();
@@ -1889,8 +1889,10 @@ function setupGeppaiDragAndDrop() {
         let newY = startTopMm + dyMm;
         newX = Math.round(newX / GRID_MM) * GRID_MM;
         newY = Math.round(newY / GRID_MM) * GRID_MM;
-        newX = Math.max(0, newX);
-        newY = Math.max(0, newY);
+        const maxX = parseFloat(canvas.style.width) - 38;
+        const maxY = parseFloat(canvas.style.height) - 15;
+        newX = Math.min(Math.max(0, newX), Math.max(0, maxX));
+        newY = Math.min(Math.max(0, newY), Math.max(0, maxY));
         box.style.left = `${newX}mm`;
         box.style.top = `${newY}mm`;
       }
