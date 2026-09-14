@@ -502,9 +502,8 @@ async function renderMainShell() {
             <button class="tab" data-view="master">マスター</button>
             <button class="tab" data-view="help">使い方</button>
           </div>
-          <div class="sidebar-footer">
-            <button class="btn-update" id="hard-refresh-btn">Update</button>
-            <span id="update-message" style="font-size:11px;color:var(--color-ink-soft);"></span>
+          <div class="sidebar-footer" id="sidebar-footer">
+            ${renderUpdateButtonHtml()}
             <button class="logout" id="logout-btn">ログアウト</button>
           </div>
         </div>
@@ -526,18 +525,36 @@ async function renderMainShell() {
     renderRoot();
   });
 
-  document.getElementById('hard-refresh-btn').addEventListener('click', () => {
-    const msg = document.getElementById('update-message');
-    msg.textContent = '最新版を読み込んでいます…';
+  attachUpdateButtonHandler();
+  sessionStorage.removeItem(JUST_UPDATED_KEY);
+
+  updateNavActive();
+  await loadFiscalYearsAndMembers();
+  renderView();
+}
+
+const JUST_UPDATED_KEY = 'asagami_just_updated';
+
+function renderUpdateButtonHtml() {
+  if (sessionStorage.getItem(JUST_UPDATED_KEY) === '1') {
+    return `<p id="update-confirm-msg" style="font-size:12px;color:var(--color-present);font-weight:500;margin:0;">✓ 最新の情報に更新しました</p>`;
+  }
+  return `<button class="btn-update" id="hard-refresh-btn">Update</button><span id="update-message" style="font-size:11px;color:var(--color-ink-soft);"></span>`;
+}
+
+function attachUpdateButtonHandler() {
+  const btn = document.getElementById('hard-refresh-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    sessionStorage.setItem(JUST_UPDATED_KEY, '1');
+    const footer = document.getElementById('sidebar-footer');
+    const msgEl = document.getElementById('update-message');
+    if (msgEl) msgEl.textContent = '最新版を読み込んでいます…';
     setTimeout(() => {
       const url = window.location.origin + window.location.pathname + '?_=' + Date.now();
       window.location.href = url;
     }, 400);
   });
-
-  updateNavActive();
-  await loadFiscalYearsAndMembers();
-  renderView();
 }
 
 function updateNavActive() {
