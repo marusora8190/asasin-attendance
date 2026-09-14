@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>朝神出欠記録</title>
+<title>朝の神殿掃除出欠記録</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20180%20180%22%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20rx%3D%2232%22%20fill%3D%22%231c2b39%22/%3E%3Ctext%20x%3D%2290%22%20y%3D%2280%22%20font-family%3D%22%27Zen%20Kaku%20Gothic%20New%27%2C%27Hiragino%20Sans%27%2C%27Noto%20Sans%20JP%27%2C%27Yu%20Gothic%27%2C%27Meiryo%27%2Csans-serif%22%20font-size%3D%2252%22%20font-weight%3D%22700%22%20fill%3D%22%23f6f4ee%22%20text-anchor%3D%22middle%22%3E%E6%9C%9D%E7%A5%9E%3C/text%3E%3Ctext%20x%3D%2290%22%20y%3D%22140%22%20font-family%3D%22%27Zen%20Kaku%20Gothic%20New%27%2C%27Hiragino%20Sans%27%2C%27Noto%20Sans%20JP%27%2C%27Yu%20Gothic%27%2C%27Meiryo%27%2Csans-serif%22%20font-size%3D%2252%22%20font-weight%3D%22700%22%20fill%3D%22%23b8863b%22%20text-anchor%3D%22middle%22%3E%E5%87%BA%E6%AC%A0%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20180%20180%22%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20rx%3D%2232%22%20fill%3D%22%231c2b39%22/%3E%3Ctext%20x%3D%2290%22%20y%3D%2280%22%20font-family%3D%22%27Zen%20Kaku%20Gothic%20New%27%2C%27Hiragino%20Sans%27%2C%27Noto%20Sans%20JP%27%2C%27Yu%20Gothic%27%2C%27Meiryo%27%2Csans-serif%22%20font-size%3D%2252%22%20font-weight%3D%22700%22%20fill%3D%22%23f6f4ee%22%20text-anchor%3D%22middle%22%3E%E6%9C%9D%E7%A5%9E%3C/text%3E%3Ctext%20x%3D%2290%22%20y%3D%22140%22%20font-family%3D%22%27Zen%20Kaku%20Gothic%20New%27%2C%27Hiragino%20Sans%27%2C%27Noto%20Sans%20JP%27%2C%27Yu%20Gothic%27%2C%27Meiryo%27%2Csans-serif%22%20font-size%3D%2252%22%20font-weight%3D%22700%22%20fill%3D%22%23b8863b%22%20text-anchor%3D%22middle%22%3E%E5%87%BA%E6%AC%A0%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -239,7 +239,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   .duty-day-block { flex: 0 1 auto !important; }
 }
 
-/* ---- 神殿掃除実施報告書（朝神提出） ---- */
+/* ---- 神殿掃除実施報告書（朝の神殿掃除提出） ---- */
 .report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
 .report-page {
   width: 166mm; height: 240mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
@@ -340,7 +340,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 
 <script>
 /* ============================================================
- * 朝神出欠記録（⑥）- 単一HTMLファイル版
+ * 朝の神殿掃除出欠記録（⑥）- 単一HTMLファイル版
  * ①〜⑤と同じく、ビルド不要・Supabase JS(CDN)を直接読み込む方式です。
  * ============================================================ */
 
@@ -362,7 +362,7 @@ const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
 const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤務者','常傭者','３年目ひのきしん者','２年目ひのきしん者','１年目ひのきしん者'];
-const CATEGORY_LABEL = { asagami: '朝神', geppai: '月例参拝' };
+const CATEGORY_LABEL = { asagami: '朝の神殿掃除', geppai: '月例参拝' };
 const ROWS_PER_BLOCK = 19;
 
 function calendarMonthToSeq(m) { return m >= 4 ? m - 3 : m + 9; }
@@ -404,7 +404,7 @@ const state = {
   rosterDay2: '22日',
   rosterDay3: '23日',
   rosterShowMonth: true,
-  dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝神当番表用）
+  dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
   masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
@@ -450,7 +450,7 @@ function renderLogin() {
     <div class="login-wrap">
       <form class="login-card" id="login-form">
         <p class="eyebrow">出欠管理システム</p>
-        <h1 class="font-display">朝神出欠記録</h1>
+        <h1 class="font-display">朝の神殿掃除出欠記録</h1>
         <label for="login-password">合言葉</label>
         <input id="login-password" type="password" autofocus placeholder="合言葉を入力" />
         <p class="login-error" id="login-error" style="display:none;"></p>
@@ -495,9 +495,9 @@ async function renderMainShell() {
         <div class="inner">
           <div class="tabs">
             <button class="tab" data-view="grid">出欠入力</button>
-            <button class="tab" data-view="report">朝神提出（月次報告書）</button>
+            <button class="tab" data-view="report">朝の神殿掃除提出（月次報告書）</button>
             <button class="tab" data-view="report-geppai">月例参拝（月次報告書）</button>
-            <button class="tab" data-view="roster">朝神当番表</button>
+            <button class="tab" data-view="roster">朝の神殿掃除当番表</button>
             <button class="tab" data-view="archive">保管記録</button>
             <button class="tab" data-view="master">マスター</button>
             <button class="tab" data-view="help">使い方</button>
@@ -608,9 +608,9 @@ function renderHelpView(container) {
 
       <section class="help-section">
         <h2>① 出欠入力</h2>
-        <p>メンバーごとに、月ごとの「朝神」「月例参拝」の出欠(○×)を入力する画面です。</p>
+        <p>メンバーごとに、月ごとの「朝の神殿掃除」「月例参拝」の出欠(○×)を入力する画面です。</p>
         <ul>
-          <li>上部の「朝神」「月例参拝」タブで、入力する区分を切り替えます。</li>
+          <li>上部の「朝の神殿掃除」「月例参拝」タブで、入力する区分を切り替えます。</li>
           <li>各月のマスをクリックすると、空欄→○→×→空欄の順に切り替わります。</li>
           <li>氏名・部署・立場はその場で書き換えられます(部署・立場はプルダウンから選択)。</li>
           <li>行の左端の「⠿」を掴んでドラッグすると、メンバーの並び順を変えられます。「↑」「↓」ボタンでも1つずつ動かせます。</li>
@@ -621,7 +621,7 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>② 朝神提出／月例参拝（月次報告書）</h2>
+        <h2>② 朝の神殿掃除提出／月例参拝（月次報告書）</h2>
         <p>1ヶ月分の出欠を、提出用のB5用紙1枚のレイアウトで印刷するための画面です。</p>
         <ul>
           <li>「年度」「対象月」「部署名(表題)」を設定してから、「印刷 / PDFで保存」を押してください。</li>
@@ -632,7 +632,7 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>③ 朝神当番表</h2>
+        <h2>③ 朝の神殿掃除当番表</h2>
         <p>1日目・2日目・3日目ごとに、部署の当番割り当てと出欠を印刷するための当番表です。</p>
         <ul>
           <li>「対象月」で出欠結果を反映する月を選べます。「テンプレ」を選ぶと、○×を一切表示しない空欄の状態で印刷できます(配布用の当番表として使えます)。</li>
@@ -646,7 +646,7 @@ function renderHelpView(container) {
         <h2>④ 保管記録</h2>
         <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
         <ul>
-          <li>年度・区分(朝神／月例参拝)を選んで、部署ごとの出欠一覧を確認できます。</li>
+          <li>年度・区分(朝の神殿掃除／月例参拝)を選んで、部署ごとの出欠一覧を確認できます。</li>
           <li>保管された記録は、保管されてから<strong>3年を過ぎると自動的に完全に削除</strong>されます。</li>
         </ul>
       </section>
@@ -1229,8 +1229,8 @@ function renderGridView(container) {
     <div class="grid-wrap">
       <div class="grid-header no-print">
         <div>
-          <p class="eyebrow">出欠管理システム</p>
           <h1 class="font-display">${CATEGORY_LABEL[state.category]}出欠記録</h1>
+          <p class="eyebrow">出欠管理システム</p>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <select id="fy-select">${fyOptions}</select>
@@ -1469,7 +1469,7 @@ async function addFiscalYear() {
   }
 }
 
-// ==================== 朝神提出（月次報告書） ====================
+// ==================== 朝の神殿掃除提出（月次報告書） ====================
 function splitIntoTwoColumns(membersWithNo, leftCountOverride) {
   const total = membersWithNo.length;
   let half = Math.ceil(total / 2);
