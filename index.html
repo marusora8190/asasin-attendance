@@ -223,12 +223,15 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   padding: 2px 4px; border-bottom: 1px solid var(--color-line);
 }
 .field-row-name { font-size: 16px; font-weight: 500; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.field-toggle-btn {
-  flex-shrink: 0; width: 46px; height: 30px; border-radius: 8px; border: 2px solid var(--color-line);
-  background: white; font-size: 16px; font-weight: 700; color: var(--color-ink-soft);
+.field-status-group { display: flex; gap: 4px; flex-shrink: 0; }
+.field-status-btn {
+  width: 34px; height: 30px; border-radius: 6px; border: 2px solid var(--color-line);
+  background: white; font-size: 15px; font-weight: 700; color: var(--color-ink-soft); opacity: 0.5;
 }
-.field-toggle-btn.present { border-color: var(--color-present); color: var(--color-present); background: var(--color-present-bg); }
-.field-toggle-btn.absent { border-color: var(--color-absent); color: var(--color-absent); background: var(--color-absent-bg); }
+.field-status-btn.active { opacity: 1; }
+.field-status-btn.present.active { border-color: var(--color-present); color: var(--color-present); background: var(--color-present-bg); }
+.field-status-btn.absent.active { border-color: var(--color-absent); color: var(--color-absent); background: var(--color-absent-bg); }
+.field-status-btn.blank.active { border-color: var(--color-ink-soft); color: var(--color-ink); background: var(--color-line); }
 .field-action-row { display: flex; gap: 10px; margin-top: 20px; }
 .field-save-btn {
   display: block; flex: 1; padding: 14px;
@@ -1577,21 +1580,23 @@ function renderFieldView(container) {
     return `
       <li class="field-row" data-member="${m.id}">
         <span class="field-row-name">${escapeHtml(m.name)}</span>
-        <button class="field-toggle-btn ${status === '○' ? 'present' : status === '×' ? 'absent' : ''}" data-member="${m.id}">${status ?? '－'}</button>
+        <div class="field-status-group" data-member="${m.id}">
+          <button class="field-status-btn present ${status === '○' ? 'active' : ''}" data-member="${m.id}" data-status="○">○</button>
+          <button class="field-status-btn absent ${status === '×' ? 'active' : ''}" data-member="${m.id}" data-status="×">×</button>
+          <button class="field-status-btn blank ${status === null ? 'active' : ''}" data-member="${m.id}" data-status="">－</button>
+        </div>
       </li>`;
   }).join('') || `<li class="field-row" style="color:var(--color-ink-soft);">該当するメンバーがいません</li>`;
-
-  const isFieldOnly = new URLSearchParams(window.location.search).get('field') === '1';
 
   container.innerHTML = `
     <div class="field-view">
       <div class="field-controls no-print">
         <div class="field-cat-tabs">${catTabs}</div>
         <select id="field-month-select">${monthOptions}</select>
-        ${isFieldOnly ? `<div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}<button class="logout" id="field-logout-btn">ログアウト</button></div>` : ''}
+        <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}<button class="logout" id="field-logout-btn">ログアウト</button></div>
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
-      <p class="hint-text no-print" style="margin-top:8px;">名前の右のボタンをタップすると、－→○→×→－の順に切り替わります。班ごとに入力が終わったら「保存」を押してください。</p>
+      <p class="hint-text no-print" style="margin-top:8px;">名前の右の「○」「×」「－」をタップして選んでください。班ごとに入力が終わったら「保存」を押してください。</p>
       <ul class="field-list">${rowsHtml}</ul>
       <div class="field-action-row no-print">
         <button class="field-all-present-btn" id="field-all-present-btn">全員○</button>
@@ -1601,14 +1606,12 @@ function renderFieldView(container) {
     </div>
   `;
 
-  if (isFieldOnly) {
-    attachUpdateButtonHandler();
-    document.getElementById('field-logout-btn').addEventListener('click', () => {
-      sessionStorage.removeItem(UNLOCK_KEY);
-      state.unlocked = false;
-      renderRoot();
-    });
-  }
+  attachUpdateButtonHandler();
+  document.getElementById('field-logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem(UNLOCK_KEY);
+    state.unlocked = false;
+    renderRoot();
+  });
 
   document.getElementById('field-month-select').addEventListener('change', (e) => {
     state.fieldMonth = Number(e.target.value);
@@ -1626,17 +1629,19 @@ function renderFieldView(container) {
       renderView();
     });
   });
-  document.querySelectorAll('.field-toggle-btn').forEach((btn) => {
-    btn.addEventListener('click', () => toggleFieldCellLocal(Number(btn.dataset.member), monthSeq, btn));
+  document.querySelectorAll('.field-status-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setFieldCellLocal(Number(btn.dataset.member), monthSeq, btn.dataset.status, btn.closest('.field-status-group'));
+    });
   });
   document.getElementById('field-all-present-btn').addEventListener('click', () => {
-    document.querySelectorAll('.field-toggle-btn').forEach((btn) => {
-      const memberId = Number(btn.dataset.member);
+    document.querySelectorAll('.field-status-group').forEach((group) => {
+      const memberId = Number(group.dataset.member);
       const key = attKey(memberId, state.fieldCategory, monthSeq);
       state.attendance.set(key, '○');
-      btn.textContent = '○';
-      btn.classList.remove('absent');
-      btn.classList.add('present');
+      group.querySelectorAll('.field-status-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.status === '○');
+      });
     });
     const msgEl = document.getElementById('field-save-msg');
     if (msgEl) msgEl.textContent = '';
@@ -1647,17 +1652,19 @@ function renderFieldView(container) {
 }
 
 // タップ時は画面上の表示だけを切り替える（保存はしない）
-function toggleFieldCellLocal(memberId, seq, btnEl) {
+function setFieldCellLocal(memberId, seq, status, groupEl) {
   const category = state.fieldCategory;
   const key = attKey(memberId, category, seq);
-  const current = state.attendance.get(key) ?? null;
-  const next = current === null ? '○' : current === '○' ? '×' : null;
+  const next = status === '' ? null : status;
 
   if (next === null) state.attendance.delete(key); else state.attendance.set(key, next);
-  btnEl.textContent = next ?? '－';
-  btnEl.classList.remove('present', 'absent');
-  if (next === '○') btnEl.classList.add('present');
-  if (next === '×') btnEl.classList.add('absent');
+
+  if (groupEl) {
+    groupEl.querySelectorAll('.field-status-btn').forEach((b) => {
+      const btnStatus = b.dataset.status === '' ? null : b.dataset.status;
+      b.classList.toggle('active', btnStatus === next);
+    });
+  }
 
   const msgEl = document.getElementById('field-save-msg');
   if (msgEl) msgEl.textContent = '';
