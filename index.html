@@ -204,6 +204,12 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-header { margin-bottom: 12px; }
 .field-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .field-cat-tabs { display: flex; gap: 6px; }
+.field-dept-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.field-dept-tabs button {
+  padding: 6px 12px; font-size: 12px; border-radius: 999px; border: 1px solid var(--color-line);
+  background: white; color: var(--color-ink-soft);
+}
+.field-dept-tabs button.active { background: var(--color-gold); color: white; border-color: var(--color-gold); font-weight: 500; }
 .field-cat-tabs button {
   padding: 8px 14px; font-size: 14px; border-radius: 999px; border: 1px solid var(--color-line);
   background: white; color: var(--color-ink-soft);
@@ -463,6 +469,7 @@ const state = {
   bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
+  fieldDeptFilter: 'all',
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -1471,6 +1478,19 @@ async function reorderMember(draggedId, targetId, insertAfter) {
 }
 
 // ==================== 現場入力（スマホ用） ====================
+const FIELD_DEPT_GROUPS = [
+  { key: 'all', label: '全員', depts: null },
+  { key: 'eizen-shomu', label: '営繕課・庶務係', depts: ['営繕課', '庶務係'] },
+  { key: 'genba1', label: '現場第一班', depts: ['現場第一班'] },
+  { key: 'genba2', label: '現場第二班', depts: ['現場第二班'] },
+  { key: 'genba3', label: '現場第三班', depts: ['現場第三班'] },
+  { key: 'seizai', label: '製材班', depts: ['製材班'] },
+  { key: 'daiku', label: '大工班', depts: ['大工班'] },
+  { key: 'mokko', label: '木工班', depts: ['木工班'] },
+  { key: 'tekko', label: '鉄工班', depts: ['鉄工班'] },
+  { key: 'kucho', label: '空調衛生係', depts: ['空調衛生係'] },
+];
+
 function renderFieldView(container) {
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.fieldMonth ? 'selected' : ''}>${m}月</option>`
@@ -1478,9 +1498,14 @@ function renderFieldView(container) {
   const catTabs = ['asagami', 'geppai'].map(c =>
     `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
+  const deptTabs = FIELD_DEPT_GROUPS.map((g) =>
+    `<button data-dept-key="${g.key}" class="field-dept-btn ${state.fieldDeptFilter === g.key ? 'active' : ''}">${g.label}</button>`
+  ).join('');
 
   const monthSeq = calendarMonthToSeq(state.fieldMonth);
-  const orderedMembers = getOrderedMembersForCategory(state.fieldCategory);
+  const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
+  const orderedMembers = getOrderedMembersForCategory(state.fieldCategory)
+    .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
 
   const rowsHtml = orderedMembers.map((m) => {
     const status = state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) ?? null;
@@ -1492,7 +1517,7 @@ function renderFieldView(container) {
         </div>
         <button class="field-toggle-btn ${status === '○' ? 'present' : status === '×' ? 'absent' : ''}" data-member="${m.id}">${status ?? '－'}</button>
       </li>`;
-  }).join('');
+  }).join('') || `<li class="field-row" style="color:var(--color-ink-soft);">該当するメンバーがいません</li>`;
 
   const isFieldOnly = new URLSearchParams(window.location.search).get('field') === '1';
 
@@ -1507,6 +1532,7 @@ function renderFieldView(container) {
         <div class="field-cat-tabs">${catTabs}</div>
         <select id="field-month-select">${monthOptions}</select>
       </div>
+      <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前の右のボタンをタップすると、－→○→×→－の順に切り替わります。押すとすぐに保存されます。</p>
       <ul class="field-list">${rowsHtml}</ul>
     </div>
@@ -1519,6 +1545,12 @@ function renderFieldView(container) {
   document.querySelectorAll('.field-cat-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.fieldCategory = btn.dataset.cat;
+      renderView();
+    });
+  });
+  document.querySelectorAll('.field-dept-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.fieldDeptFilter = btn.dataset.deptKey;
       renderView();
     });
   });
