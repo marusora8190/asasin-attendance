@@ -541,6 +541,20 @@ function renderLogin() {
 
 // ==================== 全体シェル（ナビ＋各画面） ====================
 async function renderMainShell() {
+  const isFieldOnly = new URLSearchParams(window.location.search).get('field') === '1';
+
+  if (isFieldOnly) {
+    state.view = 'field';
+    app.innerHTML = `
+      <div class="app-shell">
+        <div id="view-container"><div class="loading">読み込み中…</div></div>
+      </div>
+    `;
+    await loadFiscalYearsAndMembers();
+    renderView();
+    return;
+  }
+
   app.innerHTML = `
     <div class="app-shell">
       <nav class="app-nav no-print">
@@ -1480,11 +1494,14 @@ function renderFieldView(container) {
       </li>`;
   }).join('');
 
+  const isFieldOnly = new URLSearchParams(window.location.search).get('field') === '1';
+
   container.innerHTML = `
     <div class="field-view">
       <div class="field-header no-print">
         <p class="eyebrow">出欠管理システム</p>
         <h1 class="font-display">現場入力</h1>
+        ${isFieldOnly ? `<a href="${window.location.pathname}" style="font-size:12px;color:var(--color-accent);">全体を表示（他の画面も見る）</a>` : ''}
       </div>
       <div class="field-controls no-print">
         <div class="field-cat-tabs">${catTabs}</div>
