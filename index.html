@@ -200,7 +200,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .hint-text { margin-top: 24px; font-size: 12px; color: var(--color-ink-soft); }
 
 /* ---- 現場入力（スマホ用） ---- */
-.field-view { max-width: 480px; margin: 0 auto; padding: 8px 16px 60px; }
+.field-view { max-width: 480px; margin: 0 auto; padding: 4px 16px 60px; }
 .field-header { margin-bottom: 12px; }
 .field-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .field-cat-tabs { display: flex; gap: 6px; }
@@ -640,11 +640,12 @@ function attachUpdateButtonHandler() {
   if (!btn) return;
   btn.addEventListener('click', () => {
     sessionStorage.setItem(JUST_UPDATED_KEY, '1');
-    const footer = document.getElementById('sidebar-footer');
     const msgEl = document.getElementById('update-message');
     if (msgEl) msgEl.textContent = '最新版を読み込んでいます…';
     setTimeout(() => {
-      const url = window.location.origin + window.location.pathname + '?_=' + Date.now();
+      const params = new URLSearchParams(window.location.search);
+      params.set('_', Date.now());
+      const url = window.location.origin + window.location.pathname + '?' + params.toString();
       window.location.href = url;
     }, 400);
   });
@@ -1580,10 +1581,10 @@ function renderFieldView(container) {
 
   container.innerHTML = `
     <div class="field-view">
-      ${isFieldOnly ? `<div class="field-header no-print"><a href="${window.location.pathname}" style="font-size:12px;color:var(--color-accent);">全体を表示（他の画面も見る）</a></div>` : ''}
       <div class="field-controls no-print">
         <div class="field-cat-tabs">${catTabs}</div>
         <select id="field-month-select">${monthOptions}</select>
+        ${isFieldOnly ? `<div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}<button class="logout" id="field-logout-btn">ログアウト</button></div>` : ''}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前の右のボタンをタップすると、－→○→×→－の順に切り替わります。班ごとに入力が終わったら「保存」を押してください。</p>
@@ -1595,6 +1596,15 @@ function renderFieldView(container) {
       <p class="no-print" id="field-save-msg" style="text-align:center;font-size:13px;color:var(--color-present);font-weight:500;height:18px;margin-top:8px;"></p>
     </div>
   `;
+
+  if (isFieldOnly) {
+    attachUpdateButtonHandler();
+    document.getElementById('field-logout-btn').addEventListener('click', () => {
+      sessionStorage.removeItem(UNLOCK_KEY);
+      state.unlocked = false;
+      renderRoot();
+    });
+  }
 
   document.getElementById('field-month-select').addEventListener('change', (e) => {
     state.fieldMonth = Number(e.target.value);
