@@ -228,12 +228,18 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 }
 .field-toggle-btn.present { border-color: var(--color-present); color: var(--color-present); background: var(--color-present-bg); }
 .field-toggle-btn.absent { border-color: var(--color-absent); color: var(--color-absent); background: var(--color-absent-bg); }
+.field-action-row { display: flex; gap: 10px; margin-top: 20px; }
 .field-save-btn {
-  display: block; width: 100%; margin-top: 20px; padding: 14px;
+  display: block; flex: 1; padding: 14px;
   background: var(--color-navy); color: white; border: none; border-radius: 10px;
   font-size: 16px; font-weight: 500;
 }
 .field-save-btn:disabled { opacity: 0.6; }
+.field-all-present-btn {
+  display: block; flex: 1; padding: 14px;
+  background: white; color: var(--color-present); border: 2px solid var(--color-present); border-radius: 10px;
+  font-size: 16px; font-weight: 500;
+}
 
 .context-menu {
   position: fixed; z-index: 1000; background: white; border: 1px solid var(--color-line);
@@ -1365,8 +1371,8 @@ function renderGridView(container) {
   container.innerHTML = `
     <div class="grid-wrap">
       <div class="grid-header no-print">
-        <div>
-          <h1 class="font-display" id="grid-title-h1" style="cursor:context-menu;">${CATEGORY_LABEL[state.category]}出欠記録</h1>
+        <div id="grid-title-wrap" style="cursor:context-menu;">
+          <h1 class="font-display" id="grid-title-h1">朝の神殿掃除・月例参拝出欠記録</h1>
           <p class="eyebrow">出欠管理システム</p>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -1411,10 +1417,14 @@ function renderGridView(container) {
 
   document.getElementById('add-fy-btn').addEventListener('click', addFiscalYear);
 
-  document.getElementById('grid-title-h1').addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    showFieldShortcutMenu(e.clientX, e.clientY);
-  });
+  const titleWrap = document.getElementById('grid-title-wrap');
+  if (titleWrap) {
+    titleWrap.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFieldShortcutMenu(e.clientX, e.clientY);
+    });
+  }
 
   document.querySelectorAll('.category-tabs button').forEach(btn => {
     btn.addEventListener('click', () => { state.category = btn.dataset.cat; renderView(); });
@@ -1578,7 +1588,10 @@ function renderFieldView(container) {
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前の右のボタンをタップすると、－→○→×→－の順に切り替わります。班ごとに入力が終わったら「保存」を押してください。</p>
       <ul class="field-list">${rowsHtml}</ul>
-      <button class="field-save-btn no-print" id="field-save-btn">この班を保存</button>
+      <div class="field-action-row no-print">
+        <button class="field-all-present-btn" id="field-all-present-btn">全員○</button>
+        <button class="field-save-btn" id="field-save-btn">この班を保存</button>
+      </div>
       <p class="no-print" id="field-save-msg" style="text-align:center;font-size:13px;color:var(--color-present);font-weight:500;height:18px;margin-top:8px;"></p>
     </div>
   `;
@@ -1601,6 +1614,18 @@ function renderFieldView(container) {
   });
   document.querySelectorAll('.field-toggle-btn').forEach((btn) => {
     btn.addEventListener('click', () => toggleFieldCellLocal(Number(btn.dataset.member), monthSeq, btn));
+  });
+  document.getElementById('field-all-present-btn').addEventListener('click', () => {
+    document.querySelectorAll('.field-toggle-btn').forEach((btn) => {
+      const memberId = Number(btn.dataset.member);
+      const key = attKey(memberId, state.fieldCategory, monthSeq);
+      state.attendance.set(key, '○');
+      btn.textContent = '○';
+      btn.classList.remove('absent');
+      btn.classList.add('present');
+    });
+    const msgEl = document.getElementById('field-save-msg');
+    if (msgEl) msgEl.textContent = '';
   });
   document.getElementById('field-save-btn').addEventListener('click', () => {
     saveFieldGroup(orderedMembers, monthSeq);
