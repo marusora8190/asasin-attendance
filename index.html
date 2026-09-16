@@ -220,7 +220,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-list { list-style: none; margin: 16px 0 0; padding: 0; }
 .field-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 4px; border-bottom: 1px solid var(--color-line);
+  padding: 7px 4px; border-bottom: 1px solid var(--color-line);
 }
 .field-row-name { font-size: 17px; font-weight: 500; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .field-status-group { display: flex; gap: 6px; flex-shrink: 0; }
@@ -1595,7 +1595,7 @@ function renderFieldView(container) {
         <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}<button class="logout" id="field-logout-btn">ログアウト</button></div>
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
-      <p class="hint-text no-print" style="margin-top:8px;">名前の右の「○」「×」「－」をタップして選んでください。班ごとに入力が終わったら「保存」を押してください。</p>
+      <p class="hint-text no-print" style="margin-top:8px;">名前の右の「○」「－」をタップして選んでください。班ごとに入力が終わったら「保存」を押してください。</p>
       <ul class="field-list">${rowsHtml}</ul>
       <div class="field-action-row no-print">
         <button class="field-all-present-btn" id="field-all-present-btn">全員○</button>
