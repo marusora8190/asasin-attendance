@@ -212,21 +212,13 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 }
 .field-cat-tabs button.active { background: var(--color-navy); color: white; border-color: var(--color-navy); font-weight: 500; }
 .field-controls select { border: 1px solid var(--color-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: white; }
-.field-list { list-style: none; margin: 16px 0 0; padding: 0; }
-.field-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 7px 4px; border-bottom: 1px solid var(--color-line);
+.field-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
+.field-chip {
+  padding: 16px 6px; border-radius: 10px; border: 2px solid var(--color-line);
+  background: white; font-size: 16px; font-weight: 500; color: var(--color-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.field-row-name { font-size: 17px; font-weight: 500; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.field-status-group { display: flex; gap: 6px; flex-shrink: 0; }
-.field-status-btn {
-  width: 44px; height: 40px; border-radius: 8px; border: 2px solid var(--color-line);
-  background: white; font-size: 18px; font-weight: 700; color: var(--color-ink-soft); opacity: 0.5;
-}
-.field-status-btn.active { opacity: 1; }
-.field-status-btn.present.active { border-color: var(--color-present); color: var(--color-present); background: var(--color-present-bg); }
-.field-status-btn.absent.active { border-color: var(--color-absent); color: var(--color-absent); background: var(--color-absent-bg); }
-.field-status-btn.blank.active { border-color: var(--color-ink-soft); color: var(--color-ink); background: var(--color-line); }
+.field-chip.filled { border-color: var(--color-present); background: var(--color-present); color: white; font-weight: 700; }
 .field-action-row { display: flex; gap: 10px; margin-top: 20px; }
 .field-save-btn {
   display: block; flex: 1; padding: 14px;
@@ -489,7 +481,7 @@ const state = {
   bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
-  fieldDeptFilter: 'all',
+  fieldDeptFilter: 'eizen-shomu',
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -515,8 +507,15 @@ async function init() {
   renderRoot();
 }
 
+function isFieldOnlyMode() {
+  return new URLSearchParams(window.location.search).get('field') === '1';
+}
+
 function renderRoot() {
-  if (!state.unlocked) {
+  if (isFieldOnlyMode()) {
+    // 現場用スマホ画面は合言葉ログインなしで直接開く
+    renderMainShell();
+  } else if (!state.unlocked) {
     renderLogin();
   } else {
     renderMainShell();
@@ -568,7 +567,7 @@ function renderLogin() {
 
 // ==================== 全体シェル（ナビ＋各画面） ====================
 async function renderMainShell() {
-  const isFieldOnly = new URLSearchParams(window.location.search).get('field') === '1';
+  const isFieldOnly = isFieldOnlyMode();
 
   if (isFieldOnly) {
     state.view = 'field';
@@ -1542,7 +1541,6 @@ async function reorderMember(draggedId, targetId, insertAfter) {
 
 // ==================== 現場入力（スマホ用） ====================
 const FIELD_DEPT_GROUPS = [
-  { key: 'all', label: '全員', depts: null },
   { key: 'eizen-shomu', label: '営繕課・庶務係', depts: ['営繕課', '庶務係'] },
   { key: 'genba1', label: '現場第一班', depts: ['現場第一班'] },
   { key: 'genba2', label: '現場第二班', depts: ['現場第二班'] },
@@ -1570,17 +1568,10 @@ function renderFieldView(container) {
   const orderedMembers = getOrderedMembersForCategory(state.fieldCategory)
     .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
 
-  const rowsHtml = orderedMembers.map((m) => {
+  const chipsHtml = orderedMembers.map((m) => {
     const status = state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) ?? null;
-    return `
-      <li class="field-row" data-member="${m.id}">
-        <span class="field-row-name">${escapeHtml(m.name)}</span>
-        <div class="field-status-group" data-member="${m.id}">
-          <button class="field-status-btn present ${status === '○' ? 'active' : ''}" data-member="${m.id}" data-status="○">○</button>
-          <button class="field-status-btn blank ${status === null ? 'active' : ''}" data-member="${m.id}" data-status="">－</button>
-        </div>
-      </li>`;
-  }).join('') || `<li class="field-row" style="color:var(--color-ink-soft);">該当するメンバーがいません</li>`;
+    return `<button class="field-chip ${status === '○' ? 'filled' : ''}" data-member="${m.id}">${escapeHtml(m.name)}</button>`;
+  }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
 
   container.innerHTML = `
     <div class="field-view">
@@ -1590,11 +1581,11 @@ function renderFieldView(container) {
         <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}<button class="logout" id="field-logout-btn">ログアウト</button></div>
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
-      <p class="hint-text no-print" style="margin-top:8px;">名前の右の「○」「－」をタップして選んでください。班ごとに入力が終わったら「保存」を押してください。</p>
-      <ul class="field-list">${rowsHtml}</ul>
+      <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください。</p>
+      <div class="field-chip-grid">${chipsHtml}</div>
       <div class="field-action-row no-print">
-        <button class="field-all-present-btn" id="field-all-present-btn">全員○</button>
-        <button class="field-save-btn" id="field-save-btn">この班を保存</button>
+        <button class="field-all-present-btn" id="field-all-present-btn">全員出席</button>
+        <button class="field-save-btn" id="field-save-btn">この内容で保存</button>
       </div>
       <p class="no-print" id="field-save-msg" style="text-align:center;font-size:13px;color:var(--color-present);font-weight:500;height:18px;margin-top:8px;"></p>
     </div>
@@ -1623,19 +1614,17 @@ function renderFieldView(container) {
       renderView();
     });
   });
-  document.querySelectorAll('.field-status-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      setFieldCellLocal(Number(btn.dataset.member), monthSeq, btn.dataset.status, btn.closest('.field-status-group'));
+  document.querySelectorAll('.field-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      toggleFieldChipLocal(Number(chip.dataset.member), monthSeq, chip);
     });
   });
   document.getElementById('field-all-present-btn').addEventListener('click', () => {
-    document.querySelectorAll('.field-status-group').forEach((group) => {
-      const memberId = Number(group.dataset.member);
+    document.querySelectorAll('.field-chip').forEach((chip) => {
+      const memberId = Number(chip.dataset.member);
       const key = attKey(memberId, state.fieldCategory, monthSeq);
       state.attendance.set(key, '○');
-      group.querySelectorAll('.field-status-btn').forEach((b) => {
-        b.classList.toggle('active', b.dataset.status === '○');
-      });
+      chip.classList.add('filled');
     });
     const msgEl = document.getElementById('field-save-msg');
     if (msgEl) msgEl.textContent = '';
@@ -1646,25 +1635,20 @@ function renderFieldView(container) {
 }
 
 // タップ時は画面上の表示だけを切り替える（保存はしない）
-function setFieldCellLocal(memberId, seq, status, groupEl) {
+function toggleFieldChipLocal(memberId, seq, chipEl) {
   const category = state.fieldCategory;
   const key = attKey(memberId, category, seq);
-  const next = status === '' ? null : status;
+  const current = state.attendance.get(key) ?? null;
+  const next = current === '○' ? null : '○';
 
   if (next === null) state.attendance.delete(key); else state.attendance.set(key, next);
-
-  if (groupEl) {
-    groupEl.querySelectorAll('.field-status-btn').forEach((b) => {
-      const btnStatus = b.dataset.status === '' ? null : b.dataset.status;
-      b.classList.toggle('active', btnStatus === next);
-    });
-  }
+  chipEl.classList.toggle('filled', next === '○');
 
   const msgEl = document.getElementById('field-save-msg');
   if (msgEl) msgEl.textContent = '';
 }
 
-// 「保存」ボタンが押されたとき、今表示中の班のメンバー分をまとめて保存する
+// 「この内容で保存」ボタンが押されたとき、今表示中の班のメンバー分をまとめて保存する
 async function saveFieldGroup(members, seq) {
   const category = state.fieldCategory;
   const saveBtn = document.getElementById('field-save-btn');
@@ -1689,7 +1673,7 @@ async function saveFieldGroup(members, seq) {
     }
   }
 
-  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'この班を保存'; }
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'この内容で保存'; }
   if (msgEl) msgEl.textContent = '✓ 保存しました';
 }
 
