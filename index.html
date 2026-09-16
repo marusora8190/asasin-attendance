@@ -214,7 +214,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-controls select { border: 1px solid var(--color-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: white; }
 .field-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
 .field-chip {
-  padding: 16px 6px; border-radius: 10px; border: 2px solid var(--color-line);
+  padding: 10px 6px; border-radius: 10px; border: 2px solid var(--color-line);
   background: white; font-size: 16px; font-weight: 500; color: var(--color-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -1553,6 +1553,9 @@ const FIELD_DEPT_GROUPS = [
 ];
 
 function renderFieldView(container) {
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.fieldMonth ? 'selected' : ''}>${m}月</option>`
   ).join('');
@@ -1577,8 +1580,11 @@ function renderFieldView(container) {
     <div class="field-view">
       <div class="field-controls no-print">
         <div class="field-cat-tabs">${catTabs}</div>
-        <select id="field-month-select">${monthOptions}</select>
         <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}<button class="logout" id="field-logout-btn">ログアウト</button></div>
+      </div>
+      <div class="field-controls no-print" style="margin-top:8px;">
+        <select id="field-fy-select">${fyOptions}</select>
+        <select id="field-month-select">${monthOptions}</select>
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください。</p>
@@ -1598,6 +1604,11 @@ function renderFieldView(container) {
     renderRoot();
   });
 
+  document.getElementById('field-fy-select').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
   document.getElementById('field-month-select').addEventListener('change', (e) => {
     state.fieldMonth = Number(e.target.value);
     renderView();
