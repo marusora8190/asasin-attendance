@@ -206,6 +206,8 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   background: white; color: var(--color-ink-soft);
 }
 .field-dept-tabs button.active { background: var(--color-gold); color: white; border-color: var(--color-gold); font-weight: 500; }
+.field-dept-tabs button.saved { border-color: var(--color-present); color: var(--color-present); }
+.field-dept-tabs button.saved.active { background: var(--color-present); color: white; border-color: var(--color-present); }
 .field-cat-tabs button {
   padding: 8px 14px; font-size: 14px; border-radius: 999px; border: 1px solid var(--color-line);
   background: white; color: var(--color-ink-soft);
@@ -408,6 +410,7 @@ const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
 const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤務者','常傭者','３年目ひのきしん者','２年目ひのきしん者','１年目ひのきしん者'];
 const CATEGORY_LABEL = { asagami: '朝の神殿掃除', geppai: '月例参拝', chugen: '慰労拝受（中元）', seibo: '慰労拝受（歳暮）' };
 const ALL_CATEGORIES = ['asagami', 'geppai', 'chugen', 'seibo'];
+const YEARLY_CATEGORIES = ['chugen', 'seibo']; // これらは「月」ではなく「立教年」ごとに1回の記録
 const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
 const ROWS_PER_BLOCK = 19;
 
@@ -480,9 +483,13 @@ const state = {
   archiveCategory: 'asagami',
   archiveRows: [], // 選択中の年度・区分の保管記録
   bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
+  yearlyAttendance: new Map(), // 慰労拝受（中元/歳暮）用: `${memberId}-${category}-${fiscalYearId}` -> '○'|'×'
+  yearlyAttendanceLoadedCategory: null,
+  bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
   fieldDeptFilter: 'eizen-shomu',
+  fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
 };
 
 function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
@@ -1154,6 +1161,85 @@ function renderArchiveView(container) {
     });
   });
 }
+function yearlyAttKey(memberId, category, fiscalYearId) {
+  return `${memberId}-${category}-${fiscalYearId}`;
+}
+
+async function loadYearlyAttendance(category) {
+  const { data } = await sb.from(T_ATTENDANCE)
+    .select('member_id,fiscal_year_id,status')
+    .eq('category', category)
+    .eq('month_seq', 1);
+  state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id), r.status]));
+  state.yearlyAttendanceLoadedCategory = category;
+}
+
+function computeYearlySummary(memberId, category) {
+  let present = 0, absent = 0;
+  for (const fy of state.fiscalYears) {
+    const s = state.yearlyAttendance.get(yearlyAttKey(memberId, category, fy.id));
+    if (s === '○') present++;
+    if (s === '×') absent++;
+  }
+  const total = present + absent;
+  return { present, absent, rate: total > 0 ? present / total : null };
+}
+
+async function toggleYearlyCell(memberId, fiscalYearId, btnEl) {
+  const category = state.category;
+  const key = yearlyAttKey(memberId, category, fiscalYearId);
+  const current = state.yearlyAttendance.get(key) ?? null;
+  const next = current === null ? '○' : current === '○' ? '×' : null;
+
+  if (next === null) state.yearlyAttendance.delete(key); else state.yearlyAttendance.set(key, next);
+  btnEl.textContent = next ?? '';
+  btnEl.classList.remove('present', 'absent');
+  if (next === '○') btnEl.classList.add('present');
+  if (next === '×') btnEl.classList.add('absent');
+
+  if (next === null) {
+    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+  } else {
+    await sb.from(T_ATTENDANCE).upsert(
+      { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: next },
+      { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
+    );
+  }
+  renderView();
+}
+
+async function bulkMarkYear(fiscalYearId, mode) {
+  const category = state.category;
+  const fy = state.fiscalYears.find((f) => f.id === fiscalYearId);
+  const yearLabel = fy ? `立教${fy.start_reiki_year}年` : '';
+
+  if (mode === 'all-present') {
+    if (!confirm(`${yearLabel}分を、${CATEGORY_LABEL[category]}について全員○にします。すでに入力されている×も上書きされます。よろしいですか？`)) return;
+  } else if (mode === 'clear') {
+    if (!confirm(`${yearLabel}分（${CATEGORY_LABEL[category]}）の入力を、全員分まとめて空欄に戻します。よろしいですか？`)) return;
+  }
+
+  if (mode === 'clear') {
+    for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId));
+    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+    renderView();
+    return;
+  }
+
+  const updates = [];
+  for (const m of state.members) {
+    const key = yearlyAttKey(m.id, category, fiscalYearId);
+    const current = state.yearlyAttendance.get(key) ?? null;
+    if (mode === 'all-present' || (mode === 'fill-blank-present' && current === null)) {
+      state.yearlyAttendance.set(key, '○');
+      updates.push({ member_id: m.id, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: '○' });
+    }
+  }
+  if (updates.length === 0) { renderView(); return; }
+  await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+  renderView();
+}
+
 function computeSummary(memberId, category) {
   let present = 0, absent = 0;
   for (let seq = 1; seq <= 12; seq++) {
@@ -1320,9 +1406,25 @@ async function bulkMarkMonth(monthCtx, mode) {
 }
 
 function renderGridView(container) {
+  const isYearly = YEARLY_CATEGORIES.includes(state.category);
+
+  if (isYearly && state.yearlyAttendanceLoadedCategory !== state.category) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    loadYearlyAttendance(state.category).then(() => renderView());
+    return;
+  }
+
+  const sortedFiscalYears = [...state.fiscalYears].sort((a, b) => a.start_reiki_year - b.start_reiki_year);
+  if (isYearly && (state.bulkActionFiscalYearId == null || !sortedFiscalYears.some((fy) => fy.id === state.bulkActionFiscalYearId))) {
+    state.bulkActionFiscalYearId = sortedFiscalYears[sortedFiscalYears.length - 1]?.id ?? null;
+  }
+
   const monthCtx = getReikiMonthContext(state.bulkActionMonth);
   const bulkMonthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.bulkActionMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('');
+  const bulkYearOptions = sortedFiscalYears.map((fy) =>
+    `<option value="${fy.id}" ${fy.id === state.bulkActionFiscalYearId ? 'selected' : ''}>立教${fy.start_reiki_year}年</option>`
   ).join('');
   const fyOptions = state.fiscalYears.map(fy =>
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
@@ -1332,16 +1434,27 @@ function renderGridView(container) {
     `<button data-cat="${c}" class="${state.category === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
 
+  const bulkYearLabel = sortedFiscalYears.find((fy) => fy.id === state.bulkActionFiscalYearId);
+  const bulkYearText = bulkYearLabel ? `立教${bulkYearLabel.start_reiki_year}年` : '';
+
   const rowsHtml = state.members.map((m, index) => {
-    const s = computeSummary(m.id, state.category);
-    const cells = MONTH_SEQUENCE.map((_, i) => {
-      const seq = i + 1;
-      const status = state.attendance.get(attKey(m.id, state.category, seq)) ?? null;
-      const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
-      return `<td style="text-align:center;padding:2px;">
-        <button class="att-cell-btn ${cls}" data-member="${m.id}" data-seq="${seq}" aria-label="${MONTH_SEQUENCE[i]}月の出欠">${status ?? ''}</button>
-      </td>`;
-    }).join('');
+    const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
+    const cells = isYearly
+      ? sortedFiscalYears.map((fy) => {
+          const status = state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id)) ?? null;
+          const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+          return `<td style="text-align:center;padding:2px;">
+            <button class="att-yearly-cell-btn ${cls}" data-member="${m.id}" data-fyid="${fy.id}" aria-label="立教${fy.start_reiki_year}年の出欠">${status ?? ''}</button>
+          </td>`;
+        }).join('')
+      : MONTH_SEQUENCE.map((_, i) => {
+          const seq = i + 1;
+          const status = state.attendance.get(attKey(m.id, state.category, seq)) ?? null;
+          const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+          return `<td style="text-align:center;padding:2px;">
+            <button class="att-cell-btn ${cls}" data-member="${m.id}" data-seq="${seq}" aria-label="${MONTH_SEQUENCE[i]}月の出欠">${status ?? ''}</button>
+          </td>`;
+        }).join('');
 
     return `
       <tr data-row-member="${m.id}">
@@ -1367,7 +1480,21 @@ function renderGridView(container) {
     `;
   }).join('');
 
-  const monthHeaders = MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
+  const monthHeaders = isYearly
+    ? sortedFiscalYears.map((fy) => `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`).join('')
+    : MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
+
+  const bulkActionsHtml = isYearly ? `
+          <select id="bulk-year-select">${bulkYearOptions}</select>
+          <button class="btn-dark" id="mark-all-present-btn">${bulkYearText}分 全員出席</button>
+          <button class="btn-light" id="fill-blank-present-btn">${bulkYearText}分未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">${bulkYearText}分をクリア</button>
+  ` : `
+          <select id="bulk-month-select">${bulkMonthOptions}</select>
+          <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
+          <button class="btn-light" id="fill-blank-present-btn">${monthCtx.calendarMonth}月分未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">この月をクリア</button>
+  `;
 
   container.innerHTML = `
     <div class="grid-wrap">
@@ -1376,13 +1503,10 @@ function renderGridView(container) {
           <h1 class="font-display" id="grid-title-h1">営繕課出欠記録</h1>
           <p class="eyebrow">出欠管理システム</p>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <select id="fy-select">${fyOptions}</select>
           <button class="btn-light" id="add-fy-btn">＋年度追加</button>
-          <select id="bulk-month-select">${bulkMonthOptions}</select>
-          <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
-          <button class="btn-light" id="fill-blank-present-btn">${monthCtx.calendarMonth}月分未入力を○にする</button>
-          <button class="btn-light" id="clear-month-btn">この月をクリア</button>
+          ${bulkActionsHtml}
           <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
           <button class="btn-dark" id="export-excel-btn">Excelで書き出し</button>
         </div>
@@ -1432,23 +1556,35 @@ function renderGridView(container) {
     btn.addEventListener('click', () => { state.category = btn.dataset.cat; renderView(); });
   });
 
-  document.querySelectorAll('.att-cell-btn').forEach(btn => {
-    btn.addEventListener('click', () => toggleCell(Number(btn.dataset.member), Number(btn.dataset.seq), btn));
-  });
+  if (isYearly) {
+    document.querySelectorAll('.att-yearly-cell-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleYearlyCell(Number(btn.dataset.member), Number(btn.dataset.fyid), btn));
+    });
+    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'all-present'));
+    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'fill-blank-present'));
+    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'clear'));
+    document.getElementById('bulk-year-select').addEventListener('change', (e) => {
+      state.bulkActionFiscalYearId = Number(e.target.value);
+      renderView();
+    });
+  } else {
+    document.querySelectorAll('.att-cell-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleCell(Number(btn.dataset.member), Number(btn.dataset.seq), btn));
+    });
+    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'all-present'));
+    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'fill-blank-present'));
+    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'clear'));
+    document.getElementById('bulk-month-select').addEventListener('change', (e) => {
+      state.bulkActionMonth = Number(e.target.value);
+      renderView();
+    });
+  }
 
   document.querySelectorAll('.att-editable').forEach(input => {
     input.addEventListener('blur', () => updateMemberField(Number(input.dataset.member), input.dataset.field, input.value));
   });
   document.querySelectorAll('.att-select').forEach(sel => {
     sel.addEventListener('change', () => updateMemberField(Number(sel.dataset.member), sel.dataset.field, sel.value));
-  });
-
-  document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'all-present'));
-  document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'fill-blank-present'));
-  document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'clear'));
-  document.getElementById('bulk-month-select').addEventListener('change', (e) => {
-    state.bulkActionMonth = Number(e.target.value);
-    renderView();
   });
 
   document.querySelectorAll('[data-action="move-up"]').forEach(btn =>
@@ -1553,7 +1689,12 @@ const FIELD_DEPT_GROUPS = [
   { key: 'kucho', label: '空調衛生係', depts: ['空調衛生係'] },
 ];
 
+function fieldSavedGroupKey(category, deptKey, fyId, seq) {
+  return `${category}-${deptKey}-${fyId}-${seq}`;
+}
+
 function renderFieldView(container) {
+  const isYearly = YEARLY_CATEGORIES.includes(state.fieldCategory);
   const fyOptions = state.fiscalYears.map(fy =>
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
@@ -1563,11 +1704,15 @@ function renderFieldView(container) {
   const catTabs = ALL_CATEGORIES.map(c =>
     `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
-  const deptTabs = FIELD_DEPT_GROUPS.map((g) =>
-    `<button data-dept-key="${g.key}" class="field-dept-btn ${state.fieldDeptFilter === g.key ? 'active' : ''}">${g.label}</button>`
-  ).join('');
 
-  const monthSeq = calendarMonthToSeq(state.fieldMonth);
+  // 慰労拝受（中元/歳暮）は「月」ではなく、選択中の年度に対して1回だけ記録する
+  const monthSeq = isYearly ? 1 : calendarMonthToSeq(state.fieldMonth);
+
+  const deptTabs = FIELD_DEPT_GROUPS.map((g) => {
+    const isSaved = state.fieldSavedGroups.has(fieldSavedGroupKey(state.fieldCategory, g.key, state.fiscalYearId, monthSeq));
+    return `<button data-dept-key="${g.key}" class="field-dept-btn ${state.fieldDeptFilter === g.key ? 'active' : ''} ${isSaved ? 'saved' : ''}">${isSaved ? '✓ ' : ''}${g.label}</button>`;
+  }).join('');
+
   const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
   const orderedMembers = getOrderedMembersForCategory(state.fieldCategory)
     .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
@@ -1585,10 +1730,10 @@ function renderFieldView(container) {
       </div>
       <div class="field-controls no-print" style="margin-top:8px;">
         <select id="field-fy-select">${fyOptions}</select>
-        <select id="field-month-select">${monthOptions}</select>
+        ${isYearly ? '' : `<select id="field-month-select">${monthOptions}</select>`}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
-      <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください。</p>
+      <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
       <div class="field-chip-grid">${chipsHtml}</div>
       <div class="field-action-row no-print">
         <button class="field-all-present-btn" id="field-all-present-btn">全員出席</button>
@@ -1610,10 +1755,13 @@ function renderFieldView(container) {
     await loadAttendanceForFiscalYear();
     renderView();
   });
-  document.getElementById('field-month-select').addEventListener('change', (e) => {
-    state.fieldMonth = Number(e.target.value);
-    renderView();
-  });
+  const monthSelectEl = document.getElementById('field-month-select');
+  if (monthSelectEl) {
+    monthSelectEl.addEventListener('change', (e) => {
+      state.fieldMonth = Number(e.target.value);
+      renderView();
+    });
+  }
   document.querySelectorAll('.field-cat-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.fieldCategory = btn.dataset.cat;
@@ -1638,6 +1786,7 @@ function renderFieldView(container) {
       state.attendance.set(key, '○');
       chip.classList.add('filled');
     });
+    state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, monthSeq));
     const msgEl = document.getElementById('field-save-msg');
     if (msgEl) msgEl.textContent = '';
   });
@@ -1655,6 +1804,14 @@ function toggleFieldChipLocal(memberId, seq, chipEl) {
 
   if (next === null) state.attendance.delete(key); else state.attendance.set(key, next);
   chipEl.classList.toggle('filled', next === '○');
+
+  // 変更したので、この班の「保存済み」表示は解除する
+  state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, seq));
+  const deptBtn = document.querySelector(`.field-dept-btn[data-dept-key="${state.fieldDeptFilter}"]`);
+  if (deptBtn && deptBtn.classList.contains('saved')) {
+    deptBtn.classList.remove('saved');
+    deptBtn.textContent = deptBtn.textContent.replace(/^✓\s*/, '');
+  }
 
   const msgEl = document.getElementById('field-save-msg');
   if (msgEl) msgEl.textContent = '';
@@ -1687,6 +1844,13 @@ async function saveFieldGroup(members, seq) {
 
   if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'この内容で保存'; }
   if (msgEl) msgEl.textContent = '✓ 保存しました';
+
+  state.fieldSavedGroups.add(fieldSavedGroupKey(category, state.fieldDeptFilter, state.fiscalYearId, seq));
+  const deptBtn = document.querySelector(`.field-dept-btn[data-dept-key="${state.fieldDeptFilter}"]`);
+  if (deptBtn && !deptBtn.classList.contains('saved')) {
+    deptBtn.classList.add('saved');
+    deptBtn.textContent = '✓ ' + deptBtn.textContent;
+  }
 }
 
 async function toggleCell(memberId, seq, btnEl) {
@@ -1754,32 +1918,40 @@ async function exportAllDataToExcel() {
     const fyMap = new Map(allFiscalYears.map((fy) => [fy.id, fy]));
 
     const buildSheetRows = (category) => {
+      const isYearlyCat = YEARLY_CATEGORIES.includes(category);
       const rows = allAttendance
         .filter((a) => a.category === category && a.status)
         .map((a) => {
           const m = memberMap.get(a.member_id);
           const fy = fyMap.get(a.fiscal_year_id);
-          const calendarMonth = MONTH_SEQUENCE[a.month_seq - 1];
-          return {
+          const periodLabel = isYearlyCat
+            ? (fy ? `立教${fy.start_reiki_year}年` : '')
+            : (MONTH_SEQUENCE[a.month_seq - 1] ? `${MONTH_SEQUENCE[a.month_seq - 1]}月` : '');
+          const row = {
             '年度': fy ? fy.label : '',
-            '月': calendarMonth ? `${calendarMonth}月` : '',
             '部署': m ? (m.department || '') : '（削除済みメンバー）',
             '氏名': m ? m.name : `(member_id:${a.member_id})`,
             '立場': m ? (m.position || '') : '',
             '出欠': a.status,
           };
+          if (isYearlyCat) row['対象年'] = periodLabel; else row['月'] = periodLabel;
+          return row;
         });
       rows.sort((r1, r2) =>
-        (r1['年度'] + r1['月'] + r1['部署'] + r1['氏名']).localeCompare(
-          r2['年度'] + r2['月'] + r2['部署'] + r2['氏名'], 'ja'
+        (r1['年度'] + r1['部署'] + r1['氏名']).localeCompare(
+          r2['年度'] + r2['部署'] + r2['氏名'], 'ja'
         )
       );
       return rows;
     };
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSheetRows('asagami')), '朝の神殿掃除');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildSheetRows('geppai')), '月例参拝');
+    for (const category of ALL_CATEGORIES) {
+      const rows = buildSheetRows(category);
+      // シート名は31文字までなど制約があるため、括弧を取った短い名前にする
+      const sheetName = CATEGORY_LABEL[category].replace(/[（）]/g, '').slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
+    }
 
     const dateStr = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `出欠記録_全期間_${dateStr}.xlsx`);
