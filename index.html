@@ -1474,9 +1474,9 @@ function renderGridView(container) {
           <span class="drag-handle" data-member="${m.id}" title="ドラッグで並び替え">⠿</span>
         </td>
         <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
-        <td${isYearly ? ' style="width:90px;min-width:90px;max-width:90px;"' : ''}><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="${isYearly ? 'width:100%;box-sizing:border-box;' : ''}" /></td>
-        <td${isYearly ? ' style="width:80px;min-width:80px;max-width:80px;"' : ''}>${renderMasterSelect('department', m.id, m.department, state.departments, isYearly)}</td>
-        <td${isYearly ? ' style="width:90px;min-width:90px;max-width:90px;"' : ''}>${renderMasterSelect('position', m.id, m.position, state.positions, isYearly)}</td>
+        <td style="width:90px;min-width:90px;max-width:90px;"><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;" /></td>
+        <td style="width:80px;min-width:80px;max-width:80px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
+        <td style="width:90px;min-width:90px;max-width:90px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
         ${cells}
         <td style="text-align:center;color:var(--color-present);font-weight:500;">${s.present}</td>
         <td style="text-align:center;color:var(--color-absent);font-weight:500;">${s.absent}</td>
@@ -1541,9 +1541,9 @@ function renderGridView(container) {
             <tr>
               <th style="text-align:center;width:28px;"></th>
               <th style="text-align:center;width:40px;">No.</th>
-              <th style="${isYearly ? 'width:90px;min-width:90px;max-width:90px;' : ''}">氏名</th>
-              <th style="${isYearly ? 'width:80px;min-width:80px;max-width:80px;' : ''}">部署</th>
-              <th style="${isYearly ? 'width:90px;min-width:90px;max-width:90px;' : ''}">立場</th>
+              <th style="width:90px;min-width:90px;max-width:90px;">氏名</th>
+              <th style="width:80px;min-width:80px;max-width:80px;">部署</th>
+              <th style="width:90px;min-width:90px;max-width:90px;">立場</th>
               ${monthHeaders}
               <th style="text-align:center;">出席</th>
               <th style="text-align:center;">欠席</th>
