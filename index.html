@@ -404,6 +404,7 @@ const T_DEPARTMENTS = 'asagami_departments';
 const T_POSITIONS = 'asagami_positions';
 const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
 const T_DUTY_POSITIONS = 'asagami_duty_positions';
+const T_CATEGORY_MEMBERS = 'asagami_category_members';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
@@ -416,9 +417,10 @@ const ROWS_PER_BLOCK = 19;
 
 // 区分ごとの表示順（部署でまとめ、各部署内は主任を先頭に）でメンバーを並べる
 function getOrderedMembersForCategory(category) {
+  const activeMembers = getCategoryMemberEntries(category);
   if (category === 'geppai') {
     const deptOrder = new Map(GEPPAI_REPORT_DEPT_ORDER.map((name, i) => [name, i]));
-    return state.members
+    return activeMembers
       .filter((m) => m.department !== '営繕課')
       .slice()
       .sort((a, b) => {
@@ -429,7 +431,7 @@ function getOrderedMembersForCategory(category) {
       });
   }
   const deptOrder = new Map(state.departments.map((d, i) => [d.name, i]));
-  return state.members.slice().sort((a, b) => {
+  return activeMembers.slice().sort((a, b) => {
     const orderA = deptOrder.get(a.department) ?? Infinity;
     const orderB = deptOrder.get(b.department) ?? Infinity;
     if (orderA !== orderB) return orderA - orderB;
@@ -486,9 +488,11 @@ const state = {
   yearlyAttendance: new Map(), // 慰労拝受（中元/歳暮）用: `${memberId}-${category}-${fiscalYearId}` -> '○'|'×'
   yearlyAttendanceLoadedCategory: null,
   bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
+  categoryMembers: new Map(), // `${category}::${memberId}` -> {member_id, category, sort_order, is_active}
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
   fieldDeptFilter: 'eizen-shomu',
+  fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
   fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
 };
 
@@ -727,7 +731,23 @@ async function loadFiscalYearsAndMembers() {
   const { data: posData } = await sb.from(T_POSITIONS).select('*').order('sort_order', { ascending: true });
   state.positions = posData ?? [];
 
+  const { data: catMemberData } = await sb.from(T_CATEGORY_MEMBERS).select('*');
+  state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
+
   await loadAttendanceForFiscalYear();
+}
+
+// 指定区分の名簿（有効なメンバーのみ、区分ごとの並び順）を返す
+function getCategoryMemberEntries(category) {
+  return state.members
+    .map((m) => {
+      const cm = state.categoryMembers.get(`${category}::${m.id}`);
+      const isActive = cm ? cm.is_active : true;
+      const sortOrder = cm ? cm.sort_order : m.sort_order;
+      return isActive ? { ...m, _catSortOrder: sortOrder } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a._catSortOrder - b._catSortOrder);
 }
 
 async function loadAttendanceForFiscalYear() {
@@ -1437,7 +1457,10 @@ function renderGridView(container) {
   const bulkYearLabel = sortedFiscalYears.find((fy) => fy.id === state.bulkActionFiscalYearId);
   const bulkYearText = bulkYearLabel ? `立教${bulkYearLabel.start_reiki_year}年` : '';
 
-  const rowsHtml = state.members.map((m, index) => {
+  const categoryMembersList = getCategoryMemberEntries(state.category);
+  const excludedFromCategory = state.members.filter((m) => !categoryMembersList.some((cm) => cm.id === m.id));
+
+  const rowsHtml = categoryMembersList.map((m, index) => {
     const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
     const cells = isYearly
       ? sortedFiscalYears.map((fy) => {
@@ -1472,7 +1495,8 @@ function renderGridView(container) {
         <td style="text-align:center;">
           <div style="display:flex;gap:4px;justify-content:center;">
             <button class="icon-btn" data-action="move-up" data-member="${m.id}" ${index === 0 ? 'disabled' : ''} title="上へ">↑</button>
-            <button class="icon-btn" data-action="move-down" data-member="${m.id}" ${index === state.members.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+            <button class="icon-btn" data-action="move-down" data-member="${m.id}" ${index === categoryMembersList.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+            <button class="icon-btn" data-action="remove-from-category" data-member="${m.id}" title="この区分の名簿からだけ外す（退職にはしません）">－</button>
             <button class="icon-btn danger" data-action="remove" data-member="${m.id}" title="退職（一覧から非表示。記録は残ります）">×</button>
           </div>
         </td>
@@ -1513,6 +1537,14 @@ function renderGridView(container) {
       </div>
 
       <div class="category-tabs no-print">${catTabs}</div>
+      ${excludedFromCategory.length > 0 ? `
+      <div class="no-print" style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+        <select id="add-to-category-select">
+          ${excludedFromCategory.map((m) => `<option value="${m.id}">${escapeHtml(m.name || '（無名）')}</option>`).join('')}
+        </select>
+        <button class="btn-light" id="add-to-category-btn">＋ この区分（${CATEGORY_LABEL[state.category]}）の名簿に追加</button>
+      </div>
+      ` : ''}
 
       <div class="att-table-wrap">
         <table class="att-table">
@@ -1593,9 +1625,19 @@ function renderGridView(container) {
     btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), 1)));
   document.querySelectorAll('[data-action="remove"]').forEach(btn =>
     btn.addEventListener('click', () => removeMember(Number(btn.dataset.member))));
+  document.querySelectorAll('[data-action="remove-from-category"]').forEach(btn =>
+    btn.addEventListener('click', () => removeMemberFromCategory(Number(btn.dataset.member), state.category)));
 
   document.getElementById('add-member-btn').addEventListener('click', addMember);
   document.getElementById('export-excel-btn').addEventListener('click', () => exportAllDataToExcel());
+
+  const addToCatBtn = document.getElementById('add-to-category-btn');
+  if (addToCatBtn) {
+    addToCatBtn.addEventListener('click', () => {
+      const sel = document.getElementById('add-to-category-select');
+      addMemberToCategory(Number(sel.value), state.category);
+    });
+  }
 
   setupRowDragAndDrop();
 }
@@ -1658,22 +1700,51 @@ function setupRowDragAndDrop() {
 
 async function reorderMember(draggedId, targetId, insertAfter) {
   if (draggedId === targetId) return;
-  const fromIndex = state.members.findIndex((m) => m.id === draggedId);
-  let toIndex = state.members.findIndex((m) => m.id === targetId);
+  const category = state.category;
+  const list = getCategoryMemberEntries(category);
+  const fromIndex = list.findIndex((m) => m.id === draggedId);
+  let toIndex = list.findIndex((m) => m.id === targetId);
   if (fromIndex === -1 || toIndex === -1) return;
 
-  const reordered = [...state.members];
+  const reordered = [...list];
   const [moved] = reordered.splice(fromIndex, 1);
   toIndex = reordered.findIndex((m) => m.id === targetId);
   reordered.splice(insertAfter ? toIndex + 1 : toIndex, 0, moved);
 
-  reordered.forEach((m, i) => { m.sort_order = i + 1; });
-  state.members = reordered;
+  const upserts = reordered.map((m, i) => {
+    const key = `${category}::${m.id}`;
+    const existing = state.categoryMembers.get(key) ?? { member_id: m.id, category, is_active: true };
+    const updated = { ...existing, member_id: m.id, category, sort_order: i + 1 };
+    state.categoryMembers.set(key, updated);
+    return updated;
+  });
   renderView();
 
-  await Promise.all(reordered.map((m, i) =>
-    sb.from(T_MEMBERS).update({ sort_order: i + 1 }).eq('id', m.id)
-  ));
+  await sb.from(T_CATEGORY_MEMBERS).upsert(upserts, { onConflict: 'member_id,category' });
+}
+
+// 特定の区分の名簿からだけ外す（退職にはしない）
+async function removeMemberFromCategory(memberId, category) {
+  const m = state.members.find((mm) => mm.id === memberId);
+  const label = m && m.name.trim() ? m.name : 'このメンバー';
+  if (!confirm(`${label} を「${CATEGORY_LABEL[category]}」の名簿からだけ外します（退職にはなりません）。よろしいですか？`)) return;
+  const key = `${category}::${memberId}`;
+  const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
+  const updated = { ...existing, member_id: memberId, category, is_active: false };
+  state.categoryMembers.set(key, updated);
+  await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+  renderView();
+}
+
+// 一度外したメンバーを、特定の区分の名簿に戻す／追加する
+async function addMemberToCategory(memberId, category) {
+  const list = getCategoryMemberEntries(category);
+  const maxOrder = list.length > 0 ? Math.max(...list.map((m) => m._catSortOrder)) : 0;
+  const key = `${category}::${memberId}`;
+  const updated = { member_id: memberId, category, sort_order: maxOrder + 1, is_active: true };
+  state.categoryMembers.set(key, updated);
+  await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+  renderView();
 }
 
 // ==================== 現場入力（スマホ用） ====================
@@ -1969,6 +2040,13 @@ async function addMember() {
     .select().single();
   if (!error && data) {
     state.members.push(data);
+    // 新しいメンバーは、既定で4区分すべての名簿に登録する
+    const catInserts = ALL_CATEGORIES.map((category) => {
+      const entry = { member_id: data.id, category, sort_order: nextOrder, is_active: true };
+      state.categoryMembers.set(`${category}::${data.id}`, entry);
+      return entry;
+    });
+    await sb.from(T_CATEGORY_MEMBERS).upsert(catInserts, { onConflict: 'member_id,category' });
     renderView();
   }
 }
@@ -1983,16 +2061,22 @@ async function removeMember(memberId) {
 }
 
 async function moveMember(memberId, direction) {
-  const index = state.members.findIndex(m => m.id === memberId);
+  const category = state.category;
+  const list = getCategoryMemberEntries(category);
+  const index = list.findIndex((m) => m.id === memberId);
   const target = index + direction;
-  if (target < 0 || target >= state.members.length) return;
-  const a = state.members[index], b = state.members[target];
-  [state.members[index], state.members[target]] = [b, a];
-  await Promise.all([
-    sb.from(T_MEMBERS).update({ sort_order: b.sort_order }).eq('id', a.id),
-    sb.from(T_MEMBERS).update({ sort_order: a.sort_order }).eq('id', b.id),
-  ]);
+  if (target < 0 || target >= list.length) return;
+  const a = list[index], b = list[target];
+  const orderA = a._catSortOrder, orderB = b._catSortOrder;
+
+  const keyA = `${category}::${a.id}`, keyB = `${category}::${b.id}`;
+  const entryA = { ...(state.categoryMembers.get(keyA) ?? { member_id: a.id, category, is_active: true }), sort_order: orderB };
+  const entryB = { ...(state.categoryMembers.get(keyB) ?? { member_id: b.id, category, is_active: true }), sort_order: orderA };
+  state.categoryMembers.set(keyA, entryA);
+  state.categoryMembers.set(keyB, entryB);
   renderView();
+
+  await sb.from(T_CATEGORY_MEMBERS).upsert([entryA, entryB], { onConflict: 'member_id,category' });
 }
 
 async function addFiscalYear() {
