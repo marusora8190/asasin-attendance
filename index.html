@@ -479,7 +479,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -853,6 +853,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
+        <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -878,6 +879,10 @@ function renderMasterView(container) {
     state.masterOpen.memberDept = !state.masterOpen.memberDept;
     renderMasterPanels();
   });
+  document.getElementById('edit-category-members-btn').addEventListener('click', () => {
+    state.masterOpen.categoryMembers = !state.masterOpen.categoryMembers;
+    renderMasterPanels();
+  });
 
   renderMasterPanels();
 }
@@ -891,6 +896,7 @@ function renderMasterPanels() {
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
+  if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel());
 }
 
 function buildDutyDayPanel() {
@@ -1017,6 +1023,66 @@ function buildMemberDeptPanel() {
         m.department = val;
         await sb.from(T_MEMBERS).update({ department: val }).eq('id', id);
         renderView();
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildCategoryMembersPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '560px';
+  panel.innerHTML = `
+    <h2>区分の名簿を管理</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
+      退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。
+    </p>
+    <ul class="modal-list" id="category-members-list" style="max-height:440px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#category-members-list');
+    listEl.innerHTML = `
+      <li style="justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;">
+        <span style="flex:1;min-width:0;">氏名</span>
+        ${ALL_CATEGORIES.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      </li>
+    ` + state.members.map((m) => `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
+        ${ALL_CATEGORIES.map((c) => {
+          const cm = state.categoryMembers.get(`${c}::${m.id}`);
+          const isActive = cm ? cm.is_active : true;
+          return `<span style="width:60px;text-align:center;flex-shrink:0;">
+            <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
+          </span>`;
+        }).join('')}
+      </li>`).join('');
+
+    listEl.querySelectorAll('.category-member-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        if (cb.checked) {
+          await addMemberToCategory(memberId, category);
+        } else {
+          const m = state.members.find((mm) => mm.id === memberId);
+          const label = m && m.name.trim() ? m.name : 'このメンバー';
+          if (!confirm(`${label} を「${CATEGORY_LABEL[category]}」の名簿からだけ外します（退職にはなりません）。よろしいですか？`)) {
+            cb.checked = true;
+            return;
+          }
+          const key = `${category}::${memberId}`;
+          const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
+          const updated = { ...existing, member_id: memberId, category, is_active: false };
+          state.categoryMembers.set(key, updated);
+          await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+          renderView();
+        }
       });
     });
   }
@@ -1447,7 +1513,6 @@ function renderGridView(container) {
   const bulkYearText = bulkYearLabel ? `立教${bulkYearLabel.start_reiki_year}年` : '';
 
   const categoryMembersList = getCategoryMemberEntries(state.category);
-  const excludedFromCategory = state.members.filter((m) => !categoryMembersList.some((cm) => cm.id === m.id));
 
   const rowsHtml = categoryMembersList.map((m, index) => {
     const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
@@ -1485,7 +1550,6 @@ function renderGridView(container) {
           <div style="display:flex;gap:4px;justify-content:center;">
             <button class="icon-btn" data-action="move-up" data-member="${m.id}" ${index === 0 ? 'disabled' : ''} title="上へ">↑</button>
             <button class="icon-btn" data-action="move-down" data-member="${m.id}" ${index === categoryMembersList.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
-            <button class="icon-btn" data-action="remove-from-category" data-member="${m.id}" title="この区分の名簿からだけ外す（退職にはしません）">－</button>
             <button class="icon-btn danger" data-action="remove" data-member="${m.id}" title="退職（一覧から非表示。記録は残ります）">×</button>
           </div>
         </td>
@@ -1526,14 +1590,6 @@ function renderGridView(container) {
       </div>
 
       <div class="category-tabs no-print">${catTabs}</div>
-      ${excludedFromCategory.length > 0 ? `
-      <div class="no-print" style="display:flex;align-items:center;gap:8px;margin:8px 0;">
-        <select id="add-to-category-select">
-          ${excludedFromCategory.map((m) => `<option value="${m.id}">${escapeHtml(m.name || '（無名）')}</option>`).join('')}
-        </select>
-        <button class="btn-light" id="add-to-category-btn">＋ この区分（${CATEGORY_LABEL[state.category]}）の名簿に追加</button>
-      </div>
-      ` : ''}
 
       <div class="att-table-wrap">
         <table class="att-table">
@@ -1616,19 +1672,9 @@ function renderGridView(container) {
     btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), 1)));
   document.querySelectorAll('[data-action="remove"]').forEach(btn =>
     btn.addEventListener('click', () => removeMember(Number(btn.dataset.member))));
-  document.querySelectorAll('[data-action="remove-from-category"]').forEach(btn =>
-    btn.addEventListener('click', () => removeMemberFromCategory(Number(btn.dataset.member), state.category)));
 
   document.getElementById('add-member-btn').addEventListener('click', addMember);
   document.getElementById('export-excel-btn').addEventListener('click', () => exportAllDataToExcel());
-
-  const addToCatBtn = document.getElementById('add-to-category-btn');
-  if (addToCatBtn) {
-    addToCatBtn.addEventListener('click', () => {
-      const sel = document.getElementById('add-to-category-select');
-      addMemberToCategory(Number(sel.value), state.category);
-    });
-  }
 
   setupRowDragAndDrop();
 }
