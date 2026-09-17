@@ -1823,8 +1823,11 @@ function renderFieldView(container) {
   }).join('');
 
   const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
-  const orderedMembers = getOrderedMembersForCategory(state.fieldCategory)
-    .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
+  // 「全体」タブは、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する
+  const orderedMembers = activeGroup.key === 'all'
+    ? getCategoryMemberEntries(state.fieldCategory)
+    : getOrderedMembersForCategory(state.fieldCategory)
+        .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
 
   const chipsHtml = orderedMembers.map((m) => {
     const status = state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) ?? null;
