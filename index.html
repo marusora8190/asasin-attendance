@@ -405,13 +405,15 @@ const T_POSITIONS = 'asagami_positions';
 const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
 const T_DUTY_POSITIONS = 'asagami_duty_positions';
 const T_CATEGORY_MEMBERS = 'asagami_category_members';
+const T_CATEGORIES = 'asagami_categories';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
 const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤務者','常傭者','３年目ひのきしん者','２年目ひのきしん者','１年目ひのきしん者'];
-const CATEGORY_LABEL = { asagami: '朝の神殿掃除', geppai: '月例参拝', chugen: '慰労拝受（中元）', seibo: '慰労拝受（歳暮）' };
-const ALL_CATEGORIES = ['asagami', 'geppai', 'chugen', 'seibo'];
-const YEARLY_CATEGORIES = ['chugen', 'seibo']; // これらは「月」ではなく「立教年」ごとに1回の記録
+let CATEGORY_LABEL = {}; // {key: label} 起動時にDBから読み込む
+let ALL_CATEGORIES = []; // 区分キーの一覧（並び順）
+let YEARLY_CATEGORIES = []; // これらは「月」ではなく「立教年」ごとに1回の記録
+let FIELD_VISIBLE_CATEGORIES = []; // 現場入力（スマホ用）に表示する区分
 const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
 const ROWS_PER_BLOCK = 19;
 
@@ -479,7 +481,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, categories: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -489,6 +491,7 @@ const state = {
   yearlyAttendanceLoadedCategory: null,
   bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
   categoryMembers: new Map(), // `${category}::${memberId}` -> {member_id, category, sort_order, is_active}
+  categories: [], // asagami_categories の内容（区分の一覧・並び順・設定）
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
   fieldDeptFilter: 'eizen-shomu',
@@ -722,7 +725,21 @@ async function loadFiscalYearsAndMembers() {
   const { data: catMemberData } = await sb.from(T_CATEGORY_MEMBERS).select('*');
   state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
 
+  const { data: catData } = await sb.from(T_CATEGORIES).select('*').order('sort_order', { ascending: true });
+  state.categories = catData ?? [];
+  applyCategoriesFromState();
+
   await loadAttendanceForFiscalYear();
+}
+
+// state.categories の内容を、アプリ全体で使うCATEGORY_LABEL等に反映する
+function applyCategoriesFromState() {
+  CATEGORY_LABEL = Object.fromEntries(state.categories.map((c) => [c.key, c.label]));
+  ALL_CATEGORIES = state.categories.map((c) => c.key);
+  YEARLY_CATEGORIES = state.categories.filter((c) => c.is_yearly).map((c) => c.key);
+  FIELD_VISIBLE_CATEGORIES = state.categories.filter((c) => c.show_in_field).map((c) => c.key);
+  if (!ALL_CATEGORIES.includes(state.category)) state.category = ALL_CATEGORIES[0] ?? state.category;
+  if (!ALL_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
 }
 
 // 指定区分の名簿（有効なメンバーのみ、区分ごとの並び順）を返す
@@ -854,6 +871,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
         <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
+        <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -883,6 +901,10 @@ function renderMasterView(container) {
     state.masterOpen.categoryMembers = !state.masterOpen.categoryMembers;
     renderMasterPanels();
   });
+  document.getElementById('edit-categories-btn').addEventListener('click', () => {
+    state.masterOpen.categories = !state.masterOpen.categories;
+    renderMasterPanels();
+  });
 
   renderMasterPanels();
 }
@@ -897,6 +919,7 @@ function renderMasterPanels() {
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
   if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel());
+  if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
 }
 
 function buildDutyDayPanel() {
@@ -1086,6 +1109,133 @@ function buildCategoryMembersPanel() {
       });
     });
   }
+
+  renderList();
+  return panel;
+}
+
+function buildCategoriesPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '560px';
+  panel.innerHTML = `
+    <h2>区分（タブ）を管理</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      出欠入力・現場入力などで使う「区分」の一覧です。名前の変更、順番の入れ替え、
+      現場入力(スマホ用)に表示するかどうかの切り替え、新しい区分の追加ができます。
+    </p>
+    <ul class="modal-list" id="categories-list" style="max-height:400px;overflow-y:auto;"></ul>
+    <div class="modal-add-row">
+      <input type="text" id="new-category-input" placeholder="新しい区分名（例: 特別拝受）" />
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;">
+        <input type="checkbox" id="new-category-yearly" /> 年ごとの記録
+      </label>
+      <button class="btn-dark" id="new-category-add-btn">追加</button>
+    </div>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#categories-list');
+    const sorted = [...state.categories].sort((a, b) => a.sort_order - b.sort_order);
+    listEl.innerHTML = sorted.map((c, i) => `
+      <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
+        <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホに表示
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-yearly-checkbox" data-key="${escapeHtml(c.key)}" ${c.is_yearly ? 'checked' : ''} /> 年ごと
+        </label>
+        <button class="icon-btn category-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
+        <button class="icon-btn category-down-btn" data-key="${escapeHtml(c.key)}" ${i === sorted.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+        <button class="icon-btn danger category-delete-btn" data-key="${escapeHtml(c.key)}" title="この区分を削除">×</button>
+      </li>`).join('');
+
+    listEl.querySelectorAll('.category-label-input').forEach((input) => {
+      input.addEventListener('blur', async () => {
+        const key = input.dataset.key;
+        const val = input.value.trim() || key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.label = val;
+        await sb.from(T_CATEGORIES).update({ label: val }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-field-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.show_in_field = cb.checked;
+        await sb.from(T_CATEGORIES).update({ show_in_field: cb.checked }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-yearly-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        if (!confirm('「年ごと」の設定を変えると、この区分の出欠の表示・入力の仕組みが変わります。よろしいですか？')) {
+          cb.checked = !cb.checked;
+          return;
+        }
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.is_yearly = cb.checked;
+        await sb.from(T_CATEGORIES).update({ is_yearly: cb.checked }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-up-btn, .category-down-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const dir = btn.classList.contains('category-up-btn') ? -1 : 1;
+        const idx = sorted.findIndex((c) => c.key === key);
+        const targetIdx = idx + dir;
+        if (targetIdx < 0 || targetIdx >= sorted.length) return;
+        const a = sorted[idx], b = sorted[targetIdx];
+        const orderA = a.sort_order, orderB = b.sort_order;
+        a.sort_order = orderB; b.sort_order = orderA;
+        await Promise.all([
+          sb.from(T_CATEGORIES).update({ sort_order: orderB }).eq('key', a.key),
+          sb.from(T_CATEGORIES).update({ sort_order: orderA }).eq('key', b.key),
+        ]);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (!confirm(`「${c?.label ?? key}」を削除します。この区分の出欠記録は残りますが、画面には表示されなくなります。よろしいですか？`)) return;
+        state.categories = state.categories.filter((cc) => cc.key !== key);
+        await sb.from(T_CATEGORIES).delete().eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+  }
+
+  panel.querySelector('#new-category-add-btn').addEventListener('click', async () => {
+    const input = panel.querySelector('#new-category-input');
+    const label = input.value.trim();
+    if (!label) return;
+    const isYearly = panel.querySelector('#new-category-yearly').checked;
+    const key = 'custom_' + Date.now().toString(36);
+    const maxOrder = state.categories.length > 0 ? Math.max(...state.categories.map((c) => c.sort_order)) : 0;
+    const newCat = { key, label, sort_order: maxOrder + 1, show_in_field: true, is_yearly: isYearly };
+    const { error } = await sb.from(T_CATEGORIES).insert(newCat);
+    if (error) { alert('追加に失敗しました: ' + error.message); return; }
+    state.categories.push(newCat);
+    // 既存の全メンバーを、新しい区分の名簿にも登録する
+    const catInserts = state.members.map((m) => ({ member_id: m.id, category: key, sort_order: m.sort_order, is_active: true }));
+    if (catInserts.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(catInserts, { onConflict: 'member_id,category' });
+    for (const ci of catInserts) state.categoryMembers.set(`${key}::${ci.member_id}`, ci);
+    applyCategoriesFromState();
+    input.value = '';
+    renderView();
+  });
 
   renderList();
   return panel;
@@ -1804,13 +1954,26 @@ function fieldSavedGroupKey(category, deptKey, fyId, seq) {
 
 function renderFieldView(container) {
   const isYearly = YEARLY_CATEGORIES.includes(state.fieldCategory);
-  const fyOptions = state.fiscalYears.map(fy =>
-    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
-  ).join('');
+
+  // 「年」は立教○○○年の短い表記。既存の年度に加えて、最新の年度から2年先までは
+  // 年度が未作成でも常に選べるようにする（選ぶと自動でその年度を作成する）
+  const existingReikiYears = state.fiscalYears.map((fy) => fy.start_reiki_year);
+  const maxExistingReiki = existingReikiYears.length > 0 ? Math.max(...existingReikiYears) : (new Date().getFullYear() - 1837);
+  const desiredYearsSet = new Set(existingReikiYears);
+  desiredYearsSet.add(maxExistingReiki + 1);
+  desiredYearsSet.add(maxExistingReiki + 2);
+  const selectedFy = state.fiscalYears.find((fy) => fy.id === state.fiscalYearId);
+  if (selectedFy) desiredYearsSet.add(selectedFy.start_reiki_year);
+  const sortedReikiYears = [...desiredYearsSet].sort((a, b) => a - b);
+  const fyOptions = sortedReikiYears.map((ry) => {
+    const isSelected = selectedFy ? selectedFy.start_reiki_year === ry : false;
+    return `<option value="${ry}" ${isSelected ? 'selected' : ''}>立教${ry}年</option>`;
+  }).join('');
+
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.fieldMonth ? 'selected' : ''}>${m}月</option>`
   ).join('');
-  const catTabs = ALL_CATEGORIES.map(c =>
+  const catTabs = FIELD_VISIBLE_CATEGORIES.map(c =>
     `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
 
@@ -1858,8 +2021,23 @@ function renderFieldView(container) {
   attachUpdateButtonHandler();
 
   document.getElementById('field-fy-select').addEventListener('change', async (e) => {
-    state.fiscalYearId = Number(e.target.value);
-    await loadAttendanceForFiscalYear();
+    const reikiYear = Number(e.target.value);
+    let fy = state.fiscalYears.find((f) => f.start_reiki_year === reikiYear);
+    if (!fy) {
+      // まだ存在しない年度は自動的に作成する
+      const label = `立教${reikiYear}年4月～立教${reikiYear + 1}年3月`;
+      const { data, error } = await sb.from(T_FISCAL_YEARS)
+        .insert({ label, start_reiki_year: reikiYear, is_current: false })
+        .select().single();
+      if (!error && data) {
+        state.fiscalYears.push(data);
+        fy = data;
+      }
+    }
+    if (fy) {
+      state.fiscalYearId = fy.id;
+      await loadAttendanceForFiscalYear();
+    }
     renderView();
   });
   const monthSelectEl = document.getElementById('field-month-select');
