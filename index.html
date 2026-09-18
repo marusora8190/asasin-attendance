@@ -1819,7 +1819,6 @@ function renderGridView(container) {
           ${bulkActionsHtml}
           <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
           <button class="btn-dark" id="export-excel-btn">Excelで書き出し</button>
-          <button class="btn-light" id="switch-to-field-btn">📱 現場入力（スマホ用）に切替</button>
         </div>
       </div>
 
@@ -1909,10 +1908,6 @@ function renderGridView(container) {
 
   document.getElementById('add-member-btn').addEventListener('click', addMember);
   document.getElementById('export-excel-btn').addEventListener('click', () => exportAllDataToExcel());
-  document.getElementById('switch-to-field-btn').addEventListener('click', () => {
-    state.view = 'field';
-    renderView();
-  });
 
   setupRowDragAndDrop();
 }
@@ -2090,7 +2085,6 @@ function renderFieldView(container) {
       <div class="field-controls no-print">
         <div class="field-cat-tabs">${catTabs}</div>
         <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">
-          <button class="btn-light" id="switch-to-grid-btn" style="font-size:12px;padding:6px 10px;">💻 出欠入力（デスクトップ）に切替</button>
           ${renderUpdateButtonHtml()}
         </div>
       </div>
@@ -2110,10 +2104,6 @@ function renderFieldView(container) {
   `;
 
   attachUpdateButtonHandler();
-  document.getElementById('switch-to-grid-btn').addEventListener('click', () => {
-    state.view = 'grid';
-    renderView();
-  });
 
   document.getElementById('field-fy-select').addEventListener('change', async (e) => {
     const reikiYear = Number(e.target.value);
