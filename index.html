@@ -244,9 +244,9 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   font-size: 16px; font-weight: 500;
 }
 .field-clear-btn {
-  display: block; flex: 1; padding: 14px;
+  display: block; flex: 1; padding: 14px 4px;
   background: white; color: var(--color-absent); border: 2px solid var(--color-absent); border-radius: 10px;
-  font-size: 16px; font-weight: 500;
+  font-size: 13px; font-weight: 500; white-space: nowrap;
 }
 
 .context-menu {
@@ -428,6 +428,13 @@ const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤�
 let CATEGORY_LABEL = {}; // {key: label} 起動時にDBから読み込む
 let ALL_CATEGORIES = []; // 区分キーの一覧（並び順）
 let YEARLY_CATEGORIES = []; // これらは「月」ではなく「立教年」ごとに1回の記録
+// 年ごとの区分は、1年に3回（事前調査／会場外／会場内）まで出欠確認できる。
+// 内部的には month_seq の 1/2/3 をこの3回の記録として使い回す。
+const YEARLY_CHECKPOINTS = [
+  { seq: 1, label: '事前調査' },
+  { seq: 2, label: '会場外' },
+  { seq: 3, label: '会場内' },
+];
 let FIELD_VISIBLE_CATEGORIES = []; // 現場入力（スマホ用）に表示する区分
 const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
 const ROWS_PER_BLOCK = 19;
@@ -505,10 +512,12 @@ const state = {
   yearlyAttendance: new Map(), // 慰労拝受（中元/歳暮）用: `${memberId}-${category}-${fiscalYearId}` -> '○'|'×'
   yearlyAttendanceLoadedCategory: null,
   bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
+  bulkActionCheckpoint: 1, // 慰労拝受の一括操作の対象（事前調査/会場外/会場内）
   categoryMembers: new Map(), // `${category}::${memberId}` -> {member_id, category, sort_order, is_active}
   categories: [], // asagami_categories の内容（区分の一覧・並び順・設定）
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
+  fieldCheckpoint: 1, // 慰労拝受の現場入力での対象（事前調査/会場外/会場内）
   fieldDeptFilter: 'eizen-shomu',
   fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
   fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
@@ -1473,33 +1482,35 @@ function renderArchiveView(container) {
     });
   });
 }
-function yearlyAttKey(memberId, category, fiscalYearId) {
-  return `${memberId}-${category}-${fiscalYearId}`;
+function yearlyAttKey(memberId, category, fiscalYearId, checkpoint) {
+  return `${memberId}-${category}-${fiscalYearId}-${checkpoint}`;
 }
 
 async function loadYearlyAttendance(category) {
   const { data } = await sb.from(T_ATTENDANCE)
-    .select('member_id,fiscal_year_id,status')
+    .select('member_id,fiscal_year_id,month_seq,status')
     .eq('category', category)
-    .eq('month_seq', 1);
-  state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id), r.status]));
+    .in('month_seq', YEARLY_CHECKPOINTS.map((cp) => cp.seq));
+  state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id, r.month_seq), r.status]));
   state.yearlyAttendanceLoadedCategory = category;
 }
 
 function computeYearlySummary(memberId, category) {
   let present = 0, absent = 0;
   for (const fy of state.fiscalYears) {
-    const s = state.yearlyAttendance.get(yearlyAttKey(memberId, category, fy.id));
-    if (s === '○') present++;
-    if (s === '×') absent++;
+    for (const cp of YEARLY_CHECKPOINTS) {
+      const s = state.yearlyAttendance.get(yearlyAttKey(memberId, category, fy.id, cp.seq));
+      if (s === '○') present++;
+      if (s === '×') absent++;
+    }
   }
   const total = present + absent;
   return { present, absent, rate: total > 0 ? present / total : null };
 }
 
-async function toggleYearlyCell(memberId, fiscalYearId, btnEl) {
+async function toggleYearlyCell(memberId, fiscalYearId, checkpoint, btnEl) {
   const category = state.category;
-  const key = yearlyAttKey(memberId, category, fiscalYearId);
+  const key = yearlyAttKey(memberId, category, fiscalYearId, checkpoint);
   const current = state.yearlyAttendance.get(key) ?? null;
   const next = current === null ? '○' : current === '○' ? '×' : null;
 
@@ -1510,20 +1521,21 @@ async function toggleYearlyCell(memberId, fiscalYearId, btnEl) {
   if (next === '×') btnEl.classList.add('absent');
 
   if (next === null) {
-    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
   } else {
     await sb.from(T_ATTENDANCE).upsert(
-      { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: next },
+      { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint, status: next },
       { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
     );
   }
   renderView();
 }
 
-async function bulkMarkYear(fiscalYearId, mode) {
+async function bulkMarkYear(fiscalYearId, checkpoint, mode) {
   const category = state.category;
   const fy = state.fiscalYears.find((f) => f.id === fiscalYearId);
-  const yearLabel = fy ? `立教${fy.start_reiki_year}年` : '';
+  const cp = YEARLY_CHECKPOINTS.find((c) => c.seq === checkpoint);
+  const yearLabel = fy ? `立教${fy.start_reiki_year}年・${cp ? cp.label : ''}` : '';
 
   if (mode === 'all-present') {
     if (!confirm(`${yearLabel}分を、${CATEGORY_LABEL[category]}について全員○にします。すでに入力されている×も上書きされます。よろしいですか？`)) return;
@@ -1532,19 +1544,19 @@ async function bulkMarkYear(fiscalYearId, mode) {
   }
 
   if (mode === 'clear') {
-    for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId));
-    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+    for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId, checkpoint));
+    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
     renderView();
     return;
   }
 
   const updates = [];
   for (const m of state.members) {
-    const key = yearlyAttKey(m.id, category, fiscalYearId);
+    const key = yearlyAttKey(m.id, category, fiscalYearId, checkpoint);
     const current = state.yearlyAttendance.get(key) ?? null;
     if (mode === 'all-present' || (mode === 'fill-blank-present' && current === null)) {
       state.yearlyAttendance.set(key, '○');
-      updates.push({ member_id: m.id, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: '○' });
+      updates.push({ member_id: m.id, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint, status: '○' });
     }
   }
   if (updates.length === 0) { renderView(); return; }
@@ -1749,19 +1761,23 @@ function renderGridView(container) {
 
   const bulkYearLabel = sortedFiscalYears.find((fy) => fy.id === state.bulkActionFiscalYearId);
   const bulkYearText = bulkYearLabel ? `立教${bulkYearLabel.start_reiki_year}年` : '';
+  const bulkCheckpointOptions = YEARLY_CHECKPOINTS.map((cp) =>
+    `<option value="${cp.seq}" ${cp.seq === state.bulkActionCheckpoint ? 'selected' : ''}>${cp.label}</option>`
+  ).join('');
+  const bulkCheckpointLabel = YEARLY_CHECKPOINTS.find((cp) => cp.seq === state.bulkActionCheckpoint)?.label ?? '';
 
   const categoryMembersList = getCategoryMemberEntries(state.category);
 
   const rowsHtml = categoryMembersList.map((m, index) => {
     const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
     const cells = isYearly
-      ? sortedFiscalYears.map((fy) => {
-          const status = state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id)) ?? null;
+      ? sortedFiscalYears.map((fy) => YEARLY_CHECKPOINTS.map((cp) => {
+          const status = state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id, cp.seq)) ?? null;
           const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
           return `<td style="text-align:center;padding:2px;">
-            <button class="att-yearly-cell-btn ${cls}" data-member="${m.id}" data-fyid="${fy.id}" aria-label="立教${fy.start_reiki_year}年の出欠">${status ?? ''}</button>
+            <button class="att-yearly-cell-btn ${cls}" data-member="${m.id}" data-fyid="${fy.id}" data-checkpoint="${cp.seq}" aria-label="立教${fy.start_reiki_year}年${cp.label}の出欠">${status ?? ''}</button>
           </td>`;
-        }).join('')
+        }).join('')).join('')
       : MONTH_SEQUENCE.map((_, i) => {
           const seq = i + 1;
           const status = state.attendance.get(attKey(m.id, state.category, seq)) ?? null;
@@ -1796,14 +1812,15 @@ function renderGridView(container) {
   }).join('');
 
   const monthHeaders = isYearly
-    ? sortedFiscalYears.map((fy) => `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`).join('')
+    ? sortedFiscalYears.map((fy) => YEARLY_CHECKPOINTS.map((cp) => `<th style="text-align:center;font-size:11px;">立教${fy.start_reiki_year}年<br>${cp.label}</th>`).join('')).join('')
     : MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
 
   const bulkActionsHtml = isYearly ? `
           <select id="bulk-year-select">${bulkYearOptions}</select>
-          <button class="btn-dark" id="mark-all-present-btn">${bulkYearText}分 全員出席</button>
-          <button class="btn-light" id="fill-blank-present-btn">${bulkYearText}分未入力を○にする</button>
-          <button class="btn-light" id="clear-month-btn">${bulkYearText}分をクリア</button>
+          <select id="bulk-checkpoint-select">${bulkCheckpointOptions}</select>
+          <button class="btn-dark" id="mark-all-present-btn">${bulkYearText}・${bulkCheckpointLabel} 全員出席</button>
+          <button class="btn-light" id="fill-blank-present-btn">${bulkYearText}・${bulkCheckpointLabel} 未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">${bulkYearText}・${bulkCheckpointLabel} をクリア</button>
   ` : `
           <select id="bulk-month-select">${bulkMonthOptions}</select>
           <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
@@ -1875,13 +1892,17 @@ function renderGridView(container) {
 
   if (isYearly) {
     document.querySelectorAll('.att-yearly-cell-btn').forEach(btn => {
-      btn.addEventListener('click', () => toggleYearlyCell(Number(btn.dataset.member), Number(btn.dataset.fyid), btn));
+      btn.addEventListener('click', () => toggleYearlyCell(Number(btn.dataset.member), Number(btn.dataset.fyid), Number(btn.dataset.checkpoint), btn));
     });
-    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'all-present'));
-    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'fill-blank-present'));
-    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'clear'));
+    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, state.bulkActionCheckpoint, 'all-present'));
+    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, state.bulkActionCheckpoint, 'fill-blank-present'));
+    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, state.bulkActionCheckpoint, 'clear'));
     document.getElementById('bulk-year-select').addEventListener('change', (e) => {
       state.bulkActionFiscalYearId = Number(e.target.value);
+      renderView();
+    });
+    document.getElementById('bulk-checkpoint-select').addEventListener('change', (e) => {
+      state.bulkActionCheckpoint = Number(e.target.value);
       renderView();
     });
   } else {
@@ -2061,12 +2082,15 @@ function renderFieldView(container) {
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.fieldMonth ? 'selected' : ''}>${m}月</option>`
   ).join('');
+  const checkpointOptions = YEARLY_CHECKPOINTS.map((cp) =>
+    `<option value="${cp.seq}" ${cp.seq === state.fieldCheckpoint ? 'selected' : ''}>${cp.label}</option>`
+  ).join('');
   const catTabs = FIELD_VISIBLE_CATEGORIES.map(c =>
     `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
 
-  // 慰労拝受（中元/歳暮）は「月」ではなく、選択中の年度に対して1回だけ記録する
-  const monthSeq = isYearly ? 1 : calendarMonthToSeq(state.fieldMonth);
+  // 慰労拝受（中元/歳暮）は「月」の代わりに、選んだ確認回（事前調査/会場外/会場内）で記録する
+  const monthSeq = isYearly ? state.fieldCheckpoint : calendarMonthToSeq(state.fieldMonth);
 
   const deptTabs = FIELD_DEPT_GROUPS.map((g) => {
     const isSaved = state.fieldSavedGroups.has(fieldSavedGroupKey(state.fieldCategory, g.key, state.fiscalYearId, monthSeq));
@@ -2095,7 +2119,7 @@ function renderFieldView(container) {
       </div>
       <div class="field-controls no-print" style="margin-top:8px;">
         <select id="field-fy-select">${fyOptions}</select>
-        ${isYearly ? '' : `<select id="field-month-select">${monthOptions}</select>`}
+        ${isYearly ? `<select id="field-checkpoint-select">${checkpointOptions}</select>` : `<select id="field-month-select">${monthOptions}</select>`}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
@@ -2135,6 +2159,13 @@ function renderFieldView(container) {
   if (monthSelectEl) {
     monthSelectEl.addEventListener('change', (e) => {
       state.fieldMonth = Number(e.target.value);
+      renderView();
+    });
+  }
+  const checkpointSelectEl = document.getElementById('field-checkpoint-select');
+  if (checkpointSelectEl) {
+    checkpointSelectEl.addEventListener('change', (e) => {
+      state.fieldCheckpoint = Number(e.target.value);
       renderView();
     });
   }
@@ -2321,7 +2352,12 @@ async function exportAllDataToExcel() {
             '立場': m ? (m.position || '') : '',
             '出欠': a.status,
           };
-          if (isYearlyCat) row['対象年'] = periodLabel; else row['月'] = periodLabel;
+          if (isYearlyCat) {
+            row['対象年'] = periodLabel;
+            row['確認回'] = YEARLY_CHECKPOINTS.find((cp) => cp.seq === a.month_seq)?.label ?? '';
+          } else {
+            row['月'] = periodLabel;
+          }
           return row;
         });
       rows.sort((r1, r2) =>
