@@ -271,10 +271,10 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .modal-box h2 { margin: 0 0 4px; font-size: 16px; color: var(--color-navy); }
 .modal-hint { font-size: 11px; color: var(--color-ink-soft); margin: 0 0 10px; }
 .modal-list { list-style: none; margin: 0 0 8px; padding: 0; }
-.ceremony-table { border-collapse: collapse; font-size: 12px; min-width: 700px; }
-.ceremony-table th, .ceremony-table td { border: 1px solid var(--color-line); padding: 6px 4px; text-align: center; }
+.ceremony-table { border-collapse: collapse; font-size: 12px; min-width: 1000px; }
+.ceremony-table th, .ceremony-table td { border: 1px solid var(--color-line); padding: 6px 4px; text-align: center; white-space: nowrap; }
 .ceremony-table thead th { background: var(--color-paper); font-weight: 500; }
-.ceremony-table td input { font-size: 12px; padding: 2px; background: transparent; }
+.ceremony-table td input { font-size: 12px; padding: 2px; background: transparent; white-space: nowrap; }
 .ceremony-table td input:focus { background: white; outline: 1px solid var(--color-accent); }
 .modal-list li { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .modal-list .duty-day-select { flex-shrink: 0; width: 78px; font-size: 12px; padding: 3px 2px; }
@@ -1409,7 +1409,9 @@ function buildCeremonyTimesPanel() {
         }).join('');
         const joyuuCol = `${cat}_joyuu`;
         const joyuuCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${joyuuCol}" value="${escapeHtml(rec[joyuuCol] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
-        return [dateCell, fieldCells, joyuuCell];
+        const noteCol = `${cat}_note`;
+        const noteCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${noteCol}" value="${escapeHtml(rec[noteCol] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
+        return [dateCell, fieldCells, joyuuCell, noteCell];
       });
       return `<tr><td style="white-space:nowrap;font-weight:500;padding:4px 8px;">立教${y}年</td>${cells.join('')}</tr>`;
     }).join('');
@@ -1420,8 +1422,10 @@ function buildCeremonyTimesPanel() {
           <th rowspan="2"></th>
           <th colspan="4">勤務者慰労拝受（中元）</th>
           <th rowspan="2">常傭拝受時間</th>
+          <th rowspan="2">備考</th>
           <th colspan="4">勤務者慰労拝受（歳暮）</th>
           <th rowspan="2">常傭拝受時間</th>
+          <th rowspan="2">備考</th>
         </tr>
         <tr>${fieldHeaders}${fieldHeaders}</tr>
       </thead>
@@ -1432,7 +1436,7 @@ function buildCeremonyTimesPanel() {
       input.addEventListener('blur', async () => {
         const year = Number(input.dataset.year);
         const col = input.dataset.col;
-        const isDateField = col.endsWith('_date');
+        const isDateField = col.endsWith('_date') || col.endsWith('_note');
         const value = isDateField ? input.value.trim() : formatTimeInputValue(input.value);
         input.value = value;
         const existing = state.ceremonyTimes.get(year) ?? { reiki_year: year };
