@@ -1397,17 +1397,19 @@ function buildCeremonyTimesPanel() {
 
   function renderTable() {
     const tableEl = panel.querySelector('#ceremony-times-table');
-    const fieldHeaders = CEREMONY_TIME_FIELDS.map((f) => `<th>${f.label}</th>`).join('');
+    const fieldHeaders = `<th>日付</th>` + CEREMONY_TIME_FIELDS.map((f) => `<th>${f.label}</th>`).join('');
     const rows = state.ceremonyTimesYears.map((y) => {
       const rec = state.ceremonyTimes.get(y) ?? {};
       const cells = ['chugen', 'seibo'].flatMap((cat) => {
+        const dateCol = `${cat}_date`;
+        const dateCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${dateCol}" value="${escapeHtml(rec[dateCol] || '')}" placeholder="例: 8/1" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
         const fieldCells = CEREMONY_TIME_FIELDS.map((f) => {
           const col = `${cat}_${f.key}`;
           return `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${col}" value="${escapeHtml(rec[col] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
         }).join('');
         const joyuuCol = `${cat}_joyuu`;
         const joyuuCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${joyuuCol}" value="${escapeHtml(rec[joyuuCol] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
-        return [fieldCells, joyuuCell];
+        return [dateCell, fieldCells, joyuuCell];
       });
       return `<tr><td style="white-space:nowrap;font-weight:500;padding:4px 8px;">立教${y}年</td>${cells.join('')}</tr>`;
     }).join('');
@@ -1416,9 +1418,9 @@ function buildCeremonyTimesPanel() {
       <thead>
         <tr>
           <th rowspan="2"></th>
-          <th colspan="3">勤務者慰労拝受（中元）</th>
+          <th colspan="4">勤務者慰労拝受（中元）</th>
           <th rowspan="2">常傭拝受時間</th>
-          <th colspan="3">勤務者慰労拝受（歳暮）</th>
+          <th colspan="4">勤務者慰労拝受（歳暮）</th>
           <th rowspan="2">常傭拝受時間</th>
         </tr>
         <tr>${fieldHeaders}${fieldHeaders}</tr>
@@ -1430,7 +1432,9 @@ function buildCeremonyTimesPanel() {
       input.addEventListener('blur', async () => {
         const year = Number(input.dataset.year);
         const col = input.dataset.col;
-        const value = input.value;
+        const isDateField = col.endsWith('_date');
+        const value = isDateField ? input.value.trim() : formatTimeInputValue(input.value);
+        input.value = value;
         const existing = state.ceremonyTimes.get(year) ?? { reiki_year: year };
         existing[col] = value;
         state.ceremonyTimes.set(year, existing);
@@ -1438,6 +1442,18 @@ function buildCeremonyTimesPanel() {
       });
     });
   }
+
+// 「0812」のような3〜4桁の数字を「8:12」の時刻表記に変換する。それ以外はそのまま返す
+function formatTimeInputValue(raw) {
+  const trimmed = raw.trim();
+  if (/^\d{3,4}$/.test(trimmed)) {
+    const padded = trimmed.padStart(4, '0');
+    const hour = parseInt(padded.slice(0, 2), 10);
+    const minute = padded.slice(2, 4);
+    return `${hour}:${minute}`;
+  }
+  return raw;
+}
 
   renderTable();
   return panel;
