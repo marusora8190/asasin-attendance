@@ -745,9 +745,12 @@ async function loadFiscalYearsAndMembers() {
 // state.categories の内容を、アプリ全体で使うCATEGORY_LABEL等に反映する
 function applyCategoriesFromState() {
   CATEGORY_LABEL = Object.fromEntries(state.categories.map((c) => [c.key, c.label]));
-  ALL_CATEGORIES = state.categories.map((c) => c.key);
+  ALL_CATEGORIES = [...state.categories].sort((a, b) => a.sort_order - b.sort_order).map((c) => c.key);
   YEARLY_CATEGORIES = state.categories.filter((c) => c.is_yearly).map((c) => c.key);
-  FIELD_VISIBLE_CATEGORIES = state.categories.filter((c) => c.show_in_field).map((c) => c.key);
+  FIELD_VISIBLE_CATEGORIES = state.categories
+    .filter((c) => c.show_in_field)
+    .sort((a, b) => (a.field_sort_order ?? a.sort_order) - (b.field_sort_order ?? b.sort_order))
+    .map((c) => c.key);
   if (!ALL_CATEGORIES.includes(state.category)) state.category = ALL_CATEGORIES[0] ?? state.category;
   if (!ALL_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
 }
@@ -1146,14 +1149,15 @@ function buildCategoryMembersPanel() {
 function buildCategoriesPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '560px';
+  panel.style.maxWidth = '620px';
   panel.innerHTML = `
     <h2>区分（タブ）を管理</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
-      出欠入力・現場入力などで使う「区分」の一覧です。名前の変更、順番の入れ替え、
-      現場入力(スマホ用)に表示するかどうかの切り替え、新しい区分の追加ができます。
+      出欠入力・現場入力などで使う「区分」の一覧です。名前の変更・年ごとの切り替え・
+      新しい区分の追加はここで行い、並び順は出欠入力(デスクトップ)と現場入力(スマホ用)で
+      別々に設定できます。
     </p>
-    <ul class="modal-list" id="categories-list" style="max-height:400px;overflow-y:auto;"></ul>
+    <ul class="modal-list" id="categories-list" style="max-height:320px;overflow-y:auto;"></ul>
     <div class="modal-add-row">
       <input type="text" id="new-category-input" placeholder="新しい区分名（例: 特別拝受）" />
       <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;">
@@ -1161,12 +1165,27 @@ function buildCategoriesPanel() {
       </label>
       <button class="btn-dark" id="new-category-add-btn">追加</button>
     </div>
+
+    <h2 style="margin-top:20px;">出欠入力（デスクトップ）の並び順</h2>
+    <ul class="modal-list" id="grid-order-list" style="max-height:220px;overflow-y:auto;"></ul>
+
+    <h2 style="margin-top:20px;">現場入力（スマホ用）の並び順</h2>
+    <p class="modal-hint" style="margin-bottom:6px;">「スマホに表示」がオンの区分だけが並びます。</p>
+    <ul class="modal-list" id="field-order-list" style="max-height:220px;overflow-y:auto;"></ul>
   `;
 
   function renderList() {
     const listEl = panel.querySelector('#categories-list');
-    const sorted = [...state.categories].sort((a, b) => a.sort_order - b.sort_order);
-    listEl.innerHTML = sorted.map((c, i) => `
+    const gridOrderEl = panel.querySelector('#grid-order-list');
+    const fieldOrderEl = panel.querySelector('#field-order-list');
+
+    const byGridOrder = [...state.categories].sort((a, b) => a.sort_order - b.sort_order);
+    const byFieldOrder = [...state.categories]
+      .filter((c) => c.show_in_field)
+      .sort((a, b) => (a.field_sort_order ?? a.sort_order) - (b.field_sort_order ?? b.sort_order));
+
+    // ---- 名前・年ごと・スマホ表示・削除（並び順は関係なし） ----
+    listEl.innerHTML = byGridOrder.map((c) => `
       <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
         <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
@@ -1175,10 +1194,24 @@ function buildCategoriesPanel() {
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
           <input type="checkbox" class="category-yearly-checkbox" data-key="${escapeHtml(c.key)}" ${c.is_yearly ? 'checked' : ''} /> 年ごと
         </label>
-        <button class="icon-btn category-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
-        <button class="icon-btn category-down-btn" data-key="${escapeHtml(c.key)}" ${i === sorted.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
         <button class="icon-btn danger category-delete-btn" data-key="${escapeHtml(c.key)}" title="この区分を削除">×</button>
       </li>`).join('');
+
+    // ---- 出欠入力（デスクトップ）の並び順 ----
+    gridOrderEl.innerHTML = byGridOrder.map((c, i) => `
+      <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;">
+        <span style="flex:1;min-width:0;">${escapeHtml(c.label)}</span>
+        <button class="icon-btn grid-order-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
+        <button class="icon-btn grid-order-down-btn" data-key="${escapeHtml(c.key)}" ${i === byGridOrder.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+      </li>`).join('') || `<li style="color:var(--color-ink-soft);">区分がありません</li>`;
+
+    // ---- 現場入力（スマホ用）の並び順 ----
+    fieldOrderEl.innerHTML = byFieldOrder.map((c, i) => `
+      <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;">
+        <span style="flex:1;min-width:0;">${escapeHtml(c.label)}</span>
+        <button class="icon-btn field-order-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
+        <button class="icon-btn field-order-down-btn" data-key="${escapeHtml(c.key)}" ${i === byFieldOrder.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+      </li>`).join('') || `<li style="color:var(--color-ink-soft);">「スマホに表示」がオンの区分がありません</li>`;
 
     listEl.querySelectorAll('.category-label-input').forEach((input) => {
       input.addEventListener('blur', async () => {
@@ -1215,14 +1248,26 @@ function buildCategoriesPanel() {
         renderView();
       });
     });
-    listEl.querySelectorAll('.category-up-btn, .category-down-btn').forEach((btn) => {
+    listEl.querySelectorAll('.category-delete-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const key = btn.dataset.key;
-        const dir = btn.classList.contains('category-up-btn') ? -1 : 1;
-        const idx = sorted.findIndex((c) => c.key === key);
+        const c = state.categories.find((cc) => cc.key === key);
+        if (!confirm(`「${c?.label ?? key}」を削除します。この区分の出欠記録は残りますが、画面には表示されなくなります。よろしいですか？`)) return;
+        state.categories = state.categories.filter((cc) => cc.key !== key);
+        await sb.from(T_CATEGORIES).delete().eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+
+    gridOrderEl.querySelectorAll('.grid-order-up-btn, .grid-order-down-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const dir = btn.classList.contains('grid-order-up-btn') ? -1 : 1;
+        const idx = byGridOrder.findIndex((c) => c.key === key);
         const targetIdx = idx + dir;
-        if (targetIdx < 0 || targetIdx >= sorted.length) return;
-        const a = sorted[idx], b = sorted[targetIdx];
+        if (targetIdx < 0 || targetIdx >= byGridOrder.length) return;
+        const a = byGridOrder[idx], b = byGridOrder[targetIdx];
         const orderA = a.sort_order, orderB = b.sort_order;
         a.sort_order = orderB; b.sort_order = orderA;
         await Promise.all([
@@ -1233,13 +1278,21 @@ function buildCategoriesPanel() {
         renderView();
       });
     });
-    listEl.querySelectorAll('.category-delete-btn').forEach((btn) => {
+
+    fieldOrderEl.querySelectorAll('.field-order-up-btn, .field-order-down-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const key = btn.dataset.key;
-        const c = state.categories.find((cc) => cc.key === key);
-        if (!confirm(`「${c?.label ?? key}」を削除します。この区分の出欠記録は残りますが、画面には表示されなくなります。よろしいですか？`)) return;
-        state.categories = state.categories.filter((cc) => cc.key !== key);
-        await sb.from(T_CATEGORIES).delete().eq('key', key);
+        const dir = btn.classList.contains('field-order-up-btn') ? -1 : 1;
+        const idx = byFieldOrder.findIndex((c) => c.key === key);
+        const targetIdx = idx + dir;
+        if (targetIdx < 0 || targetIdx >= byFieldOrder.length) return;
+        const a = byFieldOrder[idx], b = byFieldOrder[targetIdx];
+        const orderA = a.field_sort_order ?? a.sort_order, orderB = b.field_sort_order ?? b.sort_order;
+        a.field_sort_order = orderB; b.field_sort_order = orderA;
+        await Promise.all([
+          sb.from(T_CATEGORIES).update({ field_sort_order: orderB }).eq('key', a.key),
+          sb.from(T_CATEGORIES).update({ field_sort_order: orderA }).eq('key', b.key),
+        ]);
         applyCategoriesFromState();
         renderView();
       });
@@ -1253,7 +1306,8 @@ function buildCategoriesPanel() {
     const isYearly = panel.querySelector('#new-category-yearly').checked;
     const key = 'custom_' + Date.now().toString(36);
     const maxOrder = state.categories.length > 0 ? Math.max(...state.categories.map((c) => c.sort_order)) : 0;
-    const newCat = { key, label, sort_order: maxOrder + 1, show_in_field: true, is_yearly: isYearly };
+    const maxFieldOrder = state.categories.length > 0 ? Math.max(...state.categories.map((c) => c.field_sort_order ?? c.sort_order)) : 0;
+    const newCat = { key, label, sort_order: maxOrder + 1, field_sort_order: maxFieldOrder + 1, show_in_field: true, is_yearly: isYearly };
     const { error } = await sb.from(T_CATEGORIES).insert(newCat);
     if (error) { alert('追加に失敗しました: ' + error.message); return; }
     state.categories.push(newCat);
@@ -1765,6 +1819,7 @@ function renderGridView(container) {
           ${bulkActionsHtml}
           <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
           <button class="btn-dark" id="export-excel-btn">Excelで書き出し</button>
+          <button class="btn-light" id="switch-to-field-btn">📱 現場入力（スマホ用）に切替</button>
         </div>
       </div>
 
@@ -1854,6 +1909,10 @@ function renderGridView(container) {
 
   document.getElementById('add-member-btn').addEventListener('click', addMember);
   document.getElementById('export-excel-btn').addEventListener('click', () => exportAllDataToExcel());
+  document.getElementById('switch-to-field-btn').addEventListener('click', () => {
+    state.view = 'field';
+    renderView();
+  });
 
   setupRowDragAndDrop();
 }
@@ -2030,7 +2089,10 @@ function renderFieldView(container) {
     <div class="field-view">
       <div class="field-controls no-print">
         <div class="field-cat-tabs">${catTabs}</div>
-        <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">${renderUpdateButtonHtml()}</div>
+        <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+          <button class="btn-light" id="switch-to-grid-btn" style="font-size:12px;padding:6px 10px;">💻 出欠入力（デスクトップ）に切替</button>
+          ${renderUpdateButtonHtml()}
+        </div>
       </div>
       <div class="field-controls no-print" style="margin-top:8px;">
         <select id="field-fy-select">${fyOptions}</select>
@@ -2048,6 +2110,10 @@ function renderFieldView(container) {
   `;
 
   attachUpdateButtonHandler();
+  document.getElementById('switch-to-grid-btn').addEventListener('click', () => {
+    state.view = 'grid';
+    renderView();
+  });
 
   document.getElementById('field-fy-select').addEventListener('change', async (e) => {
     const reikiYear = Number(e.target.value);
