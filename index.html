@@ -243,6 +243,11 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   background: white; color: var(--color-present); border: 2px solid var(--color-present); border-radius: 10px;
   font-size: 16px; font-weight: 500;
 }
+.field-clear-btn {
+  display: block; flex: 1; padding: 14px;
+  background: white; color: var(--color-absent); border: 2px solid var(--color-absent); border-radius: 10px;
+  font-size: 16px; font-weight: 500;
+}
 
 .context-menu {
   position: fixed; z-index: 1000; background: white; border: 1px solid var(--color-line);
@@ -2097,6 +2102,7 @@ function renderFieldView(container) {
       <div class="field-chip-grid">${chipsHtml}</div>
       <div class="field-action-row no-print">
         <button class="field-all-present-btn" id="field-all-present-btn">全員出席</button>
+        <button class="field-clear-btn" id="field-clear-btn">この内容をクリア</button>
         <button class="field-save-btn" id="field-save-btn">この内容で保存</button>
       </div>
       <p class="no-print" id="field-save-msg" style="text-align:center;font-size:13px;color:var(--color-present);font-weight:500;height:18px;margin-top:8px;"></p>
@@ -2155,6 +2161,17 @@ function renderFieldView(container) {
       const key = attKey(memberId, state.fieldCategory, monthSeq);
       state.attendance.set(key, '○');
       chip.classList.add('filled');
+    });
+    state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, monthSeq));
+    const msgEl = document.getElementById('field-save-msg');
+    if (msgEl) msgEl.textContent = '';
+  });
+  document.getElementById('field-clear-btn').addEventListener('click', () => {
+    document.querySelectorAll('.field-chip').forEach((chip) => {
+      const memberId = Number(chip.dataset.member);
+      const key = attKey(memberId, state.fieldCategory, monthSeq);
+      state.attendance.delete(key);
+      chip.classList.remove('filled');
     });
     state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, monthSeq));
     const msgEl = document.getElementById('field-save-msg');
