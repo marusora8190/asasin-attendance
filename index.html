@@ -1110,17 +1110,19 @@ function buildCategoryMembersPanel() {
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。
     </p>
-    <ul class="modal-list" id="category-members-list" style="max-height:440px;overflow-y:auto;"></ul>
+    <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;"></div>
+    <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;"></ul>
   `;
 
   function renderList() {
+    const headerEl = panel.querySelector('#category-members-header');
+    headerEl.innerHTML = `
+      <span style="flex:1;min-width:0;">氏名</span>
+      ${ALL_CATEGORIES.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+    `;
+
     const listEl = panel.querySelector('#category-members-list');
-    listEl.innerHTML = `
-      <li style="justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;">
-        <span style="flex:1;min-width:0;">氏名</span>
-        ${ALL_CATEGORIES.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
-      </li>
-    ` + state.members.map((m) => `
+    listEl.innerHTML = state.members.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
         ${ALL_CATEGORIES.map((c) => {
