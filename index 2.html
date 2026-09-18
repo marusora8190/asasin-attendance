@@ -1,0 +1,2827 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>営繕課出欠記録</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20180%20180%22%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20rx%3D%2232%22%20fill%3D%22%231c2b39%22/%3E%3Ctext%20x%3D%2290%22%20y%3D%2280%22%20font-family%3D%22%27Zen%20Kaku%20Gothic%20New%27%2C%27Hiragino%20Sans%27%2C%27Noto%20Sans%20JP%27%2C%27Yu%20Gothic%27%2C%27Meiryo%27%2Csans-serif%22%20font-size%3D%2252%22%20font-weight%3D%22700%22%20fill%3D%22%23f6f4ee%22%20text-anchor%3D%22middle%22%3E%E5%87%BA%E6%AC%A0%3C/text%3E%3Ctext%20x%3D%2290%22%20y%3D%22140%22%20font-family%3D%22%27Zen%20Kaku%20Gothic%20New%27%2C%27Hiragino%20Sans%27%2C%27Noto%20Sans%20JP%27%2C%27Yu%20Gothic%27%2C%27Meiryo%27%2Csans-serif%22%20font-size%3D%2252%22%20font-weight%3D%22700%22%20fill%3D%22%23b8863b%22%20text-anchor%3D%22middle%22%3E%E7%A2%BA%E8%AA%8D%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAABmJLR0QA/wD/AP+gvaeTAAAfM0lEQVR4nO2dd3yV9fXH3+e5mWQTCCuEPQOCDBEUB46CUheOUtFaZ6t11NpW29rW/rSOVovUuqoiYtXaVly4EFE2CDIkrLBCBoEkEJIQsu5zfn8kapL73Oxxn/B9v168XuTeZ3zvfT73POc533POV2hlup00KSHIyxmidrIKQy2RwarEAbFAJBDc2mMwtCklCkcF8oFs4GvQTYq1LjNl5SZAW/Pk0hoH7Z08aTzoTBXOQ0lurfMYXEemKO+JZb+1f8uaxYDd0idoMaENHDghujTMutlWrhcY1lLHNXRYUlH9e1iZztu1a01BSx202YJOTJ7YGbgTuB2Ia/aIDCcahxX+L5aCp1NSUsqae7DmCFoSR0y8HpVHQLs0dyCGE57dKnJn5paVC5tzkCYJOjF54kBgHjCpOSc3GBx4saTC+nnujhWFTdm50YLuPeLUq1TleSC6KSc0GOpDYZ8ql2VtXbWhsftajdm2d/LEv6nKGxgxG1oRgb6WsKxX8qTLG7uvpyEbJScnh4QmDHwFuKnRozMYmkaIwBXRCYnHC3IyVjR0p3oFnZycHHJUohaAXNa88RkMjUZAzotJSPIW5KQvbcgO9QnaqrTMRsyGdmVKQ0Vdp6B7J098AuNmGAKDKTEJiWkFORkb69rIb5Sj1/CJV4jwZsuPy2BoMuWqTMvcumqxvw0cBd17xKQBqroeiGm1oRkMTeOIjWd0Vsry/U5vOoXtRFVfwYjZEJjEWXjn4ifk7ONDJ46YeANwW2uPymBoBv2iExKLncJ5NVyOykQj2WFyMwwuoDjIq8n7tq/eV/3FGmZb4S4jZoNL6FThkdm1X/zWQg8cOCG6JNTah0kBNbgIVc6tHvX41kKXhlk3Y8RscBki/KH6398K2laub/vhGAzNZnKv5NPO/uYPCyprAE3ZlMGtCPad3/y/ykLrzPYajMHQAlzYN3l8d6gStArnte94DIZmEVSB51oAq9tJkxKqWg0YDC5GLgawgrycgembYXA/ExKTJ3a2RG1jnQ0dAY8iUywVhrb3SAyGFmK0JViD2nsUBkMLMdIyuRuGjoKggy0gqr0HYjC0ELEWlS1tDYaOQJwFhLT3KAyGFiK0MZ2TDIaAxwg6wLB6jOSCM5IZ2CXMXJwmENTeA2gbhNhBY5nUp5PvW6VZrF6+i8OtulBCQ7FIOufH/PX2IQRpBUUH0/l66w42b9nOpq072bw9nUPHW7zpfYfiBBG0h77TbuHxq3v6VAV7s9/lR6t2sbaiXQZWE4li7Ji+lWOUICK792Ni935MnDIVUIqWPMaZ9y6lSX1mTxDMXS2QCB3C+ORg58QarWDT2q8pausxuQwj6AAieNjJTIj2c0m8u1m+9mjrLiHVAThBXI4WwLL8NgL02i3h1wYxYvI4uvvRc0XaBlYdMP5zfbhH0BLLjMee4Xfja4fNveyZ/2uuenEvrecGB3PWb+fz3PQoH3fAzlnIjy99mlXlzTyFpy9nTerm50djk7l6HTu9zTzHCYB7BA14QsOJCK+9TqeX8CD3e05B/SZwdpKfe4CdwxfLdrfiD7bj4H4ldAg8DD1vMgP96Nmbu47Ptjb3FnBi4CoL3WEJHsL3z+vl52Iox1OzKE7q1+qJ68ExiSQnWexZs471mcdwo4djBB0AhI0+i6k9/N0shcjTbuLN09pwQFpO7s4NLFqygo8Xr2bt/iLXuDvG5WhvJJopl06mWyBdCQmmy5BTmPmTn/Pymy/xt/N9H4YDlUD6Gk9IrJ5TmHV6VMBeCC1LZeXGY66Jfwfq93iCEMzIS6cxOjRQ7Z9SvnUNS3PdE/82gm5HpPNp3HRRz8B9kNEKtiz9EjfN5xhBtxvBjLjqKqb4m+oOBLx7+Wz5QVyk58A1Dh0dq+uZ3DYjkSDnTCSKVv2dC+/+2Nk6SmdmPvUSD4yrPckEUEHKs7dz+dz9DQi7CbHf+w2fPTCJSJ9xKOXblrMow01yNha6fZAITr/xh5wZ5efrtw/yzqtftP6tXqKYPGU0EU4/Kq3gq4+XkeYuPRtBtwfhI3/AfdMT/ORtKMc3vcfcr0pafRwSPYap48MdQ3Jaspl3l+S4yt2ADuFyeBh4/Ry2NrFdu6f7Rby64qKWHVJdhA7kxrun09/Z1wA7j/fnL2J/qytJ6Dz5TCZ2cpQzx9Ys4dM8twTrvsNY6DYljLE33sXNQ0P8TFQoReve5OlVx1p/KFYXvjfVj7thF7Dkw7UccZ+ejaDbDiHm1Ot5+Id98Rd21or9vPrMJ2S2wX3e02syF49yro7xZn/Bm23xo2oFjKDbiOCkqTz2+2n09edqYJOzaD4vbmtAVp14CPZXbYDgCfLUM1UdxLDp5zEyxGErLWfbOx+yrrT+YQQiRtBtgBV/Kn98/BbOivf/ddv5a3j86TUcbdBtPpzIcH+SFSI6hdWz+2hmXpjo+AClxRt57f10V2bagRF0mxAWHUZxXiEV/sRqF7Ls6X/yzqEG+hqeeHom+M/Oi+/WpY52WELXcy5gWhen/W1yPnufj3Jd6DxX4Z4ohx7lnd9cx+ImNS7zMPKmx3jmsu6+bQxyPuH26+exoan5kXYpBfV4CcV7P+ehW9fx9kU38NDt5zIs0qrmEtgUrpvPg+81fEbOSujDAH8xbISQvn3o41nGNiczGzSAH/5wrOPDoJbv499vbnR1Zbl7BI1SWpRP01y7IPL9NWjxllBwOJ+81k74tYtIeftJrlyzitv/cCc3jI4lSMDOXcX/PfRhoyYwOg0dxpA6rpwncSgnxQnbHCxt2OjzuKSfk49tc3jJG7ya6pbMZ2eMy9HGlB1Yy+M/u4Nb5m0hrzSTfz/4FO9kNyasEcrYiSNwDB9XISFDmDw2wvHBsGTd81wy6yEefWsT6cftb9NCtXQX8+audmWorjqBb6EljhmPzOFXo2s7C0rewoe5aM6WNqymsBg468+8ck2S7yxf2Rrum/Ekn5U14DAVeSx75nfMWNiZw/sLGpdrHD6KaZOi67ZEEs6kc8YT98kShxZnXo7uXsWLj67i5aeTOPOi73PNjDMZ8NXr/GuvWx8FvyPwBY0QEhlFXGztRBybivCgNq+k8IRHEhsb4/vFlXZqZF/icrL2H2zk2YW4yedxblx9N1YhYsL5XNDjC17N8m/9vYX7+exf/+Cz118iMrSEIpdbZzAuh7uwenHFVePx+zxYDQlLZtblgwltyHHt4xQd7wBqxgjaRQixZ1zFtcP99L7zwUO/S2ZxWc8T6xKfWJ/WzYQO4aafnEFXnyumlO9NZauDhZWIUdz200nEB2qFVytgBO0KQhn149u4tq/DM4OWsvbNJ3l+WYFDHNsi4dxb+N2UuBPmQp8on9PFCJEnX8NDV/dzTGry5ixl7sf7WPyfz0hzClJYnZn2q59zVZJTdUvHwwg6wPF0O4MH/3QxgxwTiY7z5fw3WX5MKd3yDi+sPuY422jFjuE3j1zHpJiO73sYQQcwEjOKex67g2kJlsODoFKauoBH3z5QKWI7hwVPv0VKqVO0QggdcBF/f3wmY3yLBzsURtABikQnc8fjv+XHQ8OcS6TK0nj5sf+SUm0ip2LXAv70+j7KHCNwFlEjZ/Lc7GuYVG8c27103E/mYoISTuX+fzzArSMjnC+QlvD1vNn84+vamS2lbJr7JM9tL/Uz+2gRM/JKnn3+bmb0qyfF1KUYQQcUFnGjLufpf97L1YOdi1fB5vDKF7jn5VQcy2hLUnn2D3NZcdTfDKEQlnQ2D734V/58YR/nEiwXYwQdKHjimHDt73jrqes4q7u/yROlZM/73POnj9hXRwJLedr7/PKBT9jj7HsAYEX04/L7n2DBI1dxeveOEwFxQS6Hf6yQCGJiohuQnGQR5W/RXCuUyJhoYhuU4WQRFeq39qmJWEQNPod77rueK4dF4/FrMZWK7BX8/p4XWZ5f3zS1krfiWX7611jm3zuBBMvPQSWMvmddywvjz+SjV15m9r+/ZJ/Lp8AlMXliYH+COrsEBRCly7nj3If5qCHZdlWE9hjNzBt+xC0XDCLev5IBpeLQav74s0d5M60xnfxDGXrlb5n78zHE+xN1tXOU5+3g7fmv88K7X7H3mNs6clTiagvtTiyi+5/CFVddwjXTRtCz3s6jSmn659x/95O8vb+xy1KUsv3Nh7i2/Bc8/4tJ9Aqu61xCcPxQrrjrj1x2UxYrFr7Pq29/zvLdBa5pdg5G0G2G1ak74848i4svOIdp43oQWa/FBNQm/+v/cfd9r7C8yS1tS0ld8BizjtzAU7+fTnJE/amnnohenHHlLZxxxfXk7d7Ixwvf5pk3NnLQBUbbCLot6JTMPS88xA0DGpopB9jFbH/3ae56Ygl7mt1SoILMz59jVvpe/vjnW7ior3Ns2wcJJr7/YJLK8jjsAjGDiXK0DcUpzL7veZYeaYgqFO/RnfzrD3dx1cMtIebvOLb7E3513d3cu2AXhXYDHp3US+YHc/jl/9JxyxpcRtBtRFnah/zyDx+wu45QGlrC3iUvc/3Vv+SBTzI53grj0ONpLHjkHi68cx6L0kvqKP9SytPe574n1uCmFncudjlsct66n7Me3diG1sNiyE1zWHBjvyZ8cUr+mhe5Z94Q/nXjoJpFrmpTsHspz86Zx/w1h5pY2d4Yysle+x9uu/oLTrt8Fvf86GyGx9TMF9Gy/bz80CusPuYiNWMsdBtTRsq8J5izsbjSMqpNwe4VPHX/nZxzzV94oU3EXI3SQ6z41xPMuPRWbv3HIjbmlleNq5zU1+fw1ObWb+nb0rjDQts2Fd7ayb42Fdr21sNbWkxh0TGHItnjDbtTlO/nlcfmMfjGbmx6+wPe+/JAuxen2sfSWfzKbBa/MY8Rk8/hiknCu3O3t4rL09oE/sSKwdAIjMth6FAYQRs6FEbQhg6FEbShQ2EEbehQGEEbOhRG0IYOhRG0oUNhBG3oULhj6rs98AgzzhH6HFfSj0D6Ydh/RDl4HNeuEHUiYATtB080nNQFeokwPKnqRRXKipV/vKekGFUHJEbQfohNgO61XxSQApq/0qslzLxIOCeiCft6lRf+p6yuyoTyxAn3TxMSW7m/hvew8sBHSlaAZ/4EvKDjk4RLk8R3TZPGYisbNitrG7JmmQjDewpOZX8ZB6EgwC9qq1BB26a2NpGAF3REnDC+D80XtAq5OxomaAmF0V1x6MUM27K1wesJdiS0Alekkwa8oFsMgWlTLaY18xgXTLW4oKHb2/Cf920+LmzOSQMDu1wpd8Gd6cQRdCChSsYB2NCgFX1qYdMuFdjlXlxxZzKCbg8Ulq1RlrXAobwFynMf4WdJOSWyt8UdI2q5bAqrVyuL8n33sKLh5klC11r+VlmFVO4Y4BhBux0vHDisIBBsVVrS6gwb6Dt7pjZsy1LSHEoGPUHiONtW6gZ/AxcIev8mm1s21Xyt/xjh3mG1vniFL5fZPJfufBxPvPDA94Tu7dg+tuswiwfHtMADLnAgxeaPG7+b5EkYLPx2lJCRoazdq3yZDcVA/3jfh1u7SMn0F7IIEse1DUvLBTUWunXoGimOEYisxj582cq7S2BTVYPFHkOE6/s7WLRyeHupssVvI0YlItHizpEtI9bGYkUIV58kRATDkH7CkH7CD4phQ7rSM9Z3+5LDkO1Hm0HBSqhDX6WSCjc4HG4UtAjdIn2tjnqVAw2JMdfYScg9bJNWBhIqTO3pnNxyNN1mcTaUABIGScGQVUSNp/7IOEXbfKFmQGDSeGF4LSc6uBOcMsRpoSHYk61+Y8rhISAOu5WUucE+u1HQHqWHw8I39jE42Izp6L7DhDEO91pVWLGDb7vld+4j/GasYJfCvlxl9yFlVw4crLMdbusR11e4rKdDzNwfCttz/Fvb8FDn+HuJS1qQuk7QVqTQ3WHU5QWQ00QTIhHCJYNxbDZelq0sPfLNhsKwnmAJeMJgUKIwKFFAYV2a4uAI1UBtpbTC+aGrsZTZAqLEh8DBYojq5GxZfRCYPEY4vElZl+8r7Mgw509R5IZpQlwo6JAYoavD64fylbp6jWsZpB5Qcmu8CPkKE8cKwx36qavC0i36bW83CYdxCb4XvPSQ8uF+iI6s9YXaSn61u0buDuWOHS174961Q3l0p9KjhzB5IEzqJUTW9YsR6J4o3NxTOG+P8u9Nyu5q0Y6oMGcLXdSIRu7tiesE3T0WfPp2K6Tn1R34twuVeUt8X48fINyc6HzLLkyz+SDnu7+79IGhtZ/6FFanKGkH4LH0dvIyFQ5kKW9mwYJwZWyyxazBEFaHxRYL+g8Ufp0kLF1r81oa2CLEOgkaKDSCbgUE+sY7PLipkuYwSVAfVqQwa4zgtBalVigLN0PhNxoVYWJ/Iaj2hEOO8kl2484rYcIVp0LPprjdCsvWKuuLnd8uLxFCInFcRtkJKxikrMr1EKWrw7JY6lWOGpejFbCgf5xDXPU47G9kX0EJFi6eLIxwnmJDgipTPGfWc5yQBOGhHzqox4a3Ftp8UOCwUxD07yEMbIozbcM2j/87QbeBwoxGPCQWpCvvZFcKWkKge7jvNloCR90Q4sBlJVieGKGvQySi/DBkNSbRwANnni5c0LkR0QEXENXD4taxOK49WHRAWbAHiqsJU8th4Ub9Nh02ON6ij4Mi7CLIdYmgXWWhYxOEbg4XK7S3MOfquqW5/Uubx3eCCow5RZjZo2OJObaXcPtp0MthZkfL4b11yuICZcUe4QcTYGykkL5d+aJqMsrTSZg+AqKcfgxFilvaRLtH0AJDuilOy7g3+BBBcOYki5mJziE6VyIwcJhw0ygh3ul+q5CywebzKtcn/6Dy3GLh7ukwbKTwzAjB1sqQn+M6Rgrpue7ItAM3CToIhnepL9Jbx+6dhCvOFc51yG1oa7RIeeT15pu8TrHC98cJUxL8/EAVDu1WXtpVs7BXi5VlWcLQpEoh1/XjVlV25Lpj2htcJOjQrsLwpuQPVzFguDBA6hdzxjbludSa07xxAyzuSvZNwVy/1mbBQT8HEihs7FR8I4jsZfHbM6Crv6cghfwMZc469S0ZU9iaoZT2ljpDewClObDeRQUKrhH0oCRn/66lKS+Fg4U1b7HljrVHyvFiyG6ni12UZfPSVos7kx3izQo5+23mrIJsL5Xhzj4QngPbjlVuUpwLWQr967LOJco767TJM7DtgTsEHSyc0tPZ3dBS+GC9cqDaayePEsbWqqjevV052kcY06n9XQ6JFH79/aaH7b4p60rdbDMvyuKmPt+Fq1QhNUV5fnPlLChA32EWd42GCK+yaSv8Z5ty8BhklUN/p7ueQl6O8u6XysomxPfbE1cIOioRRoc5v6cVSkqasvMbkyrQZZivoCuKlLlfQOQ5whA/sWfXobBunZIcL5weCeVFsHCtzYcHvvOZE4cId4ymcvIoSBh9EgzvB++tVVZ+BVlVyUi2DSXlSmExHDwqZB93R3ZdbQJf0ALjBgjhLWBWSw8rz62C+yYLERVVqZK1tuk3Wnh+dANOJsLpZwunO7ylFcrT/1U2tEEzGi1R3t4IoXHwXoqSVW3loh6DLO4aC9G1Pk5IlHDZFGHfLmXuV0qWTyadG6VcScBPrAR3Ec5NaDk3oSADnlpi8/hm7TAtvfLTlOc21hQzAqEohX4S80Wg3yDhN98TTottbyes5QhsCy1wygghoUW/byUzG6KjWvKYjaQCdmYohU3M5TjYkNxkhX2pyoOZMHW8ML2XQ1IXEBYrXHc+JK5Q/pvp/r59AS3o8G7C9A42oweVbsJbLVHy3QC8xcrCpcqWgcKNY4QeDldcguHcyRbRa2xe2utuUQeuoIOE6eOELm2s5oJcWJ9X84EoNE6YmIBPUe6BLGWbQ6xZbchtz6k1D8R3ghCrqhjBEuSwMn+5cvpoi4mxvkZCLEjqInTap99lGLqQgBW0hEB3P7m5rUlehvJ6Ss12X/FDhFMTam+p7N6pvJbV+HN4uggPnu/b+6JBKHz6qc0bh+o4foxw11ShR43jS2Wl+Cc2GacJM3rKdzOECjn7bGavo4aYgz2+bRECnYB9KNRi5Y3NynEXW4u2wPI08iKWwydLled3V7X2UsjPsJmzBvIUPKHC6CHCT6Za/O1CYXDAmjxnAnq4Obvh04Ew3SEH2lDJwJMtbu0JqdlKSrayLZuaZWZO2LB+reJFmBWpzFkJR2KEH4wQTukJ0d/M8aswM1n58yYato55ABDQgsarLNoMk88QYgW8ZVAWTIvEpP0R3xOuDJMaPnS44w9K6D9QuKqH7y1EvbBik5LZ2ncXga6REBEFJ0cJJw8SVGHj9gacWGHjWpsdHjheAVY5JPWoJuaq4ycOtTg3zeZDl8wYBraggeJMZVGecHln+GKD0ne81Jl/0FyiEyrj3vUi0LM39HSQulYoqV9DZiP8T1Wo8PpGGII9dWXDCQm1epQIUNzQ+j+tFDNU1ly+lSr8cmjN80kQTD1JWLlMXVG1EvCCRmHZVhiVYPP2QeHO9h5Pa1EKTy2wSan+NOoRbpghTHSoSIfKB+ekyFovqnKoCPo3YQi7tyob+gvjauV3dEoUzo9X/lOvL9P+BOxDYXWKM5Q5G93RcLstCYrHp2RKvcIhPwW09aElysId4K1liUVg8nDxmUIPRALfQgOoUuJ1fjC0IoRfzXTBN90K9OwqPvWDdqGS1QhXRzpBby/sr6rqztilbBkmjKp1VwjvBZNjYGGA+9LuEHQbsnej8rBPHNriz+NqJ/gryz9XXm5CHLpFEDipl29zyGNH+LYxTkPwdLb4xanK19uVj1Ih4zh8tg9GDqp5+xZLOH2g8sm6wI54GEG7FE+cML52Z1GFvYeU8kYEOYOClJBQ4dRRwoQRkJapbMiHw4rPLG2XJIthG202B3CfO1f40IZaCAzo79vrWm3YVscMohPhId/12hMP9E0SpndRvjzim6UnYcqEHk0ddNtgLHQtPEFKVFjNixnlGGUQgkMgOqzu+3tFORQ3xKcNhZ9ebtWqrlZCHa6QFSFcNMDXGtlHlM3HgBDnlFFLfJeViItQaj+dFBXBymw4P65WyFCE4b0hLF1pZF+fNsP1gnYqwXLYioK8hqWtJ42weHxEAzYUmHCaMKGe23vqOpvHdtR/bhEI8/nhOB97xAiha+0rp8qOPZUdWMWGCl+dEhWtRFmQX/Wr8YTC+F6+3VBzC5RDByBttG/MP7I79LNgW4D2NXC/oGuXYJ0AHC+CggiIqaZELYHP0qqyBMtxtKCdEi3+Wl9vM4WMfPAWKlsLhP61/fQgSAj/rtg20HC9oE9EUrfYvLtRuGSccGaXykhHagpsrpoh1BLIq8Df0lh1ouWw4zCgsCMHLowFUSgugFWpNp/vgQMBHOYwgnYpxYeV1xYpK/oJl/aEN1KrhRptZUeucGpjOvtXUZipbK2KYmTkKHtCYflOWHtIKTVT3y1MufLlDthT/SqVwREXfNH1oSUwu/bUd707QdoeZfYe39fXbVMu7NG4nGsthw9T9NuGjoV7lYf3NmI8AYCrBK0l8OlXratep4kVN1KSrcxeAdeeLAyOqN9SlxfBh2ttPj3aJsNrNVwl6BZFBa869JpuAyV7DyuPvqM+rcUKWvjcB9OUv+yHmGglMVroVDtzT8Frw7FjsPdwxyimkMTkiR3gYxgMlZiZQkOHwgja0KGwwO+iogaD2yi1AJc/1xoM3yCFFnCk3u0MBleghRaQ2t7DMBhaiFxLhK/bexQGQ4ugusOybTa09zgMhpZARHZa2N7PcHfDSYMBABW2WJnb1+YB69p7MAZDM7HtsrJlFoAq77T3aAyGZrI5a+f6XAvA8lrzgACu5TUY6mURVE19p+9YkQV81K7DMRiagSKvQbVcDlVmt99wDIZmIGzJTFm5EaoJOnPrqsUCK9pvVAZD0xDVud/8v2a2ncif2nw0BkPzyCsh7Plv/qgh6PQtKz8ReK/tx2QwNA2BJ3NSPv926SaffGjL470T07nW4AIUDgaHlc2p/lrt5pUcPZiZH53Q2wuc22YjMxiaxm37N61dW/0Ff8XAVmLyxMXAWa0+JIOhKQhLM7asOotaXdb8lWDZBDELyGvtcRkMTSDfY3mvw6FloN+awoxNqzLFlsswJVqGQEP0hrTNax1b4Pj40NUpyE1Pi+malIlwceuMzGBoLPJYRsqqv/t7t05BAxTkpG+MSUjyAlNadFwGQ+OZn5Gy6md1bVCvoAEKctKXxnRLrAAxoja0F+93Cyu7+sCBA3Xm7jdI0AAFhzKWxXTrfQw4D7NSsaFtmd8trOzq9evX19vIt9HCTBxx6mWovAJENGloBkPDUZC/ZKSsvJeGLcDQNEvbK3nSaEHfAvo1ZX+DoQHkI3pDxpbVbzVmpwa7HNUpzEnPDunc56Ugy+4CMrYpxzAY/CIs9Xi809K/XrOq8bs2k8Rhp12AZc8GBjX3WIYTG4WDwK8yU1bNp4EuRm2aZKGrU5Cbnjooqduzx7xBucApQKfmHtNwwpEn8EhIWNk1tXMzGkuLRiu6DDktKjzIvlbhdmBISx7b0AERtqjqS2WE/bN6CmjzDtk6SK/kSWeDPUOwvg/au5XOY3AXNrAZWKTIa9+UTbUkbRFPll7Jp58k4h2HrSchchLQHYit+hfWBmMwtB1lQBGQDxxGZIco21U0xS4rW5a1c31ua578/wFWs35neL6zpwAAAABJRU5ErkJggg==">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --color-paper: #f6f4ee;
+  --color-panel: #ffffff;
+  --color-ink: #22262b;
+  --color-ink-soft: #5b6168;
+  --color-navy: #1c2b39;
+  --color-navy-soft: #33465a;
+  --color-line: #d9d4c6;
+  --color-present: #2f6f4e;
+  --color-present-bg: #e4efe6;
+  --color-absent: #a8442f;
+  --color-absent-bg: #f5e6e1;
+  --color-gold: #b8863b;
+  --color-accent: #3a7ca5;
+  --color-accent-hover: #2f6690;
+}
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+/* 画面全体の文字をはっきり・くっきり・太めに統一する */
+*, *::before, *::after {
+  font-weight: 700 !important;
+}
+input, select, textarea, button {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.font-display { font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif; font-weight: 900; letter-spacing: 0.01em; }
+button { cursor: pointer; font-family: inherit; }
+button:active { filter: brightness(0.85); }
+.btn-light:active { background: var(--color-line); }
+.icon-btn:active:not(:disabled) { background: var(--color-line); }
+nav.app-nav .tab:active { color: var(--color-navy-soft); }
+.category-tabs button:active { color: var(--color-navy-soft); }
+input, select { font-family: inherit; }
+select {
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: white;
+  font-size: 14px;
+  height: 38px;
+  box-sizing: border-box;
+}
+:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+
+/* ---- ログイン画面 ---- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  padding: 44px 40px;
+}
+.login-card .eyebrow { font-size: 13px; color: var(--color-ink-soft); margin: 0 0 6px; }
+.login-card h1 { font-size: 26px; margin: 0 0 32px; color: var(--color-navy); }
+.login-card label { display:block; font-size: 14px; color: var(--color-ink-soft); margin-bottom: 8px; }
+.login-card input[type=password] {
+  width: 100%; border: 1px solid var(--color-line); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 18px; background: white; font-size: 15px;
+}
+.login-card input[type=password]:focus { border-color: var(--color-navy); }
+.login-error { font-size: 13px; color: var(--color-absent); margin: 0 0 14px; }
+.btn-primary {
+  width: 100%; background: var(--color-navy); color: white; border: none;
+  border-radius: 10px; padding: 14px; font-weight: 500; font-size: 15px;
+}
+.btn-primary:hover { background: var(--color-navy-soft); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+/* ---- ナビゲーション（上部横並び） ---- */
+.app-shell { display: block; }
+nav.app-nav { border-bottom: 1px solid var(--color-line); background: var(--color-panel); }
+nav.app-nav .inner {
+  max-width: 1400px; margin: 0 auto; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+}
+nav.app-nav .tabs { display: flex; flex-wrap: wrap; }
+nav.app-nav .tab {
+  padding: 12px 16px; font-size: 14px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--color-ink-soft);
+}
+nav.app-nav .tab.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
+nav.app-nav .sidebar-footer {
+  padding: 8px 0; display: flex; flex-direction: row; align-items: center; gap: 12px;
+}
+nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decoration: underline; background: none; border: none; }
+.btn-update {
+  background: #c0392b; color: white; border: none; border-radius: 8px;
+  padding: 6px 14px; font-size: 12px; font-weight: 500;
+}
+.btn-update:hover { background: #a5301f; }
+.btn-update:active { background: #8a2819; }
+
+/* ---- 共通ツールバー ---- */
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
+  margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--color-line);
+}
+.toolbar .field label { display:block; font-size: 11px; color: var(--color-ink-soft); margin-bottom: 4px; }
+.toolbar select, .toolbar input[type=text] {
+  border: 1px solid var(--color-line); background: white; border-radius: 8px;
+  padding: 8px 12px; font-size: 14px;
+}
+.btn-dark {
+  background: white; color: var(--color-accent); border: 2px solid var(--color-accent); border-radius: 8px;
+  padding: 8px 16px; font-size: 14px; height: 38px; box-sizing: border-box;
+}
+.btn-dark:hover { background: var(--color-accent); color: white; }
+.btn-dark:active { background: var(--color-accent-hover); border-color: var(--color-accent-hover); color: white; }
+.btn-light {
+  background: white; border: 1px solid var(--color-line); border-radius: 8px;
+  padding: 8px 16px; font-size: 14px; color: var(--color-ink); height: 38px; box-sizing: border-box;
+}
+.btn-light:hover { background: var(--color-paper); }
+
+/* ---- 出欠入力グリッド ---- */
+.grid-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
+.help-view { max-width: 820px; }
+.help-section { margin-top: 28px; }
+.help-section h2 { font-size: 16px; color: var(--color-navy); margin: 0 0 8px; }
+.help-section p { margin: 0 0 8px; color: var(--color-ink); }
+.help-section ul { margin: 0; padding-left: 20px; }
+.help-section li { margin-bottom: 6px; line-height: 1.6; }
+.grid-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px; }
+.grid-header h1 { font-size: 20px; margin: 0; color: var(--color-navy); }
+.grid-header .eyebrow { font-size: 12px; color: var(--color-ink-soft); margin: 0 0 4px; }
+.category-tabs { display:flex; gap: 2px; margin-bottom: 16px; }
+.category-tabs button {
+  padding: 8px 16px; font-size: 14px; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--color-ink-soft);
+}
+.category-tabs button.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
+table.att-table { min-width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-panel); }
+.att-table-wrap {
+  overflow-x: auto; overflow-y: auto; max-height: 70vh;
+  border: 1px solid var(--color-line); background: var(--color-panel); border-radius: 8px;
+}
+table.att-table thead tr { background: var(--color-accent); color: white; }
+table.att-table thead th { position: sticky; top: 0; z-index: 20; background: var(--color-accent); }
+table.att-table th { font-weight: 500; padding: 6px 8px; text-align: center; white-space: nowrap; }
+table.att-table td { padding: 1px 4px; border-top: 1px solid var(--color-line); line-height: 1.2; }
+table.att-table tbody tr:hover { background: #fbfaf6; }
+.att-editable {
+  width: 100%; background: transparent; padding: 2px 4px; border-radius: 8px;
+  border: 1px solid transparent; font-size: 13px;
+}
+.att-editable:hover { border-color: var(--color-line); }
+.att-editable:focus { border-color: var(--color-navy); background: white; }
+.att-select {
+  height: 26px; padding: 1px 6px; font-size: 13px;
+}
+.att-cell-btn {
+  width: 26px; height: 26px; border-radius: 6px; font-weight: 500; font-size: 13px; border: 1px solid var(--color-line);
+  background: white; color: transparent;
+}
+.att-cell-btn.present { background: var(--color-present-bg); color: var(--color-present); border-color: rgba(47,111,78,0.3); }
+.att-cell-btn.absent { background: var(--color-absent-bg); color: var(--color-absent); border-color: rgba(168,68,47,0.3); }
+.icon-btn {
+  width: 24px; height: 24px; display:flex; align-items:center; justify-content:center;
+  border-radius: 8px; font-size: 11px; border: 1px solid var(--color-line); background: white; color: var(--color-ink-soft);
+}
+.icon-btn:disabled { opacity: 0.3; }
+.icon-btn.danger { color: var(--color-absent); }
+.icon-btn.danger:hover { border-color: var(--color-absent); }
+.drag-handle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; height: 28px; cursor: grab; color: var(--color-ink-soft);
+  font-size: 14px; user-select: none; touch-action: none;
+}
+.drag-handle:active { cursor: grabbing; }
+tr[data-row-member].dragging { opacity: 0.4; }
+tr[data-row-member].drag-over-top { box-shadow: inset 0 2px 0 0 var(--color-navy); }
+tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-navy); }
+.hint-text { margin-top: 24px; font-size: 12px; color: var(--color-ink-soft); }
+
+/* ---- 現場入力（スマホ用） ---- */
+.field-view { max-width: 480px; margin: 0 auto; padding: 4px 16px 60px; }
+.field-header { margin-bottom: 12px; }
+.field-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field-cat-tabs { display: flex; gap: 6px; }
+.field-dept-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.field-dept-tabs button {
+  padding: 6px 12px; font-size: 12px; border-radius: 999px; border: 1px solid var(--color-line);
+  background: white; color: var(--color-ink-soft);
+}
+.field-dept-tabs button.active { background: var(--color-gold); color: white; border-color: var(--color-gold); font-weight: 500; }
+.field-dept-tabs button.saved { border-color: var(--color-present); color: var(--color-present); }
+.field-dept-tabs button.saved.active { background: var(--color-present); color: white; border-color: var(--color-present); }
+.field-cat-tabs button {
+  padding: 8px 14px; font-size: 14px; border-radius: 999px; border: 1px solid var(--color-line);
+  background: white; color: var(--color-ink-soft);
+}
+.field-cat-tabs button.active { background: var(--color-navy); color: white; border-color: var(--color-navy); font-weight: 500; }
+.field-controls select { border: 1px solid var(--color-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: white; }
+.field-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
+.field-chip {
+  padding: 10px 6px; border-radius: 10px; border: 2px solid var(--color-line);
+  background: white; font-size: 16px; font-weight: 500; color: var(--color-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.field-chip.filled { border-color: var(--color-present); background: var(--color-present); color: white; font-weight: 700; }
+.field-action-row { display: flex; gap: 10px; margin-top: 20px; }
+.field-save-btn {
+  display: block; flex: 1; padding: 14px;
+  background: var(--color-navy); color: white; border: none; border-radius: 10px;
+  font-size: 16px; font-weight: 500;
+}
+.field-save-btn:disabled { opacity: 0.6; }
+.field-all-present-btn {
+  display: block; flex: 1; padding: 14px;
+  background: white; color: var(--color-present); border: 2px solid var(--color-present); border-radius: 10px;
+  font-size: 16px; font-weight: 500;
+}
+
+.context-menu {
+  position: fixed; z-index: 1000; background: white; border: 1px solid var(--color-line);
+  border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 4px; min-width: 200px;
+}
+.context-menu button {
+  display: block; width: 100%; text-align: left; padding: 8px 12px; font-size: 13px;
+  background: none; border: none; border-radius: 6px; color: var(--color-ink);
+}
+.context-menu button:hover { background: var(--color-paper); }
+
+/* ---- モーダル（部署・立場の編集） ---- */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+}
+.modal-box {
+  background: white; border-radius: 4px; padding: 20px 24px; width: 100%; max-width: 420px;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-box h2 { margin: 0 0 4px; font-size: 16px; color: var(--color-navy); }
+.modal-hint { font-size: 11px; color: var(--color-ink-soft); margin: 0 0 10px; }
+.modal-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.modal-list li { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.modal-list .duty-day-select { flex-shrink: 0; width: 78px; font-size: 12px; padding: 3px 2px; }
+.modal-list input[type=text] { min-width: 0; }
+.modal-list input[type=text] {
+  flex: 1; border: 1px solid var(--color-line); border-radius: 8px; padding: 3px 8px; font-size: 13px;
+}
+.modal-add-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.modal-add-row button { flex-shrink: 0; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+.modal-add-row input[type=text] {
+  flex: 1; border: 1px solid var(--color-line); border-radius: 8px; padding: 3px 8px; font-size: 13px;
+}
+.modal-actions { display: flex; justify-content: flex-end; }
+.modal-list .icon-btn { width: 22px; height: 22px; }
+.master-panel {
+  background: white; border: 1px solid var(--color-line); border-radius: 8px;
+  padding: 16px 20px; min-width: 220px; max-width: 260px; flex: 1;
+}
+.master-panel h2 { font-size: 14px; margin: 0 0 10px; color: var(--color-navy); }
+
+/* ---- 印刷共通 ---- */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .roster-wrap { padding: 0 !important; max-width: none !important; }
+  .roster-doc { padding: 5mm !important; border: none !important; overflow: visible !important; transform: translate(-0.5mm, 4mm); }
+  .duty-days-row { min-width: 0 !important; }
+  .duty-day-block { flex: 0 1 auto !important; }
+}
+
+/* ---- 神殿掃除実施報告書（朝の神殿掃除提出） ---- */
+.report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
+.report-page {
+  width: 166mm; height: 240mm; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  padding: 8mm 5mm 4mm; box-sizing: border-box; display:flex; flex-direction:column;
+  font-size: 10.5px; color:#1a1a1a; font-family: 'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif;
+}
+@media print {
+  .report-page { box-shadow: none; margin: 0; page-break-after: always; transform: translateX(1.5mm); }
+  .report-page:last-child { page-break-after: auto; }
+  .report-preview { min-height: 100vh; justify-content: flex-start; }
+  .report-outer { padding: 0 !important; }
+}
+@media screen {
+  .report-page { width: auto; max-width: 100%; background: transparent; box-shadow: none; }
+}
+
+.report-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px; min-height:42mm; }
+.report-header-left h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:400; font-size:19px; margin:0 0 10px; }
+.report-header-left .org-name { font-size:15px; font-weight:400; margin:0 0 8px; }
+.report-header-left .report-date { font-size:15px; font-weight:400; margin:0; }
+.report-header-right { display:flex; flex-direction:column; gap:6px; margin-right: -1mm; }
+.stamp-table { border-collapse: collapse; }
+.stamp-table th, .stamp-table td { border:1px solid #333; width:18mm; height:5mm; text-align:center; font-size:11px; font-weight:400; padding:1px 2px; white-space:nowrap; }
+.stamp-table td { height: 15mm; }
+.report-summary-line { font-size:14px; font-weight:400; margin: calc(4px - 4mm) 0 10px; }
+.report-columns { display:flex; gap:6mm; align-items:flex-start; justify-content:center; margin-top: 0.5mm; }
+.report-summary-block { display:flex; justify-content:flex-end; margin-top:4mm; }
+.report-summary-block .summary-table { width:auto; min-width:55mm; }
+.report-column { flex: 0 0 auto; min-width:0; }
+.member-table { width: 75.5mm; border-collapse: collapse; table-layout: fixed; }
+.member-table th, .member-table td { border:1px solid #333; padding:calc(0.7mm * var(--report-row-scale, 1)) 3px; font-size:10px; line-height:calc(1.5 * var(--report-row-scale, 1)); }
+.member-table thead th { background:#f1efe8; font-weight:400; text-align:center; }
+.member-table .col-no { width:7mm; text-align:center; font-size:13px; }
+.member-table .col-name { width:28mm; padding-left: 4mm; font-size:14px; }
+.member-table .col-position { width:30mm; text-align:center; font-size:13px; }
+.member-table td.ditto { text-align: center; padding-left: 0; }
+.member-table td.small-pos { font-size: 11px; }
+.member-table .col-status { width:10.5mm; text-align:center; font-size:13px; }
+.summary-table th { background:#f1efe8; font-weight:400; text-align:center; }
+.summary-table td { padding:3px 6px; }
+.summary-table .num { text-align:right; width:30%; }
+.summary-table .total-row { font-weight:400; }
+.report-page-number { text-align:center; font-size:10px; color:#666; margin-top:auto; padding-top:8px; }
+
+/* ---- 当番表 ---- */
+.roster-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 16px; }
+.roster-doc { padding: 32px; overflow-x: auto; }
+.roster-doc {
+  background-image:
+    linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
+  background-size: 5mm 5mm;
+}
+@media print {
+  .roster-doc { background-image: none; }
+}
+.roster-doc h1 { font-family:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif; font-weight:500; font-size:16px; margin:0 0 20px; color: var(--color-ink); }
+
+.duty-days-row { display:flex; gap:16px; align-items:flex-start; }
+.duty-day-block { flex: 0 1 auto; min-width:77mm; }
+.duty-day-header {
+  position: relative;
+  text-align:center; font-size:14px; font-weight:500; color: var(--color-ink);
+  border-bottom: 1px solid #333; padding-bottom:6px; margin-bottom: 8mm;
+}
+.duty-day-header::before, .duty-day-header::after {
+  content: ''; position: absolute; top: 100%; width: 0; height: 5mm; border-left: 1px solid #333;
+}
+.duty-day-header::before { left: 0; }
+.duty-day-header::after { right: 0; }
+.duty-day-columns { display:flex; gap:16px; align-items:flex-start; }
+.duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
+.duty-subcolumn .piece-draggable { cursor: grab; position: relative; z-index: 1; background: var(--color-paper); }
+.duty-subcolumn .piece-draggable.dragging-piece { cursor: grabbing; z-index: 20; opacity: 0.85; }
+.duty-dept-label { font-size:12px; font-weight:500; color: var(--color-ink-soft); margin:0 0 4px; }
+.duty-dept-box {
+  list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
+}
+.duty-dept-box li {
+  display:flex; align-items:stretch; gap:8px; font-size:14px; font-weight:500; padding: 0 8px;
+  border-bottom: 1px solid var(--color-line);
+}
+.duty-dept-box li:last-child { border-bottom: none; }
+.duty-dept-box li .mark {
+  width:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  font-size:16px; font-weight:500; padding: calc(5px + 0.5mm) 8px calc(5px + 0.5mm) 0;
+  border-right:1px solid #999; color: var(--color-ink);
+}
+.duty-dept-box li .mark.absent { color: var(--color-absent); font-weight:600; }
+.duty-dept-box li .name { white-space:nowrap; margin-left: 2mm; align-self:center; padding: calc(5px + 0.5mm) 0; }
+
+.loading, .error-msg { padding: 40px; color: var(--color-ink-soft); }
+.error-msg { color: var(--color-absent); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+ * 朝の神殿掃除出欠記録（⑥）- 単一HTMLファイル版
+ * ①〜⑤と同じく、ビルド不要・Supabase JS(CDN)を直接読み込む方式です。
+ * ============================================================ */
+
+// ---- Supabase接続情報（スパーベース・②③④⑤共用プロジェクト） ----
+const SUPABASE_URL = 'https://zhxuntrhxnrssqpvcmvl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpoeHVudHJoeG5yc3NxcHZjbXZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNDcyNjYsImV4cCI6MjA5NzgyMzI2Nn0.l3pwvKZVVJqDA4HORqt-Op-cTvVF3bkX1ovWgAuSO58';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// テーブル名（スパーベース内の他システムと衝突しないよう asagami_ を付与）
+const T_MEMBERS = 'asagami_members';
+const T_ATTENDANCE = 'asagami_attendance';
+const T_FISCAL_YEARS = 'asagami_fiscal_years';
+const T_DEPARTMENTS = 'asagami_departments';
+const T_POSITIONS = 'asagami_positions';
+const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
+const T_DUTY_POSITIONS = 'asagami_duty_positions';
+const T_CATEGORY_MEMBERS = 'asagami_category_members';
+const T_CATEGORIES = 'asagami_categories';
+const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
+
+const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
+const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤務者','常傭者','３年目ひのきしん者','２年目ひのきしん者','１年目ひのきしん者'];
+let CATEGORY_LABEL = {}; // {key: label} 起動時にDBから読み込む
+let ALL_CATEGORIES = []; // 区分キーの一覧（並び順）
+let YEARLY_CATEGORIES = []; // これらは「月」ではなく「立教年」ごとに1回の記録
+let FIELD_VISIBLE_CATEGORIES = []; // 現場入力（スマホ用）に表示する区分
+const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
+const ROWS_PER_BLOCK = 19;
+
+// 区分ごとの表示順（部署でまとめ、各部署内は主任を先頭に）でメンバーを並べる
+function getOrderedMembersForCategory(category) {
+  const activeMembers = getCategoryMemberEntries(category);
+  if (category === 'geppai') {
+    const deptOrder = new Map(GEPPAI_REPORT_DEPT_ORDER.map((name, i) => [name, i]));
+    return activeMembers
+      .filter((m) => m.department !== '営繕課')
+      .slice()
+      .sort((a, b) => {
+        const orderA = deptOrder.get(a.department) ?? Infinity;
+        const orderB = deptOrder.get(b.department) ?? Infinity;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1);
+      });
+  }
+  const deptOrder = new Map(state.departments.map((d, i) => [d.name, i]));
+  return activeMembers.slice().sort((a, b) => {
+    const orderA = deptOrder.get(a.department) ?? Infinity;
+    const orderB = deptOrder.get(b.department) ?? Infinity;
+    if (orderA !== orderB) return orderA - orderB;
+    return (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1);
+  });
+}
+
+function calendarMonthToSeq(m) { return m >= 4 ? m - 3 : m + 9; }
+function getCurrentReikiMonthContext() {
+  return getReikiMonthContext(new Date().getMonth() + 1);
+}
+function getReikiMonthContext(calendarMonth) {
+  const fiscalYear = state.fiscalYears.find(y => y.id === state.fiscalYearId) || null;
+  const reikiYear = fiscalYear
+    ? (calendarMonth >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1)
+    : null;
+  const monthSeq = calendarMonthToSeq(calendarMonth);
+  return { reikiYear, calendarMonth, fiscalYear, monthSeq };
+}
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---- アプリ全体の状態 ----
+const state = {
+  unlocked: false,
+  view: 'grid', // 'grid' | 'report' | 'roster' | 'archive' | 'master'
+  fiscalYears: [],
+  fiscalYearId: null,
+  members: [],
+  departments: [],
+  positions: [],
+  attendance: new Map(), // key: `${memberId}-${category}-${monthSeq}` -> '○'|'×'
+  category: 'asagami',
+  reportMonth: new Date().getMonth() + 1,
+  reportOrgName: '営繕部営繕課',
+  reportLeftCount: null, // nullなら自動（半分ずつ）。数値をセットすると左の人数を固定できる
+  reportGeppaiMonth: new Date().getMonth() + 1,
+  reportGeppaiOrgName: '営繕部営繕課',
+  reportGeppaiLeftCount: null,
+  rosterMonth: new Date().getMonth() + 1,
+  rosterOrgName: '営繕課',
+  rosterDay1: '21日',
+  rosterDay2: '22日',
+  rosterDay3: '23日',
+  rosterShowMonth: true,
+  dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, categories: false },
+  archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
+  archiveFiscalYearId: null,
+  archiveCategory: 'asagami',
+  archiveRows: [], // 選択中の年度・区分の保管記録
+  bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
+  yearlyAttendance: new Map(), // 慰労拝受（中元/歳暮）用: `${memberId}-${category}-${fiscalYearId}` -> '○'|'×'
+  yearlyAttendanceLoadedCategory: null,
+  bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
+  categoryMembers: new Map(), // `${category}::${memberId}` -> {member_id, category, sort_order, is_active}
+  categories: [], // asagami_categories の内容（区分の一覧・並び順・設定）
+  fieldCategory: 'asagami',
+  fieldMonth: new Date().getMonth() + 1,
+  fieldDeptFilter: 'eizen-shomu',
+  fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
+  fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
+};
+
+function attKey(memberId, category, monthSeq) { return `${memberId}-${category}-${monthSeq}`; }
+
+// 画面ごとに印刷用紙のサイズ・向きを切り替える
+function setPrintPageSize(cssRule) {
+  let styleEl = document.getElementById('dynamic-page-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'dynamic-page-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `@media print { @page { ${cssRule} } }`;
+}
+
+const app = document.getElementById('app');
+
+// ==================== 起動処理 ====================
+const UNLOCK_KEY = 'asagami_unlocked';
+
+async function init() {
+  state.unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1';
+  renderRoot();
+}
+
+function isFieldOnlyMode() {
+  return new URLSearchParams(window.location.search).get('field') === '1';
+}
+
+function renderRoot() {
+  // 合言葉ログインは廃止し、常に直接アプリを開く
+  renderMainShell();
+}
+
+// ==================== ログイン画面 ====================
+function renderLogin() {
+  app.innerHTML = `
+    <div class="login-wrap">
+      <form class="login-card" id="login-form">
+        <p class="eyebrow">出欠管理システム</p>
+        <h1 class="font-display">営繕課出欠記録</h1>
+        <label for="login-password">合言葉</label>
+        <input id="login-password" type="password" autofocus placeholder="合言葉を入力" />
+        <p class="login-error" id="login-error" style="display:none;"></p>
+        <button type="submit" class="btn-primary" id="login-submit">ログイン</button>
+      </form>
+    </div>
+  `;
+
+  const form = document.getElementById('login-form');
+  const input = document.getElementById('login-password');
+  const errorEl = document.getElementById('login-error');
+  const submitBtn = document.getElementById('login-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = input.value;
+    if (!password) return;
+    errorEl.style.display = 'none';
+    submitBtn.disabled = true;
+    submitBtn.textContent = '確認中…';
+    try {
+      const { data, error } = await sb.rpc(RPC_VERIFY_PASSWORD, { input_password: password });
+      if (error) throw new Error('接続に失敗しました。しばらくしてからもう一度お試しください。');
+      if (!data) throw new Error('合言葉が違います。');
+      sessionStorage.setItem(UNLOCK_KEY, '1');
+      state.unlocked = true;
+      renderRoot();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'ログイン';
+    }
+  });
+}
+
+// ==================== 全体シェル（ナビ＋各画面） ====================
+async function renderMainShell() {
+  const isFieldOnly = isFieldOnlyMode();
+
+  if (isFieldOnly) {
+    state.view = 'field';
+    app.innerHTML = `
+      <div class="app-shell">
+        <div id="view-container"><div class="loading">読み込み中…</div></div>
+      </div>
+    `;
+    await loadFiscalYearsAndMembers();
+    renderView();
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="app-shell">
+      <nav class="app-nav no-print">
+        <div class="inner">
+          <div class="tabs">
+            <button class="tab" data-view="grid">出欠入力</button>
+            <button class="tab" data-view="report">朝の神殿掃除提出（月次報告書）</button>
+            <button class="tab" data-view="report-geppai">月例参拝（月次報告書）</button>
+            <button class="tab" data-view="roster">朝の神殿掃除当番表</button>
+            <button class="tab" data-view="archive">保管記録</button>
+            <button class="tab" data-view="master">マスター</button>
+            <button class="tab" data-view="help">使い方</button>
+          </div>
+          <div class="sidebar-footer" id="sidebar-footer">
+            ${renderUpdateButtonHtml()}
+          </div>
+        </div>
+      </nav>
+      <div id="view-container"><div class="loading">読み込み中…</div></div>
+    </div>
+  `;
+
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.view = btn.dataset.view;
+      updateNavActive();
+      renderView();
+    });
+  });
+
+  attachUpdateButtonHandler();
+  sessionStorage.removeItem(JUST_UPDATED_KEY);
+
+  updateNavActive();
+  await loadFiscalYearsAndMembers();
+  renderView();
+}
+
+const JUST_UPDATED_KEY = 'asagami_just_updated';
+
+function renderUpdateButtonHtml() {
+  if (sessionStorage.getItem(JUST_UPDATED_KEY) === '1') {
+    return `<p id="update-confirm-msg" style="font-size:12px;color:var(--color-present);font-weight:500;margin:0;">✓ 最新の情報に更新しました</p>`;
+  }
+  return `<button class="btn-update" id="hard-refresh-btn">Update</button><span id="update-message" style="font-size:11px;color:var(--color-ink-soft);"></span>`;
+}
+
+function attachUpdateButtonHandler() {
+  const btn = document.getElementById('hard-refresh-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    sessionStorage.setItem(JUST_UPDATED_KEY, '1');
+    const msgEl = document.getElementById('update-message');
+    if (msgEl) msgEl.textContent = '最新版を読み込んでいます…';
+    setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      params.set('_', Date.now());
+      const url = window.location.origin + window.location.pathname + '?' + params.toString();
+      window.location.href = url;
+    }, 400);
+  });
+}
+
+function updateNavActive() {
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.view === state.view);
+  });
+}
+
+// 「出欠記録」の見出しを右クリックしたときの隠しメニュー（現場入力への入口）
+function showFieldShortcutMenu(x, y) {
+  const old = document.getElementById('field-shortcut-menu');
+  if (old) old.remove();
+
+  const menu = document.createElement('div');
+  menu.id = 'field-shortcut-menu';
+  menu.className = 'context-menu';
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  menu.innerHTML = `<button id="field-shortcut-open">現場入力（スマホ用）を開く</button>`;
+  document.body.appendChild(menu);
+
+  document.getElementById('field-shortcut-open').addEventListener('click', () => {
+    menu.remove();
+    state.view = 'field';
+    renderView();
+  });
+
+  const closeOnOutsideClick = (ev) => {
+    if (!menu.contains(ev.target)) {
+      menu.remove();
+      document.removeEventListener('click', closeOnOutsideClick);
+      document.removeEventListener('contextmenu', closeOnOutsideClick);
+    }
+  };
+  setTimeout(() => {
+    document.addEventListener('click', closeOnOutsideClick);
+    document.addEventListener('contextmenu', closeOnOutsideClick);
+  }, 0);
+}
+
+function renderView() {
+  const container = document.getElementById('view-container');
+  if (state.view === 'grid') renderGridView(container);
+  else if (state.view === 'field') renderFieldView(container);
+  else if (state.view === 'report') renderReportView(container, 'asagami');
+  else if (state.view === 'report-geppai') renderReportView(container, 'geppai');
+  else if (state.view === 'roster') renderRosterView(container);
+  else if (state.view === 'archive') renderArchiveView(container);
+  else if (state.view === 'master') renderMasterView(container);
+  else if (state.view === 'help') renderHelpView(container);
+}
+
+// ==================== データ取得 ====================
+async function loadFiscalYearsAndMembers() {
+  const { data: fyData, error: fyError } = await sb
+    .from(T_FISCAL_YEARS).select('*').order('start_reiki_year', { ascending: false });
+  if (fyError) { console.error(fyError); return; }
+  state.fiscalYears = fyData ?? [];
+  state.fiscalYearId = (state.fiscalYears.find(y => y.is_current) ?? state.fiscalYears[0])?.id ?? null;
+
+  const { data: memberData, error: memberError } = await sb
+    .from(T_MEMBERS).select('*').eq('is_active', true).order('sort_order', { ascending: true });
+  if (memberError) { console.error(memberError); return; }
+  state.members = memberData ?? [];
+
+  const { data: deptData } = await sb.from(T_DEPARTMENTS).select('*').order('sort_order', { ascending: true });
+  state.departments = deptData ?? [];
+
+  const { data: posData } = await sb.from(T_POSITIONS).select('*').order('sort_order', { ascending: true });
+  state.positions = posData ?? [];
+
+  const { data: catMemberData } = await sb.from(T_CATEGORY_MEMBERS).select('*');
+  state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
+
+  const { data: catData } = await sb.from(T_CATEGORIES).select('*').order('sort_order', { ascending: true });
+  state.categories = catData ?? [];
+  applyCategoriesFromState();
+
+  await loadAttendanceForFiscalYear();
+}
+
+// state.categories の内容を、アプリ全体で使うCATEGORY_LABEL等に反映する
+function applyCategoriesFromState() {
+  CATEGORY_LABEL = Object.fromEntries(state.categories.map((c) => [c.key, c.label]));
+  ALL_CATEGORIES = state.categories.map((c) => c.key);
+  YEARLY_CATEGORIES = state.categories.filter((c) => c.is_yearly).map((c) => c.key);
+  FIELD_VISIBLE_CATEGORIES = state.categories.filter((c) => c.show_in_field).map((c) => c.key);
+  if (!ALL_CATEGORIES.includes(state.category)) state.category = ALL_CATEGORIES[0] ?? state.category;
+  if (!ALL_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
+}
+
+// 指定区分の名簿（有効なメンバーのみ、区分ごとの並び順）を返す
+function getCategoryMemberEntries(category) {
+  return state.members
+    .map((m) => {
+      const cm = state.categoryMembers.get(`${category}::${m.id}`);
+      const isActive = cm ? cm.is_active : true;
+      const sortOrder = cm ? cm.sort_order : m.sort_order;
+      return isActive ? { ...m, _catSortOrder: sortOrder } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a._catSortOrder - b._catSortOrder);
+}
+
+async function loadAttendanceForFiscalYear() {
+  state.attendance = new Map();
+  if (!state.fiscalYearId) return;
+  const { data, error } = await sb
+    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId);
+  if (error) { console.error(error); return; }
+  for (const row of (data ?? [])) {
+    state.attendance.set(attKey(row.member_id, row.category, row.month_seq), row.status);
+  }
+}
+
+function currentFiscalYearLabel() {
+  return state.fiscalYears.find(y => y.id === state.fiscalYearId)?.label ?? '';
+}
+
+// ==================== マスター（部署・立場の編集） ====================
+// ==================== 使い方 ====================
+function renderHelpView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap help-view">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">使い方</h1>
+        </div>
+      </div>
+
+      <section class="help-section">
+        <h2>① 出欠入力</h2>
+        <p>メンバーごとに、区分ごとの出欠(○×)を入力する画面です。</p>
+        <ul>
+          <li>上部のタブ(朝の神殿掃除・月例参拝・慰労拝受(中元)・慰労拝受(歳暮)など)で、入力する区分を切り替えます。区分の種類は「マスター」タブの「区分（タブ）を管理」で追加・変更できます。</li>
+          <li>「朝の神殿掃除」「月例参拝」など月ごとの区分は、各月のマスをクリックすると空欄→○→×→空欄の順に切り替わります。</li>
+          <li>「慰労拝受(中元)」「慰労拝受(歳暮)」など「年ごと」に設定された区分は、月の代わりに「立教○○○年」の列が並びます(1年に1回の記録)。</li>
+          <li>氏名・部署・立場はその場で書き換えられます(部署・立場はプルダウンから選択)。</li>
+          <li>行の左端の「⠿」を掴んでドラッグすると、メンバーの並び順を変えられます。「↑」「↓」ボタンでも1つずつ動かせます。<strong>この並び順は区分ごとに別々に管理されています。</strong></li>
+          <li>「＋年度追加」で新しい年度を追加できます。今年度のデータが消えることはありません。</li>
+          <li>月ごとの区分では「○月分 全員出席」「○月分未入力を○にする」「この月をクリア」、年ごとの区分では「立教○年分 全員出席」などの一括操作ができます。</li>
+          <li>「×」ボタンは、メンバーを退職扱いにして一覧から外します。<strong>これまでの出欠記録は削除されず、データベースには残ります。</strong></li>
+          <li>「Excelで書き出し」で、登録されている全期間・全区分の出欠記録を1つのExcelファイル(区分ごとにシート分け)としてダウンロードできます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>② 現場入力（スマホ用）</h2>
+        <p>スマホで、現場にいながら出欠(主に出席のチェック)を入力するための画面です。<strong>合言葉によるログインは不要</strong>で、URLを開けば直接使えます。</p>
+        <ul>
+          <li>URLの末尾に <code>?field=1</code> を付けて開くと、他の画面を含まないスマホ専用の表示になります。ホーム画面に追加しておくと便利です。</li>
+          <li>上部のタブで区分を切り替えます。表示される区分は「マスター」の「区分（タブ）を管理」で「スマホに表示」にチェックが入っているものだけです。</li>
+          <li>「年」「月」のプルダウンで対象を選びます。「年」は立教○○○年の表記で、<strong>まだ作られていない先の年度を選んでも自動的にその年度が作成されます</strong>(常に最新から2年先まで選べます)。年ごとの区分では「月」の選択は出ません。</li>
+          <li>下の「営繕課・庶務係」「現場第一班」…「空調衛生係」「全体」のタブで、表示する班を絞り込めます。「全体」を選ぶと、出欠入力画面と同じ並び順で全員が表示されます。</li>
+          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。</li>
+          <li>「全員出席」でその場に表示されている全員を出席にできます。入力が終わったら「この内容で保存」を押してください。保存した班のタブには✓が付き、内容を変えると✓は消えます。</li>
+          <li>右上の「Update」ボタンで、キャッシュを無視して最新版を読み込み直せます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>③ 朝の神殿掃除提出／月例参拝（月次報告書）</h2>
+        <p>1ヶ月分の出欠を、提出用のB5用紙1枚のレイアウトで印刷するための画面です。</p>
+        <ul>
+          <li>「年度」「対象月」「部署名(表題)」を設定してから、「印刷 / PDFで保存」を押してください。</li>
+          <li>「左：人数」で、氏名一覧を左右どちらに何名ずつ振り分けるか調整できます(「自動(半分ずつ)」で元に戻せます)。</li>
+          <li>人数が多い月は、文字サイズはそのまま、行の余白だけ自動的に少し詰めて1枚に収まるよう調整されます。</li>
+          <li>月例参拝の報告書は、営繕課を除いた部署順(庶務係→現場第一班→…→空調衛生係)で、各部署の主任が一番上に来るように並び、「立場」欄の代わりに「部署」欄が表示されます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>④ 朝の神殿掃除当番表</h2>
+        <p>1日目・2日目・3日目ごとに、部署の当番割り当てと出欠を印刷するための当番表です。</p>
+        <ul>
+          <li>「対象月」で出欠結果を反映する月を選べます。「テンプレ」を選ぶと、○×を一切表示しない空欄の状態で印刷できます(配布用の当番表として使えます)。</li>
+          <li>「『○月』を表示する」のチェックを外すと、表題から月の表示だけを消せます。</li>
+          <li>各部署の枠は、クリックしたまま掴んで少しずらして配置を調整できます(自動保存されます)。「配置をリセット」で元の並びに戻せます。</li>
+          <li>担当日を個別に変えたい人は、「マスター」タブの「担当日の個別設定」で設定します。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑤ 保管記録</h2>
+        <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
+        <ul>
+          <li>年度・区分を選んで、部署ごとの出欠一覧を確認できます。</li>
+          <li>保管された記録は、保管されてから<strong>3年を過ぎると自動的に完全に削除</strong>されます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑥ マスター</h2>
+        <p>部署・立場・区分など、システム全体で使う基本情報を管理する画面です。</p>
+        <ul>
+          <li><strong>部署を編集</strong>：部署名の追加・変更・削除と、部署ごとの既定の当番日(1〜3日目)を設定します。</li>
+          <li><strong>立場を編集</strong>：立場(役職)名の一覧を管理します。</li>
+          <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
+          <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
+          <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
+          <li><strong>区分の名簿を管理</strong>：区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。</li>
+          <li><strong>区分（タブ）を管理</strong>：出欠入力・現場入力で使う区分そのものを管理します。名前の変更、並び替え、現場入力(スマホ)への表示・非表示、月ごと/年ごとの切り替え、新しい区分の追加・削除ができます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>年度・記録・ログインについて</h2>
+        <ul>
+          <li>出欠データは年度ごとに分かれて保存されます。年度が変わっても、過去の年度のデータは消えず、「年度」のプルダウンでいつでも見返せます。</li>
+          <li>年度が終わる(3月末を過ぎる)と、自動的にその年度の記録が「保管記録」にコピーされます。</li>
+          <li>退職者を出欠入力画面で「×」で外しても、記録は削除されず、通常の年度データ・保管記録にそのまま残ります。区分ごとに名簿から外すだけの場合は「区分の名簿を管理」を使ってください。</li>
+          <li>合言葉によるログインは廃止しており、URLを知っていれば誰でも直接アプリを開けます。URLの管理にはご注意ください。</li>
+        </ul>
+      </section>
+    </div>
+  `;
+}
+
+function renderMasterView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">マスター管理</h1>
+        </div>
+      </div>
+      <p class="hint-text" style="margin-top:0;margin-bottom:20px;">
+        出欠入力で使う「部署」「立場」の一覧を管理します。名前を変更すると、
+        すでに登録されているメンバーの表示も自動的に置き換わります。
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+        <button class="btn-dark" id="edit-dept-btn">部署を編集</button>
+        <button class="btn-dark" id="edit-pos-btn">立場を編集</button>
+        <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
+        <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
+        <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
+        <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
+        <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
+      </div>
+      <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
+    </div>
+  `;
+
+  document.getElementById('edit-dept-btn').addEventListener('click', () => {
+    state.masterOpen.department = !state.masterOpen.department;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-pos-btn').addEventListener('click', () => {
+    state.masterOpen.position = !state.masterOpen.position;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-duty-btn').addEventListener('click', () => {
+    state.masterOpen.dutyDay = !state.masterOpen.dutyDay;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-leader-btn').addEventListener('click', () => {
+    state.masterOpen.leader = !state.masterOpen.leader;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-member-dept-btn').addEventListener('click', () => {
+    state.masterOpen.memberDept = !state.masterOpen.memberDept;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-category-members-btn').addEventListener('click', () => {
+    state.masterOpen.categoryMembers = !state.masterOpen.categoryMembers;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-categories-btn').addEventListener('click', () => {
+    state.masterOpen.categories = !state.masterOpen.categories;
+    renderMasterPanels();
+  });
+
+  renderMasterPanels();
+}
+
+function renderMasterPanels() {
+  const panelsEl = document.getElementById('master-panels');
+  if (!panelsEl) return;
+  panelsEl.innerHTML = '';
+  if (state.masterOpen.department) panelsEl.appendChild(buildMasterPanel('department'));
+  if (state.masterOpen.position) panelsEl.appendChild(buildMasterPanel('position'));
+  if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
+  if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
+  if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
+  if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel());
+  if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
+}
+
+function buildDutyDayPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '480px';
+  panel.innerHTML = `
+    <h2>担当日の個別設定</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      通常は部署の既定の担当日が使われます。特定の人だけ違う日にしたい場合はここで設定してください
+      （「部署の既定を使う」に戻すこともできます）。
+    </p>
+    <ul class="modal-list" id="duty-day-list" style="max-height:400px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const dayLabel = (n) => (state[`rosterDay${n}`] && state[`rosterDay${n}`].trim()) || `${n}日目`;
+    const listEl = panel.querySelector('#duty-day-list');
+    listEl.innerHTML = state.members.map((m) => {
+      const deptDefault = state.departments.find((d) => d.name === m.department)?.duty_day ?? null;
+      const defaultLabel = deptDefault ? `部署の既定（${dayLabel(deptDefault)}）を使う` : '部署の既定（未設定）を使う';
+      return `
+        <li data-id="${m.id}" style="justify-content:space-between;">
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}<span style="color:var(--color-ink-soft);font-size:11px;"> (${escapeHtml(m.department || '未設定')})</span></span>
+          <select class="duty-override-select" data-id="${m.id}" style="flex-shrink:0;min-width:200px;">
+            <option value="" ${!m.duty_day_override ? 'selected' : ''}>${defaultLabel}</option>
+            <option value="1" ${m.duty_day_override === 1 ? 'selected' : ''}>${dayLabel(1)}</option>
+            <option value="2" ${m.duty_day_override === 2 ? 'selected' : ''}>${dayLabel(2)}</option>
+            <option value="3" ${m.duty_day_override === 3 ? 'selected' : ''}>${dayLabel(3)}</option>
+          </select>
+        </li>`;
+    }).join('');
+
+    listEl.querySelectorAll('.duty-override-select').forEach((sel) => {
+      const id = Number(sel.dataset.id);
+      sel.addEventListener('change', async () => {
+        const val = sel.value ? Number(sel.value) : null;
+        const m = state.members.find((mm) => mm.id === id);
+        m.duty_day_override = val;
+        await sb.from(T_MEMBERS).update({ duty_day_override: val }).eq('id', id);
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildLeaderPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '420px';
+  panel.innerHTML = `
+    <h2>主任の設定</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      チェックした人は、当番表でその部署の名簿の一番上に表示されます
+      （部署ごとに1人を想定していますが、複数チェックした場合は
+      チェックした人が上位にまとまります）。
+    </p>
+    <ul class="modal-list" id="leader-list" style="max-height:400px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#leader-list');
+    listEl.innerHTML = state.members.map((m) => `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" class="leader-checkbox" data-id="${m.id}" ${m.is_leader ? 'checked' : ''} />
+          <span style="white-space:nowrap;">${escapeHtml(m.name)}<span style="color:var(--color-ink-soft);font-size:11px;"> (${escapeHtml(m.department || '未設定')})</span></span>
+        </label>
+      </li>`).join('');
+
+    listEl.querySelectorAll('.leader-checkbox').forEach((cb) => {
+      const id = Number(cb.dataset.id);
+      cb.addEventListener('change', async () => {
+        const val = cb.checked;
+        const m = state.members.find((mm) => mm.id === id);
+        m.is_leader = val;
+        await sb.from(T_MEMBERS).update({ is_leader: val }).eq('id', id);
+        renderView();
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildMemberDeptPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '420px';
+  panel.innerHTML = `
+    <h2>メンバーの部署を変更</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      選んだ部署に応じて、当番表の担当日や当番表への振り分けも自動的に変わります。
+    </p>
+    <ul class="modal-list" id="member-dept-list" style="max-height:400px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#member-dept-list');
+    const deptOrder = new Map(state.departments.map((d, i) => [d.name, i]));
+    const sortedMembers = [...state.members].sort((a, b) => {
+      const orderA = deptOrder.get(a.department) ?? Infinity;
+      const orderB = deptOrder.get(b.department) ?? Infinity;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1);
+    });
+    listEl.innerHTML = sortedMembers.map((m) => `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
+        <select class="member-dept-select" data-id="${m.id}" style="flex-shrink:0;min-width:150px;">
+          <option value="" ${!m.department ? 'selected' : ''}>（部署未設定）</option>
+          ${state.departments.map((d) => `<option value="${escapeHtml(d.name)}" ${m.department === d.name ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('')}
+        </select>
+      </li>`).join('');
+
+    listEl.querySelectorAll('.member-dept-select').forEach((sel) => {
+      const id = Number(sel.dataset.id);
+      sel.addEventListener('change', async () => {
+        const val = sel.value || null;
+        const m = state.members.find((mm) => mm.id === id);
+        m.department = val;
+        await sb.from(T_MEMBERS).update({ department: val }).eq('id', id);
+        renderView();
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildCategoryMembersPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '560px';
+  panel.innerHTML = `
+    <h2>区分の名簿を管理</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
+      退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。
+    </p>
+    <ul class="modal-list" id="category-members-list" style="max-height:440px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#category-members-list');
+    listEl.innerHTML = `
+      <li style="justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;">
+        <span style="flex:1;min-width:0;">氏名</span>
+        ${ALL_CATEGORIES.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      </li>
+    ` + state.members.map((m) => `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
+        ${ALL_CATEGORIES.map((c) => {
+          const cm = state.categoryMembers.get(`${c}::${m.id}`);
+          const isActive = cm ? cm.is_active : true;
+          return `<span style="width:60px;text-align:center;flex-shrink:0;">
+            <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
+          </span>`;
+        }).join('')}
+      </li>`).join('');
+
+    listEl.querySelectorAll('.category-member-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        if (cb.checked) {
+          await addMemberToCategory(memberId, category);
+        } else {
+          const m = state.members.find((mm) => mm.id === memberId);
+          const label = m && m.name.trim() ? m.name : 'このメンバー';
+          if (!confirm(`${label} を「${CATEGORY_LABEL[category]}」の名簿からだけ外します（退職にはなりません）。よろしいですか？`)) {
+            cb.checked = true;
+            return;
+          }
+          const key = `${category}::${memberId}`;
+          const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
+          const updated = { ...existing, member_id: memberId, category, is_active: false };
+          state.categoryMembers.set(key, updated);
+          await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+          renderView();
+        }
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildCategoriesPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '560px';
+  panel.innerHTML = `
+    <h2>区分（タブ）を管理</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      出欠入力・現場入力などで使う「区分」の一覧です。名前の変更、順番の入れ替え、
+      現場入力(スマホ用)に表示するかどうかの切り替え、新しい区分の追加ができます。
+    </p>
+    <ul class="modal-list" id="categories-list" style="max-height:400px;overflow-y:auto;"></ul>
+    <div class="modal-add-row">
+      <input type="text" id="new-category-input" placeholder="新しい区分名（例: 特別拝受）" />
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;">
+        <input type="checkbox" id="new-category-yearly" /> 年ごとの記録
+      </label>
+      <button class="btn-dark" id="new-category-add-btn">追加</button>
+    </div>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#categories-list');
+    const sorted = [...state.categories].sort((a, b) => a.sort_order - b.sort_order);
+    listEl.innerHTML = sorted.map((c, i) => `
+      <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
+        <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホに表示
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-yearly-checkbox" data-key="${escapeHtml(c.key)}" ${c.is_yearly ? 'checked' : ''} /> 年ごと
+        </label>
+        <button class="icon-btn category-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
+        <button class="icon-btn category-down-btn" data-key="${escapeHtml(c.key)}" ${i === sorted.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+        <button class="icon-btn danger category-delete-btn" data-key="${escapeHtml(c.key)}" title="この区分を削除">×</button>
+      </li>`).join('');
+
+    listEl.querySelectorAll('.category-label-input').forEach((input) => {
+      input.addEventListener('blur', async () => {
+        const key = input.dataset.key;
+        const val = input.value.trim() || key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.label = val;
+        await sb.from(T_CATEGORIES).update({ label: val }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-field-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.show_in_field = cb.checked;
+        await sb.from(T_CATEGORIES).update({ show_in_field: cb.checked }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-yearly-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        if (!confirm('「年ごと」の設定を変えると、この区分の出欠の表示・入力の仕組みが変わります。よろしいですか？')) {
+          cb.checked = !cb.checked;
+          return;
+        }
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.is_yearly = cb.checked;
+        await sb.from(T_CATEGORIES).update({ is_yearly: cb.checked }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-up-btn, .category-down-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const dir = btn.classList.contains('category-up-btn') ? -1 : 1;
+        const idx = sorted.findIndex((c) => c.key === key);
+        const targetIdx = idx + dir;
+        if (targetIdx < 0 || targetIdx >= sorted.length) return;
+        const a = sorted[idx], b = sorted[targetIdx];
+        const orderA = a.sort_order, orderB = b.sort_order;
+        a.sort_order = orderB; b.sort_order = orderA;
+        await Promise.all([
+          sb.from(T_CATEGORIES).update({ sort_order: orderB }).eq('key', a.key),
+          sb.from(T_CATEGORIES).update({ sort_order: orderA }).eq('key', b.key),
+        ]);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (!confirm(`「${c?.label ?? key}」を削除します。この区分の出欠記録は残りますが、画面には表示されなくなります。よろしいですか？`)) return;
+        state.categories = state.categories.filter((cc) => cc.key !== key);
+        await sb.from(T_CATEGORIES).delete().eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+  }
+
+  panel.querySelector('#new-category-add-btn').addEventListener('click', async () => {
+    const input = panel.querySelector('#new-category-input');
+    const label = input.value.trim();
+    if (!label) return;
+    const isYearly = panel.querySelector('#new-category-yearly').checked;
+    const key = 'custom_' + Date.now().toString(36);
+    const maxOrder = state.categories.length > 0 ? Math.max(...state.categories.map((c) => c.sort_order)) : 0;
+    const newCat = { key, label, sort_order: maxOrder + 1, show_in_field: true, is_yearly: isYearly };
+    const { error } = await sb.from(T_CATEGORIES).insert(newCat);
+    if (error) { alert('追加に失敗しました: ' + error.message); return; }
+    state.categories.push(newCat);
+    // 既存の全メンバーを、新しい区分の名簿にも登録する
+    const catInserts = state.members.map((m) => ({ member_id: m.id, category: key, sort_order: m.sort_order, is_active: true }));
+    if (catInserts.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(catInserts, { onConflict: 'member_id,category' });
+    for (const ci of catInserts) state.categoryMembers.set(`${key}::${ci.member_id}`, ci);
+    applyCategoriesFromState();
+    input.value = '';
+    renderView();
+  });
+
+  renderList();
+  return panel;
+}
+
+// ==================== 保管記録（閲覧専用） ====================
+async function loadArchiveFiscalYears() {
+  const { data } = await sb.from(T_FISCAL_YEARS)
+    .select('id,label,start_reiki_year')
+    .eq('archived', true)
+    .order('start_reiki_year', { ascending: false });
+  state.archiveFiscalYears = data ?? [];
+  if (!state.archiveFiscalYearId || !state.archiveFiscalYears.some(fy => fy.id === state.archiveFiscalYearId)) {
+    state.archiveFiscalYearId = state.archiveFiscalYears[0]?.id ?? null;
+  }
+}
+
+async function loadArchiveRows() {
+  if (!state.archiveFiscalYearId) { state.archiveRows = []; return; }
+  const { data } = await sb.from(T_ATTENDANCE_ARCHIVE)
+    .select('*')
+    .eq('fiscal_year_id', state.archiveFiscalYearId)
+    .eq('category', state.archiveCategory)
+    .order('member_sort_order', { ascending: true, nullsFirst: false })
+    .order('member_name', { ascending: true });
+  state.archiveRows = data ?? [];
+}
+
+function renderArchiveView(container) {
+  if (!state._archiveLoaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    loadArchiveFiscalYears()
+      .then(() => loadArchiveRows())
+      .then(() => { state._archiveLoaded = true; renderView(); });
+    return;
+  }
+
+  if (state.archiveFiscalYears.length === 0) {
+    container.innerHTML = `
+      <div class="grid-wrap">
+        <div class="grid-header">
+          <div><p class="eyebrow">出欠管理システム</p><h1 class="font-display">保管記録</h1></div>
+        </div>
+        <p class="hint-text" style="margin-top:0;">
+          まだ保管された年度データはありません。年度が終了すると、自動的にここへ記録が保管されます。
+        </p>
+      </div>`;
+    return;
+  }
+
+  const fyOptions = state.archiveFiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.archiveFiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const catTabs = ALL_CATEGORIES.map(c =>
+    `<button data-cat="${c}" class="${state.archiveCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  ).join('');
+
+  // 部署ごと・メンバーごとにまとめる（登録順=member_sort_orderを維持）
+  const groups = [];
+  const idxMap = new Map();
+  for (const r of state.archiveRows) {
+    const key = r.department || '（部署未設定）';
+    if (!idxMap.has(key)) { idxMap.set(key, groups.length); groups.push({ dept: key, members: new Map() }); }
+    const g = groups[idxMap.get(key)];
+    const memberKey = `${r.member_id ?? 'x'}-${r.member_name}`;
+    if (!g.members.has(memberKey)) g.members.set(memberKey, { name: r.member_name, months: {} });
+    g.members.get(memberKey).months[r.month_seq] = r.status;
+  }
+
+  const monthHeaders = MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
+
+  const bodyHtml = groups.map(g => {
+    const memberRows = Array.from(g.members.values()).map((m) => {
+      let present = 0, absent = 0;
+      const cells = MONTH_SEQUENCE.map((seq) => {
+        const status = m.months[seq] ?? null;
+        if (status === '○') present++;
+        if (status === '×') absent++;
+        const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+        return `<td style="text-align:center;padding:2px;">
+          <span class="att-cell-btn ${cls}" style="display:inline-flex;align-items:center;justify-content:center;">${status ?? ''}</span>
+        </td>`;
+      }).join('');
+      const total = present + absent;
+      const rate = total > 0 ? Math.round((present / total) * 100) + '%' : '—';
+      return `
+        <tr>
+          <td style="padding:2px 8px;">${escapeHtml(m.name)}</td>
+          ${cells}
+          <td style="text-align:center;color:var(--color-present);font-weight:500;">${present}</td>
+          <td style="text-align:center;color:var(--color-absent);font-weight:500;">${absent}</td>
+          <td style="text-align:center;color:var(--color-ink-soft);">${rate}</td>
+        </tr>`;
+    }).join('');
+    return `<tbody>
+      <tr><td colspan="${2 + MONTH_SEQUENCE.length + 2}" style="background:#f1efe8;font-weight:500;padding:4px 8px;">${escapeHtml(g.dept)}</td></tr>
+      ${memberRows}
+    </tbody>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">保管記録</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select id="archive-fy-select">${fyOptions}</select>
+        </div>
+      </div>
+      <p class="hint-text" style="margin-top:0;margin-bottom:16px;">
+        年度が終了すると自動的にここへ記録が保管されます。閲覧専用で、内容の編集はできません。
+      </p>
+      <div class="category-tabs">${catTabs}</div>
+      ${state.archiveRows.length === 0 ? `
+        <p class="hint-text">この年度・区分の保管記録はありません。</p>
+      ` : `
+        <div class="att-table-wrap">
+          <table class="att-table">
+            <thead>
+              <tr>
+                <th>氏名</th>
+                ${monthHeaders}
+                <th style="text-align:center;">出席</th>
+                <th style="text-align:center;">欠席</th>
+                <th style="text-align:center;">出席率</th>
+              </tr>
+            </thead>
+            ${bodyHtml}
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+
+  document.getElementById('archive-fy-select').addEventListener('change', async (e) => {
+    state.archiveFiscalYearId = Number(e.target.value);
+    await loadArchiveRows();
+    renderView();
+  });
+  document.querySelectorAll('.category-tabs button').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      state.archiveCategory = btn.dataset.cat;
+      await loadArchiveRows();
+      renderView();
+    });
+  });
+}
+function yearlyAttKey(memberId, category, fiscalYearId) {
+  return `${memberId}-${category}-${fiscalYearId}`;
+}
+
+async function loadYearlyAttendance(category) {
+  const { data } = await sb.from(T_ATTENDANCE)
+    .select('member_id,fiscal_year_id,status')
+    .eq('category', category)
+    .eq('month_seq', 1);
+  state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id), r.status]));
+  state.yearlyAttendanceLoadedCategory = category;
+}
+
+function computeYearlySummary(memberId, category) {
+  let present = 0, absent = 0;
+  for (const fy of state.fiscalYears) {
+    const s = state.yearlyAttendance.get(yearlyAttKey(memberId, category, fy.id));
+    if (s === '○') present++;
+    if (s === '×') absent++;
+  }
+  const total = present + absent;
+  return { present, absent, rate: total > 0 ? present / total : null };
+}
+
+async function toggleYearlyCell(memberId, fiscalYearId, btnEl) {
+  const category = state.category;
+  const key = yearlyAttKey(memberId, category, fiscalYearId);
+  const current = state.yearlyAttendance.get(key) ?? null;
+  const next = current === null ? '○' : current === '○' ? '×' : null;
+
+  if (next === null) state.yearlyAttendance.delete(key); else state.yearlyAttendance.set(key, next);
+  btnEl.textContent = next ?? '';
+  btnEl.classList.remove('present', 'absent');
+  if (next === '○') btnEl.classList.add('present');
+  if (next === '×') btnEl.classList.add('absent');
+
+  if (next === null) {
+    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+  } else {
+    await sb.from(T_ATTENDANCE).upsert(
+      { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: next },
+      { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
+    );
+  }
+  renderView();
+}
+
+async function bulkMarkYear(fiscalYearId, mode) {
+  const category = state.category;
+  const fy = state.fiscalYears.find((f) => f.id === fiscalYearId);
+  const yearLabel = fy ? `立教${fy.start_reiki_year}年` : '';
+
+  if (mode === 'all-present') {
+    if (!confirm(`${yearLabel}分を、${CATEGORY_LABEL[category]}について全員○にします。すでに入力されている×も上書きされます。よろしいですか？`)) return;
+  } else if (mode === 'clear') {
+    if (!confirm(`${yearLabel}分（${CATEGORY_LABEL[category]}）の入力を、全員分まとめて空欄に戻します。よろしいですか？`)) return;
+  }
+
+  if (mode === 'clear') {
+    for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId));
+    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+    renderView();
+    return;
+  }
+
+  const updates = [];
+  for (const m of state.members) {
+    const key = yearlyAttKey(m.id, category, fiscalYearId);
+    const current = state.yearlyAttendance.get(key) ?? null;
+    if (mode === 'all-present' || (mode === 'fill-blank-present' && current === null)) {
+      state.yearlyAttendance.set(key, '○');
+      updates.push({ member_id: m.id, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: '○' });
+    }
+  }
+  if (updates.length === 0) { renderView(); return; }
+  await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+  renderView();
+}
+
+function computeSummary(memberId, category) {
+  let present = 0, absent = 0;
+  for (let seq = 1; seq <= 12; seq++) {
+    const s = state.attendance.get(attKey(memberId, category, seq));
+    if (s === '○') present++;
+    if (s === '×') absent++;
+  }
+  const total = present + absent;
+  return { present, absent, rate: total > 0 ? present / total : null };
+}
+
+function renderMasterSelect(field, memberId, currentValue, masterList, compact) {
+  const options = masterList.map(item =>
+    `<option value="${escapeHtml(item.name)}" ${item.name === currentValue ? 'selected' : ''}>${escapeHtml(item.name)}</option>`
+  ).join('');
+  const hasCurrent = masterList.some(item => item.name === currentValue);
+  const extra = (!hasCurrent && currentValue) ? `<option value="${escapeHtml(currentValue)}" selected>${escapeHtml(currentValue)}（一覧に無い値）</option>` : '';
+  const blank = `<option value="" ${!currentValue ? 'selected' : ''}>（未設定）</option>`;
+  const style = compact ? ' style="width:100%;box-sizing:border-box;"' : '';
+  return `<select class="att-select" data-field="${field}" data-member="${memberId}"${style}>${blank}${extra}${options}</select>`;
+}
+
+const MASTER_CONFIG = {
+  department: { table: T_DEPARTMENTS, label: '部署', memberField: 'department' },
+  position: { table: T_POSITIONS, label: '立場', memberField: 'position' },
+};
+
+function buildMasterPanel(kind) {
+  const cfg = MASTER_CONFIG[kind];
+  const list = kind === 'department' ? state.departments : state.positions;
+
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.innerHTML = `
+    <h2>${cfg.label}一覧</h2>
+    <ul class="modal-list" id="panel-list-${kind}"></ul>
+    <div class="modal-add-row">
+      <input type="text" id="panel-add-input-${kind}" placeholder="新しい${cfg.label}名" />
+      <button class="btn-dark" id="panel-add-btn-${kind}">追加</button>
+    </div>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector(`#panel-list-${kind}`);
+    listEl.innerHTML = list.map(item => {
+      const dayField = kind === 'department' ? `
+        <select class="duty-day-select" data-id="${item.id}">
+          <option value="" ${!item.duty_day ? 'selected' : ''}>担当日未設定</option>
+          <option value="1" ${item.duty_day === 1 ? 'selected' : ''}>${(state.rosterDay1 && state.rosterDay1.trim()) || '1日目'}</option>
+          <option value="2" ${item.duty_day === 2 ? 'selected' : ''}>${(state.rosterDay2 && state.rosterDay2.trim()) || '2日目'}</option>
+          <option value="3" ${item.duty_day === 3 ? 'selected' : ''}>${(state.rosterDay3 && state.rosterDay3.trim()) || '3日目'}</option>
+        </select>` : '';
+      return `
+      <li data-id="${item.id}">
+        <input type="text" class="modal-rename-input" value="${escapeHtml(item.name)}" />
+        ${dayField}
+        <button class="icon-btn danger modal-delete-btn" title="削除">×</button>
+      </li>
+    `;
+    }).join('');
+
+    listEl.querySelectorAll('.modal-rename-input').forEach((input) => {
+      const li = input.closest('li');
+      const id = Number(li.dataset.id);
+      input.addEventListener('blur', async () => {
+        const item = list.find((i) => i.id === id);
+        const newName = input.value.trim();
+        if (!newName || newName === item.name) { input.value = item.name; return; }
+        const oldName = item.name;
+        const { error } = await sb.from(cfg.table).update({ name: newName }).eq('id', id);
+        if (error) { alert('更新に失敗しました（同じ名前がすでにある可能性があります）。'); input.value = item.name; return; }
+        item.name = newName;
+        await sb.from(T_MEMBERS).update({ [cfg.memberField]: newName }).eq(cfg.memberField, oldName);
+        state.members.forEach((m) => { if (m[cfg.memberField] === oldName) m[cfg.memberField] = newName; });
+        renderList();
+      });
+    });
+
+    if (kind === 'department') {
+      listEl.querySelectorAll('.duty-day-select').forEach((sel) => {
+        const id = Number(sel.dataset.id);
+        sel.addEventListener('change', async () => {
+          const item = list.find((i) => i.id === id);
+          const val = sel.value ? Number(sel.value) : null;
+          await sb.from(cfg.table).update({ duty_day: val }).eq('id', id);
+          item.duty_day = val;
+        });
+      });
+    }
+
+    listEl.querySelectorAll('.modal-delete-btn').forEach((btn) => {
+      const li = btn.closest('li');
+      const id = Number(li.dataset.id);
+      btn.addEventListener('click', async () => {
+        const item = list.find((i) => i.id === id);
+        if (!confirm(`「${item.name}」を一覧から削除します。すでに割り当てられているメンバーの表示はそのまま残ります。よろしいですか？`)) return;
+        await sb.from(cfg.table).delete().eq('id', id);
+        const idx = list.findIndex((i) => i.id === id);
+        if (idx >= 0) list.splice(idx, 1);
+        renderList();
+      });
+    });
+  }
+
+  renderList();
+
+  panel.querySelector(`#panel-add-btn-${kind}`).addEventListener('click', async () => {
+    const input = panel.querySelector(`#panel-add-input-${kind}`);
+    const name = input.value.trim();
+    if (!name) return;
+    const nextOrder = list.length > 0 ? Math.max(...list.map((i) => i.sort_order)) + 1 : 1;
+    const { data, error } = await sb.from(cfg.table).insert({ name, sort_order: nextOrder }).select().single();
+    if (error) { alert('追加に失敗しました（同じ名前がすでにある可能性があります）。'); return; }
+    list.push(data);
+    input.value = '';
+    renderList();
+  });
+
+  return panel;
+}
+
+async function bulkMarkMonth(monthCtx, mode) {
+  if (!monthCtx.fiscalYear) {
+    alert(`立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月にあたる年度がまだ登録されていません。先に「＋年度追加」で該当の年度を追加してください。`);
+    return;
+  }
+  if (monthCtx.fiscalYear.id !== state.fiscalYearId) {
+    alert(`今表示している年度には、立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月が含まれていません。上の「年度」のプルダウンで「${monthCtx.fiscalYear.label}」に切り替えてから、もう一度お試しください。`);
+    return;
+  }
+
+  const monthSeqValue = monthCtx.monthSeq;
+  const fiscalYear = monthCtx.fiscalYear;
+
+  if (mode === 'all-present') {
+    if (!confirm(`立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月分を、${CATEGORY_LABEL[state.category]}について全員○にします。すでに入力されている×も上書きされます。よろしいですか？`)) return;
+  }
+  if (mode === 'clear') {
+    if (!confirm(`立教${monthCtx.reikiYear}年${monthCtx.calendarMonth}月分（${CATEGORY_LABEL[state.category]}）の入力を、全員分まとめて空欄に戻します。よろしいですか？`)) return;
+    for (const m of state.members) {
+      state.attendance.delete(attKey(m.id, state.category, monthSeqValue));
+    }
+    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYear.id, category: state.category, month_seq: monthSeqValue });
+    renderView();
+    return;
+  }
+
+  const updates = [];
+  for (const m of state.members) {
+    const key = attKey(m.id, state.category, monthSeqValue);
+    const current = state.attendance.get(key) ?? null;
+    if (mode === 'all-present') {
+      state.attendance.set(key, '○');
+      updates.push({ member_id: m.id, fiscal_year_id: fiscalYear.id, category: state.category, month_seq: monthSeqValue, status: '○' });
+    } else if (mode === 'fill-blank-present' && current === null) {
+      state.attendance.set(key, '○');
+      updates.push({ member_id: m.id, fiscal_year_id: fiscalYear.id, category: state.category, month_seq: monthSeqValue, status: '○' });
+    }
+  }
+
+  if (updates.length === 0) { renderView(); return; }
+
+  await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+  renderView();
+}
+
+function renderGridView(container) {
+  const isYearly = YEARLY_CATEGORIES.includes(state.category);
+
+  if (isYearly && state.yearlyAttendanceLoadedCategory !== state.category) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    loadYearlyAttendance(state.category).then(() => renderView());
+    return;
+  }
+
+  const sortedFiscalYears = [...state.fiscalYears].sort((a, b) => a.start_reiki_year - b.start_reiki_year);
+  if (isYearly && (state.bulkActionFiscalYearId == null || !sortedFiscalYears.some((fy) => fy.id === state.bulkActionFiscalYearId))) {
+    state.bulkActionFiscalYearId = sortedFiscalYears[sortedFiscalYears.length - 1]?.id ?? null;
+  }
+
+  const monthCtx = getReikiMonthContext(state.bulkActionMonth);
+  const bulkMonthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.bulkActionMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('');
+  const bulkYearOptions = sortedFiscalYears.map((fy) =>
+    `<option value="${fy.id}" ${fy.id === state.bulkActionFiscalYearId ? 'selected' : ''}>立教${fy.start_reiki_year}年</option>`
+  ).join('');
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+
+  const catTabs = ALL_CATEGORIES.map(c =>
+    `<button data-cat="${c}" class="${state.category === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  ).join('');
+
+  const bulkYearLabel = sortedFiscalYears.find((fy) => fy.id === state.bulkActionFiscalYearId);
+  const bulkYearText = bulkYearLabel ? `立教${bulkYearLabel.start_reiki_year}年` : '';
+
+  const categoryMembersList = getCategoryMemberEntries(state.category);
+
+  const rowsHtml = categoryMembersList.map((m, index) => {
+    const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
+    const cells = isYearly
+      ? sortedFiscalYears.map((fy) => {
+          const status = state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id)) ?? null;
+          const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+          return `<td style="text-align:center;padding:2px;">
+            <button class="att-yearly-cell-btn ${cls}" data-member="${m.id}" data-fyid="${fy.id}" aria-label="立教${fy.start_reiki_year}年の出欠">${status ?? ''}</button>
+          </td>`;
+        }).join('')
+      : MONTH_SEQUENCE.map((_, i) => {
+          const seq = i + 1;
+          const status = state.attendance.get(attKey(m.id, state.category, seq)) ?? null;
+          const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
+          return `<td style="text-align:center;padding:2px;">
+            <button class="att-cell-btn ${cls}" data-member="${m.id}" data-seq="${seq}" aria-label="${MONTH_SEQUENCE[i]}月の出欠">${status ?? ''}</button>
+          </td>`;
+        }).join('');
+
+    return `
+      <tr data-row-member="${m.id}">
+        <td style="text-align:center;padding:0;">
+          <span class="drag-handle" data-member="${m.id}" title="ドラッグで並び替え">⠿</span>
+        </td>
+        <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
+        <td style="width:90px;min-width:90px;max-width:90px;"><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;" /></td>
+        <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
+        <td style="width:200px;min-width:200px;max-width:200px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
+        ${cells}
+        <td style="text-align:center;color:var(--color-present);font-weight:500;">${s.present}</td>
+        <td style="text-align:center;color:var(--color-absent);font-weight:500;">${s.absent}</td>
+        <td style="text-align:center;color:var(--color-ink-soft);">${s.rate != null ? Math.round(s.rate*100)+'%' : '—'}</td>
+        <td style="text-align:center;">
+          <div style="display:flex;gap:4px;justify-content:center;">
+            <button class="icon-btn" data-action="move-up" data-member="${m.id}" ${index === 0 ? 'disabled' : ''} title="上へ">↑</button>
+            <button class="icon-btn" data-action="move-down" data-member="${m.id}" ${index === categoryMembersList.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
+            <button class="icon-btn danger" data-action="remove" data-member="${m.id}" title="退職（一覧から非表示。記録は残ります）">×</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const monthHeaders = isYearly
+    ? sortedFiscalYears.map((fy) => `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`).join('')
+    : MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
+
+  const bulkActionsHtml = isYearly ? `
+          <select id="bulk-year-select">${bulkYearOptions}</select>
+          <button class="btn-dark" id="mark-all-present-btn">${bulkYearText}分 全員出席</button>
+          <button class="btn-light" id="fill-blank-present-btn">${bulkYearText}分未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">${bulkYearText}分をクリア</button>
+  ` : `
+          <select id="bulk-month-select">${bulkMonthOptions}</select>
+          <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
+          <button class="btn-light" id="fill-blank-present-btn">${monthCtx.calendarMonth}月分未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">この月をクリア</button>
+  `;
+
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header no-print">
+        <div id="grid-title-wrap" style="cursor:context-menu;">
+          <h1 class="font-display" id="grid-title-h1">営繕課出欠記録</h1>
+          <p class="eyebrow">出欠管理システム</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <select id="fy-select">${fyOptions}</select>
+          <button class="btn-light" id="add-fy-btn">＋年度追加</button>
+          ${bulkActionsHtml}
+          <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
+          <button class="btn-dark" id="export-excel-btn">Excelで書き出し</button>
+          <button class="btn-light" id="switch-to-field-btn">📱 現場入力（スマホ用）に切替</button>
+        </div>
+      </div>
+
+      <div class="category-tabs no-print">${catTabs}</div>
+
+      <div class="att-table-wrap">
+        <table class="att-table">
+          <thead>
+            <tr>
+              <th style="text-align:center;width:28px;"></th>
+              <th style="text-align:center;width:40px;">No.</th>
+              <th style="width:90px;min-width:90px;max-width:90px;">氏名</th>
+              <th style="width:150px;min-width:150px;max-width:150px;">部署</th>
+              <th style="width:200px;min-width:200px;max-width:200px;">立場</th>
+              ${monthHeaders}
+              <th style="text-align:center;">出席</th>
+              <th style="text-align:center;">欠席</th>
+              <th style="text-align:center;">出席率</th>
+              <th style="text-align:center;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="att-rows-body">${rowsHtml}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  // イベント登録
+  document.getElementById('fy-select').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+
+  document.getElementById('add-fy-btn').addEventListener('click', addFiscalYear);
+
+  const titleWrap = document.getElementById('grid-title-wrap');
+  if (titleWrap) {
+    titleWrap.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFieldShortcutMenu(e.clientX, e.clientY);
+    });
+  }
+
+  document.querySelectorAll('.category-tabs button').forEach(btn => {
+    btn.addEventListener('click', () => { state.category = btn.dataset.cat; renderView(); });
+  });
+
+  if (isYearly) {
+    document.querySelectorAll('.att-yearly-cell-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleYearlyCell(Number(btn.dataset.member), Number(btn.dataset.fyid), btn));
+    });
+    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'all-present'));
+    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'fill-blank-present'));
+    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'clear'));
+    document.getElementById('bulk-year-select').addEventListener('change', (e) => {
+      state.bulkActionFiscalYearId = Number(e.target.value);
+      renderView();
+    });
+  } else {
+    document.querySelectorAll('.att-cell-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleCell(Number(btn.dataset.member), Number(btn.dataset.seq), btn));
+    });
+    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'all-present'));
+    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'fill-blank-present'));
+    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkMonth(monthCtx, 'clear'));
+    document.getElementById('bulk-month-select').addEventListener('change', (e) => {
+      state.bulkActionMonth = Number(e.target.value);
+      renderView();
+    });
+  }
+
+  document.querySelectorAll('.att-editable').forEach(input => {
+    input.addEventListener('blur', () => updateMemberField(Number(input.dataset.member), input.dataset.field, input.value));
+  });
+  document.querySelectorAll('.att-select').forEach(sel => {
+    sel.addEventListener('change', () => updateMemberField(Number(sel.dataset.member), sel.dataset.field, sel.value));
+  });
+
+  document.querySelectorAll('[data-action="move-up"]').forEach(btn =>
+    btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), -1)));
+  document.querySelectorAll('[data-action="move-down"]').forEach(btn =>
+    btn.addEventListener('click', () => moveMember(Number(btn.dataset.member), 1)));
+  document.querySelectorAll('[data-action="remove"]').forEach(btn =>
+    btn.addEventListener('click', () => removeMember(Number(btn.dataset.member))));
+
+  document.getElementById('add-member-btn').addEventListener('click', addMember);
+  document.getElementById('export-excel-btn').addEventListener('click', () => exportAllDataToExcel());
+  document.getElementById('switch-to-field-btn').addEventListener('click', () => {
+    state.view = 'field';
+    renderView();
+  });
+
+  setupRowDragAndDrop();
+}
+
+function setupRowDragAndDrop() {
+  const tbody = document.getElementById('att-rows-body');
+  if (!tbody) return;
+
+  // ハンドルを掴んでいる間だけ、その行を draggable にする
+  tbody.querySelectorAll('.drag-handle').forEach((handle) => {
+    handle.addEventListener('mousedown', () => {
+      const tr = handle.closest('tr[data-row-member]');
+      if (tr) tr.draggable = true;
+    });
+  });
+  const resetDraggable = () => {
+    tbody.querySelectorAll('tr[data-row-member]').forEach((tr) => { tr.draggable = false; });
+  };
+  document.addEventListener('mouseup', resetDraggable);
+
+  let draggedId = null;
+
+  tbody.addEventListener('dragstart', (e) => {
+    const tr = e.target.closest('tr[data-row-member]');
+    if (!tr) return;
+    draggedId = Number(tr.dataset.rowMember);
+    tr.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  tbody.addEventListener('dragover', (e) => {
+    const tr = e.target.closest('tr[data-row-member]');
+    if (!tr || draggedId === null) return;
+    e.preventDefault();
+    tbody.querySelectorAll('tr[data-row-member]').forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom'));
+    const rect = tr.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+    tr.classList.add(isAfter ? 'drag-over-bottom' : 'drag-over-top');
+  });
+
+  tbody.addEventListener('drop', (e) => {
+    const tr = e.target.closest('tr[data-row-member]');
+    tbody.querySelectorAll('tr[data-row-member]').forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging'));
+    if (!tr || draggedId === null) return;
+    e.preventDefault();
+    const targetId = Number(tr.dataset.rowMember);
+    const rect = tr.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > rect.height / 2;
+    const droppedId = draggedId;
+    draggedId = null;
+    reorderMember(droppedId, targetId, isAfter);
+  });
+
+  tbody.addEventListener('dragend', () => {
+    tbody.querySelectorAll('tr[data-row-member]').forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging'));
+    draggedId = null;
+    resetDraggable();
+  });
+}
+
+async function reorderMember(draggedId, targetId, insertAfter) {
+  if (draggedId === targetId) return;
+  const category = state.category;
+  const list = getCategoryMemberEntries(category);
+  const fromIndex = list.findIndex((m) => m.id === draggedId);
+  let toIndex = list.findIndex((m) => m.id === targetId);
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  const reordered = [...list];
+  const [moved] = reordered.splice(fromIndex, 1);
+  toIndex = reordered.findIndex((m) => m.id === targetId);
+  reordered.splice(insertAfter ? toIndex + 1 : toIndex, 0, moved);
+
+  const upserts = reordered.map((m, i) => {
+    const key = `${category}::${m.id}`;
+    const existing = state.categoryMembers.get(key) ?? { member_id: m.id, category, is_active: true };
+    const updated = { ...existing, member_id: m.id, category, sort_order: i + 1 };
+    state.categoryMembers.set(key, updated);
+    return updated;
+  });
+  renderView();
+
+  await sb.from(T_CATEGORY_MEMBERS).upsert(upserts, { onConflict: 'member_id,category' });
+}
+
+// 特定の区分の名簿からだけ外す（退職にはしない）
+async function removeMemberFromCategory(memberId, category) {
+  const m = state.members.find((mm) => mm.id === memberId);
+  const label = m && m.name.trim() ? m.name : 'このメンバー';
+  if (!confirm(`${label} を「${CATEGORY_LABEL[category]}」の名簿からだけ外します（退職にはなりません）。よろしいですか？`)) return;
+  const key = `${category}::${memberId}`;
+  const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
+  const updated = { ...existing, member_id: memberId, category, is_active: false };
+  state.categoryMembers.set(key, updated);
+  await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+  renderView();
+}
+
+// 一度外したメンバーを、特定の区分の名簿に戻す／追加する
+async function addMemberToCategory(memberId, category) {
+  const list = getCategoryMemberEntries(category);
+  const maxOrder = list.length > 0 ? Math.max(...list.map((m) => m._catSortOrder)) : 0;
+  const key = `${category}::${memberId}`;
+  const updated = { member_id: memberId, category, sort_order: maxOrder + 1, is_active: true };
+  state.categoryMembers.set(key, updated);
+  await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+  renderView();
+}
+
+// ==================== 現場入力（スマホ用） ====================
+const FIELD_DEPT_GROUPS = [
+  { key: 'eizen-shomu', label: '営繕課・庶務係', depts: ['営繕課', '庶務係'] },
+  { key: 'genba1', label: '現場第一班', depts: ['現場第一班'] },
+  { key: 'genba2', label: '現場第二班', depts: ['現場第二班'] },
+  { key: 'genba3', label: '現場第三班', depts: ['現場第三班'] },
+  { key: 'seizai', label: '製材班', depts: ['製材班'] },
+  { key: 'daiku', label: '大工班', depts: ['大工班'] },
+  { key: 'mokko', label: '木工班', depts: ['木工班'] },
+  { key: 'tekko', label: '鉄工班', depts: ['鉄工班'] },
+  { key: 'kucho', label: '空調衛生係', depts: ['空調衛生係'] },
+  { key: 'all', label: '全体', depts: null },
+];
+
+function fieldSavedGroupKey(category, deptKey, fyId, seq) {
+  return `${category}-${deptKey}-${fyId}-${seq}`;
+}
+
+function renderFieldView(container) {
+  const isYearly = YEARLY_CATEGORIES.includes(state.fieldCategory);
+
+  // 「年」は立教○○○年の短い表記。既存の年度に加えて、最新の年度から2年先までは
+  // 年度が未作成でも常に選べるようにする（選ぶと自動でその年度を作成する）
+  const existingReikiYears = state.fiscalYears.map((fy) => fy.start_reiki_year);
+  const maxExistingReiki = existingReikiYears.length > 0 ? Math.max(...existingReikiYears) : (new Date().getFullYear() - 1837);
+  const desiredYearsSet = new Set(existingReikiYears);
+  desiredYearsSet.add(maxExistingReiki + 1);
+  desiredYearsSet.add(maxExistingReiki + 2);
+  const selectedFy = state.fiscalYears.find((fy) => fy.id === state.fiscalYearId);
+  if (selectedFy) desiredYearsSet.add(selectedFy.start_reiki_year);
+  const sortedReikiYears = [...desiredYearsSet].sort((a, b) => a - b);
+  const fyOptions = sortedReikiYears.map((ry) => {
+    const isSelected = selectedFy ? selectedFy.start_reiki_year === ry : false;
+    return `<option value="${ry}" ${isSelected ? 'selected' : ''}>立教${ry}年</option>`;
+  }).join('');
+
+  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.fieldMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('');
+  const catTabs = FIELD_VISIBLE_CATEGORIES.map(c =>
+    `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  ).join('');
+
+  // 慰労拝受（中元/歳暮）は「月」ではなく、選択中の年度に対して1回だけ記録する
+  const monthSeq = isYearly ? 1 : calendarMonthToSeq(state.fieldMonth);
+
+  const deptTabs = FIELD_DEPT_GROUPS.map((g) => {
+    const isSaved = state.fieldSavedGroups.has(fieldSavedGroupKey(state.fieldCategory, g.key, state.fiscalYearId, monthSeq));
+    return `<button data-dept-key="${g.key}" class="field-dept-btn ${state.fieldDeptFilter === g.key ? 'active' : ''} ${isSaved ? 'saved' : ''}">${isSaved ? '✓ ' : ''}${g.label}</button>`;
+  }).join('');
+
+  const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
+  // 「全体」タブは、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する
+  const orderedMembers = activeGroup.key === 'all'
+    ? getCategoryMemberEntries(state.fieldCategory)
+    : getOrderedMembersForCategory(state.fieldCategory)
+        .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
+
+  const chipsHtml = orderedMembers.map((m) => {
+    const status = state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) ?? null;
+    return `<button class="field-chip ${status === '○' ? 'filled' : ''}" data-member="${m.id}">${escapeHtml(m.name)}</button>`;
+  }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
+
+  container.innerHTML = `
+    <div class="field-view">
+      <div class="field-controls no-print">
+        <div class="field-cat-tabs">${catTabs}</div>
+        <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+          <button class="btn-light" id="switch-to-grid-btn" style="font-size:12px;padding:6px 10px;">💻 出欠入力（デスクトップ）に切替</button>
+          ${renderUpdateButtonHtml()}
+        </div>
+      </div>
+      <div class="field-controls no-print" style="margin-top:8px;">
+        <select id="field-fy-select">${fyOptions}</select>
+        ${isYearly ? '' : `<select id="field-month-select">${monthOptions}</select>`}
+      </div>
+      <div class="field-dept-tabs no-print">${deptTabs}</div>
+      <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
+      <div class="field-chip-grid">${chipsHtml}</div>
+      <div class="field-action-row no-print">
+        <button class="field-all-present-btn" id="field-all-present-btn">全員出席</button>
+        <button class="field-save-btn" id="field-save-btn">この内容で保存</button>
+      </div>
+      <p class="no-print" id="field-save-msg" style="text-align:center;font-size:13px;color:var(--color-present);font-weight:500;height:18px;margin-top:8px;"></p>
+    </div>
+  `;
+
+  attachUpdateButtonHandler();
+  document.getElementById('switch-to-grid-btn').addEventListener('click', () => {
+    state.view = 'grid';
+    renderView();
+  });
+
+  document.getElementById('field-fy-select').addEventListener('change', async (e) => {
+    const reikiYear = Number(e.target.value);
+    let fy = state.fiscalYears.find((f) => f.start_reiki_year === reikiYear);
+    if (!fy) {
+      // まだ存在しない年度は自動的に作成する
+      const label = `立教${reikiYear}年4月～立教${reikiYear + 1}年3月`;
+      const { data, error } = await sb.from(T_FISCAL_YEARS)
+        .insert({ label, start_reiki_year: reikiYear, is_current: false })
+        .select().single();
+      if (!error && data) {
+        state.fiscalYears.push(data);
+        fy = data;
+      }
+    }
+    if (fy) {
+      state.fiscalYearId = fy.id;
+      await loadAttendanceForFiscalYear();
+    }
+    renderView();
+  });
+  const monthSelectEl = document.getElementById('field-month-select');
+  if (monthSelectEl) {
+    monthSelectEl.addEventListener('change', (e) => {
+      state.fieldMonth = Number(e.target.value);
+      renderView();
+    });
+  }
+  document.querySelectorAll('.field-cat-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.fieldCategory = btn.dataset.cat;
+      renderView();
+    });
+  });
+  document.querySelectorAll('.field-dept-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.fieldDeptFilter = btn.dataset.deptKey;
+      renderView();
+    });
+  });
+  document.querySelectorAll('.field-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      toggleFieldChipLocal(Number(chip.dataset.member), monthSeq, chip);
+    });
+  });
+  document.getElementById('field-all-present-btn').addEventListener('click', () => {
+    document.querySelectorAll('.field-chip').forEach((chip) => {
+      const memberId = Number(chip.dataset.member);
+      const key = attKey(memberId, state.fieldCategory, monthSeq);
+      state.attendance.set(key, '○');
+      chip.classList.add('filled');
+    });
+    state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, monthSeq));
+    const msgEl = document.getElementById('field-save-msg');
+    if (msgEl) msgEl.textContent = '';
+  });
+  document.getElementById('field-save-btn').addEventListener('click', () => {
+    saveFieldGroup(orderedMembers, monthSeq);
+  });
+}
+
+// タップ時は画面上の表示だけを切り替える（保存はしない）
+function toggleFieldChipLocal(memberId, seq, chipEl) {
+  const category = state.fieldCategory;
+  const key = attKey(memberId, category, seq);
+  const current = state.attendance.get(key) ?? null;
+  const next = current === '○' ? null : '○';
+
+  if (next === null) state.attendance.delete(key); else state.attendance.set(key, next);
+  chipEl.classList.toggle('filled', next === '○');
+
+  // 変更したので、この班の「保存済み」表示は解除する
+  state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, seq));
+  const deptBtn = document.querySelector(`.field-dept-btn[data-dept-key="${state.fieldDeptFilter}"]`);
+  if (deptBtn && deptBtn.classList.contains('saved')) {
+    deptBtn.classList.remove('saved');
+    deptBtn.textContent = deptBtn.textContent.replace(/^✓\s*/, '');
+  }
+
+  const msgEl = document.getElementById('field-save-msg');
+  if (msgEl) msgEl.textContent = '';
+}
+
+// 「この内容で保存」ボタンが押されたとき、今表示中の班のメンバー分をまとめて保存する
+async function saveFieldGroup(members, seq) {
+  const category = state.fieldCategory;
+  const saveBtn = document.getElementById('field-save-btn');
+  const msgEl = document.getElementById('field-save-msg');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+
+  if (state.fiscalYearId) {
+    const upserts = [];
+    const deleteIds = [];
+    for (const m of members) {
+      const status = state.attendance.get(attKey(m.id, category, seq)) ?? null;
+      if (status === null) deleteIds.push(m.id);
+      else upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status });
+    }
+    if (upserts.length > 0) {
+      await sb.from(T_ATTENDANCE).upsert(upserts, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+    }
+    if (deleteIds.length > 0) {
+      await sb.from(T_ATTENDANCE).delete()
+        .match({ fiscal_year_id: state.fiscalYearId, category, month_seq: seq })
+        .in('member_id', deleteIds);
+    }
+  }
+
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'この内容で保存'; }
+  if (msgEl) msgEl.textContent = '✓ 保存しました';
+
+  state.fieldSavedGroups.add(fieldSavedGroupKey(category, state.fieldDeptFilter, state.fiscalYearId, seq));
+  const deptBtn = document.querySelector(`.field-dept-btn[data-dept-key="${state.fieldDeptFilter}"]`);
+  if (deptBtn && !deptBtn.classList.contains('saved')) {
+    deptBtn.classList.add('saved');
+    deptBtn.textContent = '✓ ' + deptBtn.textContent;
+  }
+}
+
+async function toggleCell(memberId, seq, btnEl) {
+  const key = attKey(memberId, state.category, seq);
+  const current = state.attendance.get(key) ?? null;
+  const next = current === null ? '○' : current === '○' ? '×' : null;
+
+  if (next === null) state.attendance.delete(key); else state.attendance.set(key, next);
+  btnEl.textContent = next ?? '';
+  btnEl.classList.remove('present', 'absent');
+  if (next === '○') btnEl.classList.add('present');
+  if (next === '×') btnEl.classList.add('absent');
+
+  // 出席/欠席/出席率のセルを更新
+  const row = btnEl.closest('tr');
+  const s = computeSummary(memberId, state.category);
+  const tds = row.querySelectorAll('td');
+  tds[tds.length - 4].textContent = s.present;
+  tds[tds.length - 3].textContent = s.absent;
+  tds[tds.length - 2].textContent = s.rate != null ? Math.round(s.rate * 100) + '%' : '—';
+
+  if (!state.fiscalYearId) return;
+  if (next === null) {
+    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq });
+  } else {
+    await sb.from(T_ATTENDANCE).upsert(
+      { member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq, status: next },
+      { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
+    );
+  }
+}
+
+async function updateMemberField(memberId, field, value) {
+  const m = state.members.find(m => m.id === memberId);
+  if (m) m[field] = value;
+  await sb.from(T_MEMBERS).update({ [field]: value }).eq('id', memberId);
+}
+
+async function fetchAllRows(table, selectStr) {
+  const pageSize = 1000;
+  let allRows = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await sb.from(table).select(selectStr).range(from, from + pageSize - 1);
+    if (error) { console.error(error); break; }
+    allRows = allRows.concat(data ?? []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return allRows;
+}
+
+async function exportAllDataToExcel() {
+  const btn = document.getElementById('export-excel-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '書き出し中…'; }
+  try {
+    const [allMembers, fyResult, allAttendance] = await Promise.all([
+      fetchAllRows(T_MEMBERS, '*'),
+      sb.from(T_FISCAL_YEARS).select('*').order('start_reiki_year', { ascending: true }),
+      fetchAllRows(T_ATTENDANCE, '*'),
+    ]);
+    const allFiscalYears = fyResult.data ?? [];
+
+    const memberMap = new Map(allMembers.map((m) => [m.id, m]));
+    const fyMap = new Map(allFiscalYears.map((fy) => [fy.id, fy]));
+
+    const buildSheetRows = (category) => {
+      const isYearlyCat = YEARLY_CATEGORIES.includes(category);
+      const rows = allAttendance
+        .filter((a) => a.category === category && a.status)
+        .map((a) => {
+          const m = memberMap.get(a.member_id);
+          const fy = fyMap.get(a.fiscal_year_id);
+          const periodLabel = isYearlyCat
+            ? (fy ? `立教${fy.start_reiki_year}年` : '')
+            : (MONTH_SEQUENCE[a.month_seq - 1] ? `${MONTH_SEQUENCE[a.month_seq - 1]}月` : '');
+          const row = {
+            '年度': fy ? fy.label : '',
+            '部署': m ? (m.department || '') : '（削除済みメンバー）',
+            '氏名': m ? m.name : `(member_id:${a.member_id})`,
+            '立場': m ? (m.position || '') : '',
+            '出欠': a.status,
+          };
+          if (isYearlyCat) row['対象年'] = periodLabel; else row['月'] = periodLabel;
+          return row;
+        });
+      rows.sort((r1, r2) =>
+        (r1['年度'] + r1['部署'] + r1['氏名']).localeCompare(
+          r2['年度'] + r2['部署'] + r2['氏名'], 'ja'
+        )
+      );
+      return rows;
+    };
+
+    const wb = XLSX.utils.book_new();
+    for (const category of ALL_CATEGORIES) {
+      const rows = buildSheetRows(category);
+      // シート名は31文字までなど制約があるため、括弧を取った短い名前にする
+      const sheetName = CATEGORY_LABEL[category].replace(/[（）]/g, '').slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `出欠記録_全期間_${dateStr}.xlsx`);
+  } catch (err) {
+    alert('書き出し中にエラーが発生しました: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Excelで書き出し'; }
+  }
+}
+
+async function addMember() {
+  const nextOrder = state.members.length > 0 ? Math.max(...state.members.map(m => m.sort_order)) + 1 : 1;
+  const { data, error } = await sb.from(T_MEMBERS)
+    .insert({ sort_order: nextOrder, department: '', name: '', position: '' })
+    .select().single();
+  if (!error && data) {
+    state.members.push(data);
+    // 新しいメンバーは、既定で4区分すべての名簿に登録する
+    const catInserts = ALL_CATEGORIES.map((category) => {
+      const entry = { member_id: data.id, category, sort_order: nextOrder, is_active: true };
+      state.categoryMembers.set(`${category}::${data.id}`, entry);
+      return entry;
+    });
+    await sb.from(T_CATEGORY_MEMBERS).upsert(catInserts, { onConflict: 'member_id,category' });
+    renderView();
+  }
+}
+
+async function removeMember(memberId) {
+  const m = state.members.find(m => m.id === memberId);
+  const label = m && m.name.trim() ? m.name : 'このメンバー';
+  if (!confirm(`${label} を一覧から外します（退職扱い）。よろしいですか？\n※これまでの出欠記録・氏名・部署・立場のデータは削除されず、そのまま残ります。`)) return;
+  await sb.from(T_MEMBERS).update({ is_active: false }).eq('id', memberId);
+  state.members = state.members.filter(m => m.id !== memberId);
+  renderView();
+}
+
+async function moveMember(memberId, direction) {
+  const category = state.category;
+  const list = getCategoryMemberEntries(category);
+  const index = list.findIndex((m) => m.id === memberId);
+  const target = index + direction;
+  if (target < 0 || target >= list.length) return;
+  const a = list[index], b = list[target];
+  const orderA = a._catSortOrder, orderB = b._catSortOrder;
+
+  const keyA = `${category}::${a.id}`, keyB = `${category}::${b.id}`;
+  const entryA = { ...(state.categoryMembers.get(keyA) ?? { member_id: a.id, category, is_active: true }), sort_order: orderB };
+  const entryB = { ...(state.categoryMembers.get(keyB) ?? { member_id: b.id, category, is_active: true }), sort_order: orderA };
+  state.categoryMembers.set(keyA, entryA);
+  state.categoryMembers.set(keyB, entryB);
+  renderView();
+
+  await sb.from(T_CATEGORY_MEMBERS).upsert([entryA, entryB], { onConflict: 'member_id,category' });
+}
+
+async function addFiscalYear() {
+  const label = prompt('新しい年度の表示名を入力してください（例: 立教190年4月〜191年3月）');
+  if (!label) return;
+  const startYearStr = prompt('立教年度の開始年を数字で入力してください（例: 190）');
+  if (!startYearStr || !/^\d+$/.test(startYearStr)) { alert('数字で入力してください。'); return; }
+  const { data, error } = await sb.from(T_FISCAL_YEARS)
+    .insert({ label, start_reiki_year: Number(startYearStr), is_current: false })
+    .select().single();
+  if (!error && data) {
+    state.fiscalYearId = data.id;
+    await loadFiscalYearsAndMembers();
+    renderView();
+  }
+}
+
+// ==================== 朝の神殿掃除提出（月次報告書） ====================
+function splitIntoTwoColumns(membersWithNo, leftCountOverride) {
+  const total = membersWithNo.length;
+  let half = Math.ceil(total / 2);
+  if (leftCountOverride != null && Number.isFinite(leftCountOverride)) {
+    half = Math.min(Math.max(leftCountOverride, 0), total);
+  }
+  return { left: membersWithNo.slice(0, half), right: membersWithNo.slice(half) };
+}
+
+function renderReportView(container, category) {
+  setPrintPageSize('size: 176mm 250mm; margin: 5mm;');
+  const isGeppai = category === 'geppai';
+  const titleText = isGeppai ? '月例参拝出欠報告書' : '神殿掃除実施報告書';
+  const monthField = isGeppai ? 'reportGeppaiMonth' : 'reportMonth';
+  const orgField = isGeppai ? 'reportGeppaiOrgName' : 'reportOrgName';
+  const leftCountField = isGeppai ? 'reportGeppaiLeftCount' : 'reportLeftCount';
+  const idPrefix = isGeppai ? 'report-geppai' : 'report';
+
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state[monthField] ? 'selected' : ''}>${m}月</option>`
+  ).join('');
+
+  const fiscalYear = state.fiscalYears.find(y => y.id === state.fiscalYearId);
+  const reikiYear = fiscalYear ? (state[monthField] >= 4 ? fiscalYear.start_reiki_year : fiscalYear.start_reiki_year + 1) : null;
+  const monthSeq = calendarMonthToSeq(state[monthField]);
+
+  const membersForDisplay = isGeppai ? getOrderedMembersForCategory('geppai') : state.members;
+  const membersWithNo = membersForDisplay.map((m, i) => ({ ...m, no: i + 1 }));
+
+  let presentCount = 0;
+  for (const m of membersWithNo) {
+    if (state.attendance.get(attKey(m.id, category, monthSeq)) === '○') presentCount++;
+  }
+
+  const posCounts = new Map();
+  for (const m of membersForDisplay) posCounts.set(m.position, (posCounts.get(m.position) ?? 0) + 1);
+  const positionCounts = [];
+  for (const p of POSITION_ORDER) { if (posCounts.has(p)) { positionCounts.push({label:p, count:posCounts.get(p)}); posCounts.delete(p); } }
+  for (const [label, count] of posCounts) positionCounts.push({ label, count });
+
+  const { left, right } = splitIntoTwoColumns(membersWithNo, state[leftCountField]);
+
+  // 1列あたりの人数が基準（26名）を超えたら、行の高さ（余白・行間）だけを自動で縮めて収まるようにする。
+  // 文字サイズ・表題部分（社名・年月・印影欄）は変更しない。
+  // ※この数値はCSSからの計算による目安で、実際の印刷結果を保証するものではありません。
+  const BASELINE_ROWS_PER_COLUMN = 26;
+  const MIN_ROW_SCALE = 0.62; // これ以上は行が詰まりすぎて読みにくくなるため下限とする
+  const maxRowsInColumn = Math.max(left.length, right.length);
+  const reportRowScale = maxRowsInColumn > BASELINE_ROWS_PER_COLUMN
+    ? Math.max(MIN_ROW_SCALE, BASELINE_ROWS_PER_COLUMN / maxRowsInColumn)
+    : 1;
+
+  const renderNameColumn = (slot) => {
+    const rows = slot.map((m, idx) => {
+      const status = state.attendance.get(attKey(m.id, category, monthSeq)) ?? null;
+      const fieldValue = isGeppai ? m.department : m.position;
+      const prevValue = idx > 0 ? (isGeppai ? slot[idx-1].department : slot[idx-1].position) : null;
+      const isDitto = idx > 0 && fieldValue === prevValue;
+      const posDisplay = isDitto ? '〃' : escapeHtml(fieldValue);
+      const isLongPos = !isDitto && fieldValue && fieldValue.length > 6;
+      const posClass = ['col-position', isDitto ? 'ditto' : '', isLongPos ? 'small-pos' : ''].filter(Boolean).join(' ');
+      return `<tr><td class="col-no">${m.no}</td><td class="col-name">${escapeHtml(m.name)}</td><td class="${posClass}">${posDisplay}</td><td class="col-status">${status ?? ''}</td></tr>`;
+    }).join('');
+    return `
+      <div class="report-column">
+        <table class="member-table">
+          <thead><tr><th class="col-no">No</th><th class="col-name">氏　名</th><th class="col-position">${isGeppai ? '部署' : '立場'}</th><th class="col-status">出欠</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  };
+
+  const summaryRows = positionCounts.map(p => `<tr><td>${escapeHtml(p.label)}</td><td class="num">${p.count}名</td></tr>`).join('');
+  const summaryHtml = `
+    <div class="report-summary-block">
+      <table class="member-table summary-table">
+        <thead><tr><th>立場</th><th>人数</th></tr></thead>
+        <tbody>${summaryRows}<tr class="total-row"><td>合　計</td><td class="num">${membersForDisplay.length}名</td></tr></tbody>
+      </table>
+    </div>`;
+
+  const pageHtml = `
+    <section class="report-page" style="--report-row-scale: ${reportRowScale};">
+      <header class="report-header">
+        <div class="report-header-left">
+          <h1>${titleText}</h1>
+          <p class="org-name">${escapeHtml(state[orgField])}</p>
+          ${reikiYear != null ? `<p class="report-date">立教${reikiYear}年${state[monthField]}月</p>` : ''}
+        </div>
+        <div class="report-header-right">
+          ${isGeppai ? `
+          <table class="stamp-table">
+            <thead><tr><th>課　長</th><th>庶　務</th></tr></thead>
+            <tbody><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+          </table>
+          ` : `
+          <table class="stamp-table">
+            <thead><tr><th>表統領室長</th><th>表統領室次長</th><th>世話課長</th><th>受理</th></tr></thead>
+            <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+          </table>
+          <table class="stamp-table">
+            <thead><tr><th>部　長</th><th>次　長</th><th>課　長</th><th>庶　務</th></tr></thead>
+            <tbody><tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr></tbody>
+          </table>
+          `}
+        </div>
+      </header>
+      <p class="report-summary-line">【総員：${membersForDisplay.length}名、出席者：${presentCount}名】</p>
+      <div class="report-columns">
+        ${renderNameColumn(left)}
+        ${renderNameColumn(right)}
+      </div>
+    </section>
+  `;
+
+  container.innerHTML = `
+    <div class="report-outer" style="padding:32px 16px;">
+      <div class="toolbar no-print" style="max-width:1180px;margin:0 auto;">
+        <div class="field"><label>年度</label><select id="${idPrefix}-fy">${fyOptions}</select></div>
+        <div class="field"><label>対象月</label><select id="${idPrefix}-month">${monthOptions}</select></div>
+        <div class="field" style="flex:1;min-width:160px;"><label>部署名（表題）</label><input type="text" id="${idPrefix}-org" value="${escapeHtml(state[orgField])}" style="width:100%;" /></div>
+        <div class="field" style="min-width:70px;">
+          <label>左：人数</label>
+          <input type="number" id="${idPrefix}-left-count" min="0" max="${membersForDisplay.length}" value="${left.length}" style="width:100%;" />
+        </div>
+        <div class="field" style="min-width:70px;">
+          <label>右：人数</label>
+          <input type="text" id="${idPrefix}-right-count" value="${right.length}名" readonly style="width:100%;background:#f1efe8;" />
+        </div>
+        <div class="field"><label>&nbsp;</label><button class="btn-light" id="${idPrefix}-split-reset-btn">自動（半分ずつ）</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn-dark" id="${idPrefix}-print-btn">印刷 / PDFで保存</button></div>
+      </div>
+      <p class="no-print" style="max-width:1180px;margin:0 auto 12px;font-size:12px;color:var(--color-ink-soft);">
+        用紙サイズ：B5 ／ 片面印刷で1ページに収まる想定です。印刷ダイアログで「用紙サイズ：B5」を選択してください。
+      </p>
+      <div class="report-preview">${pageHtml}</div>
+    </div>
+  `;
+
+  document.getElementById(`${idPrefix}-fy`).addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+  document.getElementById(`${idPrefix}-month`).addEventListener('change', (e) => {
+    state[monthField] = Number(e.target.value);
+    renderView();
+  });
+  document.getElementById(`${idPrefix}-org`).addEventListener('input', (e) => {
+    state[orgField] = e.target.value;
+  });
+  document.getElementById(`${idPrefix}-org`).addEventListener('blur', () => renderView());
+  document.getElementById(`${idPrefix}-left-count`).addEventListener('change', (e) => {
+    const val = Number(e.target.value);
+    state[leftCountField] = Number.isFinite(val) ? Math.min(Math.max(val, 0), membersForDisplay.length) : null;
+    renderView();
+  });
+  document.getElementById(`${idPrefix}-split-reset-btn`).addEventListener('click', () => {
+    state[leftCountField] = null;
+    renderView();
+  });
+  document.getElementById(`${idPrefix}-print-btn`).addEventListener('click', () => window.print());
+}
+
+// ==================== 当番表 ====================
+function effectiveDutyDay(member) {
+  if (member.duty_day_override) return member.duty_day_override;
+  const dept = state.departments.find((d) => d.name === member.department);
+  return dept?.duty_day ?? null;
+}
+
+const SHOMU_ANCHOR_BY_DAY = { 1: null, 2: '木工班', 3: '現場第二班' };
+
+function splitDayGroupsWithShomuLast(deptGroups, dayNum) {
+  const shomuIdx = deptGroups.findIndex((g) => g.dept === '庶務係');
+  const shomu = shomuIdx >= 0 ? deptGroups[shomuIdx] : null;
+  const rest = shomuIdx >= 0 ? deptGroups.filter((_, i) => i !== shomuIdx) : deptGroups;
+  const [col1, col2] = splitDeptGroupsIntoTwoColumns(rest);
+
+  if (shomu) {
+    const anchor = SHOMU_ANCHOR_BY_DAY[dayNum];
+    const anchorPos = anchor ? col2.findIndex((g) => g.dept === anchor) : -1;
+    if (anchorPos >= 0) {
+      col2.splice(anchorPos + 1, 0, shomu);
+    } else {
+      col2.push(shomu);
+    }
+  }
+  return [col1, col2];
+}
+
+function splitDeptGroupsIntoTwoColumns(deptGroups) {
+  return splitDeptGroupsIntoColumns(deptGroups, 2);
+}
+
+function splitDeptGroupsIntoColumns(deptGroups, n) {
+  const total = deptGroups.reduce((sum, g) => sum + g.members.length, 0);
+  const target = Math.ceil(total / n);
+  const columns = Array.from({ length: n }, () => []);
+  let colIdx = 0;
+  let running = 0;
+  for (const g of deptGroups) {
+    columns[colIdx].push(g);
+    running += g.members.length;
+    if (colIdx < n - 1 && running >= target) {
+      colIdx++;
+      running = 0;
+    }
+  }
+  return columns;
+}
+
+function renderRosterView(container) {
+  setPrintPageSize('size: 250mm 176mm; margin: 5mm;');
+
+  if (!state._dutyPositionsLoaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    sb.from(T_DUTY_POSITIONS).select('*').then(({ data }) => {
+      state.dutyPositions = new Map((data ?? []).map((r) => [r.item_key, { x: Number(r.x), y: Number(r.y) }]));
+      state._dutyPositionsLoaded = true;
+      renderView();
+    });
+    return;
+  }
+
+  const fyOptions = state.fiscalYears.map(fy =>
+    `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
+  ).join('');
+  const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
+    `<option value="${m}" ${m === state.rosterMonth ? 'selected' : ''}>${m}月</option>`
+  ).join('') + `<option value="template" ${state.rosterMonth === 'template' ? 'selected' : ''}>テンプレ</option>`;
+
+  const isTemplate = state.rosterMonth === 'template';
+  const monthSeq = isTemplate ? null : calendarMonthToSeq(state.rosterMonth);
+
+  // 担当日（1〜3）ごとにメンバーを振り分け、日ごとに部署でまとめる（登録順を維持）
+  const byDay = { 1: [], 2: [], 3: [], none: [] };
+  const byDayIndex = { 1: new Map(), 2: new Map(), 3: new Map(), none: new Map() };
+  for (const m of state.members) {
+    const day = effectiveDutyDay(m);
+    const bucket = day ?? 'none';
+    const key = m.department || '（部署未設定）';
+    const idxMap = byDayIndex[bucket];
+    if (!idxMap.has(key)) {
+      idxMap.set(key, byDay[bucket].length);
+      byDay[bucket].push({ dept: key, members: [] });
+    }
+    byDay[bucket][idxMap.get(key)].members.push(m);
+  }
+
+  // 各部署グループ内で主任を先頭に並べ替え（それ以外は登録順を維持）
+  for (const bucket of Object.values(byDay)) {
+    for (const g of bucket) {
+      g.members.sort((a, b) => (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1));
+    }
+  }
+
+  const renderMemberBox = (group, dayKey) => {
+    const rows = group.members.map(m => {
+      const status = isTemplate ? null : (state.attendance.get(attKey(m.id, 'asagami', monthSeq)) ?? null);
+      const cls = status === '×' ? 'absent' : status === '○' ? 'present' : 'blank';
+      const mark = status === '×' ? '×' : status === '○' ? '○' : '';
+      return `<li>
+        <span class="mark ${cls}">${mark}</span><span class="name">${escapeHtml(m.name)}</span>
+      </li>`;
+    }).join('');
+    const dragKey = `dept-${dayKey}-${group.dept}`;
+    const pos = state.dutyPositions.get(dragKey) ?? { x: 0, y: 0 };
+    return `
+      <div class="duty-dept piece-draggable" data-drag-key="${escapeHtml(dragKey)}" style="transform: translate(${pos.x}mm, ${pos.y}mm);">
+        <p class="duty-dept-label">${escapeHtml(group.dept)}</p>
+        <ul class="duty-dept-box">${rows}</ul>
+      </div>`;
+  };
+
+  const renderSubcolumn = (groups, dayKey) => `
+    <div class="duty-subcolumn">${groups.map((g) => renderMemberBox(g, dayKey)).join('')}</div>
+  `;
+
+function swapGroupsInColumn(col, deptA, deptB) {
+  const idxA = col.findIndex((g) => g.dept === deptA);
+  const idxB = col.findIndex((g) => g.dept === deptB);
+  if (idxA >= 0 && idxB >= 0) {
+    [col[idxA], col[idxB]] = [col[idxB], col[idxA]];
+  }
+}
+
+function moveGroupToColumnFront(cols, deptName, targetIdx) {
+  for (let i = 0; i < cols.length; i++) {
+    const pos = cols[i].findIndex((g) => g.dept === deptName);
+    if (pos >= 0) {
+      const [group] = cols[i].splice(pos, 1);
+      cols[targetIdx].unshift(group);
+      return;
+    }
+  }
+}
+
+function moveGroupToColumnEnd(cols, deptName, targetIdx) {
+  for (let i = 0; i < cols.length; i++) {
+    const pos = cols[i].findIndex((g) => g.dept === deptName);
+    if (pos >= 0) {
+      const [group] = cols[i].splice(pos, 1);
+      cols[targetIdx].push(group);
+      return;
+    }
+  }
+}
+
+function moveGroupBeforeAnchor(cols, deptToMove, anchorDept) {
+  let moved = null;
+  for (const col of cols) {
+    const pos = col.findIndex((g) => g.dept === deptToMove);
+    if (pos >= 0) { [moved] = col.splice(pos, 1); break; }
+  }
+  if (!moved) return;
+  for (const col of cols) {
+    const anchorPos = col.findIndex((g) => g.dept === anchorDept);
+    if (anchorPos >= 0) { col.splice(anchorPos, 0, moved); return; }
+  }
+}
+
+const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
+  const dayBlocksHtml = [1, 2, 3].map((dayNum) => {
+    const label = dayLabels[dayNum - 1];
+    let [col1, col2] = splitDayGroupsWithShomuLast(byDay[dayNum], dayNum);
+    if (dayNum === 2) { [col1, col2] = [col2, col1]; moveGroupToColumnFront([col1, col2], '現場第一班', 0); moveGroupToColumnEnd([col1, col2], '庶務係', 1); }
+    if (dayNum === 3) { moveGroupToColumnFront([col1, col2], '現場第二班', 0); moveGroupBeforeAnchor([col1, col2], '大工班', '庶務係'); }
+    return `
+      <div class="duty-day-block">
+        <div class="duty-day-header"><span>${escapeHtml(label || `${dayNum}日目`)}</span></div>
+        <div class="duty-day-columns">
+          ${renderSubcolumn(col1, dayNum)}
+          ${renderSubcolumn(col2, dayNum)}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const noneColumns = splitDeptGroupsIntoColumns(byDay.none, 3);
+  const noneHtml = byDay.none.length > 0 ? `
+    <div class="duty-day-block">
+      <div class="duty-day-header"><span>担当日未定</span></div>
+      <div class="duty-day-columns">
+        ${renderSubcolumn(noneColumns[0], 'none')}
+        ${renderSubcolumn(noneColumns[1], 'none')}
+        ${renderSubcolumn(noneColumns[2], 'none')}
+      </div>
+    </div>
+  ` : '';
+
+  const dateSummary = (state.rosterShowMonth && !isTemplate)
+    ? `${state.rosterMonth}月${dayLabels.filter(Boolean).join('・')}`
+    : dayLabels.filter(Boolean).join('・');
+
+  container.innerHTML = `
+    <div class="roster-wrap">
+      <div class="toolbar no-print">
+        <div class="field"><label>年度</label><select id="roster-fy">${fyOptions}</select></div>
+        <div class="field"><label>対象月</label><select id="roster-month">${monthOptions}</select></div>
+        <div class="field" style="min-width:160px;"><label>部署名（表題）</label><input type="text" id="roster-org" value="${escapeHtml(state.rosterOrgName)}" style="width:100%;" /></div>
+        <div class="field" style="min-width:90px;"><label>1日目</label><input type="text" id="roster-day1" value="${escapeHtml(state.rosterDay1)}" placeholder="例: 8/21" style="width:100%;" /></div>
+        <div class="field" style="min-width:90px;"><label>2日目</label><input type="text" id="roster-day2" value="${escapeHtml(state.rosterDay2)}" placeholder="例: 8/22" style="width:100%;" /></div>
+        <div class="field" style="min-width:90px;"><label>3日目</label><input type="text" id="roster-day3" value="${escapeHtml(state.rosterDay3)}" placeholder="例: 8/23" style="width:100%;" /></div>
+        <div class="field">
+          <label>表題</label>
+          <label style="display:flex;align-items:center;gap:6px;height:38px;white-space:nowrap;font-size:14px;">
+            <input type="checkbox" id="roster-show-month" ${state.rosterShowMonth ? 'checked' : ''} />
+            「○月」を表示する
+          </label>
+        </div>
+        <div class="field"><label>&nbsp;</label><button class="btn-light" id="roster-reset-layout-btn">配置をリセット</button></div>
+        <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
+      </div>
+      <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
+        班の枠をクリックしたまま掴むと、位置をずらして配置できます(自動的に保存されます)。
+      </p>
+      <div class="roster-doc">
+        <h1 id="roster-title-display">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>
+        <div class="duty-days-row">${dayBlocksHtml}</div>
+        ${noneHtml}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('roster-fy').addEventListener('change', async (e) => {
+    state.fiscalYearId = Number(e.target.value);
+    await loadAttendanceForFiscalYear();
+    renderView();
+  });
+  document.getElementById('roster-month').addEventListener('change', (e) => {
+    state.rosterMonth = e.target.value === 'template' ? 'template' : Number(e.target.value);
+    renderView();
+  });
+  document.getElementById('roster-org').addEventListener('input', (e) => { state.rosterOrgName = e.target.value; });
+  document.getElementById('roster-org').addEventListener('blur', () => renderView());
+  document.getElementById('roster-day1').addEventListener('input', (e) => { state.rosterDay1 = e.target.value; });
+  document.getElementById('roster-day1').addEventListener('blur', () => renderView());
+  document.getElementById('roster-day2').addEventListener('input', (e) => { state.rosterDay2 = e.target.value; });
+  document.getElementById('roster-day2').addEventListener('blur', () => renderView());
+  document.getElementById('roster-day3').addEventListener('input', (e) => { state.rosterDay3 = e.target.value; });
+  document.getElementById('roster-day3').addEventListener('blur', () => renderView());
+  document.getElementById('roster-show-month').addEventListener('change', (e) => {
+    state.rosterShowMonth = e.target.checked;
+    renderView();
+  });
+  document.getElementById('roster-reset-layout-btn').addEventListener('click', async () => {
+    if (!confirm('班の位置ずらしをすべて元に戻します。よろしいですか？')) return;
+    await sb.from(T_DUTY_POSITIONS).delete().neq('item_key', '__none__');
+    state.dutyPositions = new Map();
+    renderView();
+  });
+  document.getElementById('roster-print-btn').addEventListener('click', () => window.print());
+
+  setupPieceDragAndDrop();
+}
+
+function setupPieceDragAndDrop() {
+  const pieces = document.querySelectorAll('.piece-draggable');
+  if (pieces.length === 0) return;
+  const refCol = document.querySelector('.duty-subcolumn');
+  const GRID_MM = 0.625;
+
+  pieces.forEach((box) => {
+    box.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const key = box.dataset.dragKey;
+      const refRect = (refCol || box).getBoundingClientRect();
+      const mmPerPx = 38 / refRect.width; // .duty-subcolumn の min-width: 38mm を基準に換算
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const currentTransform = box.style.transform || '';
+      const match = /translate\(([-\d.]+)mm,\s*([-\d.]+)mm\)/.exec(currentTransform);
+      const startDx = match ? parseFloat(match[1]) : 0;
+      const startDy = match ? parseFloat(match[2]) : 0;
+
+      box.classList.add('dragging-piece');
+      document.body.style.userSelect = 'none';
+
+      function onMove(ev) {
+        const dxMm = (ev.clientX - startX) * mmPerPx;
+        const dyMm = (ev.clientY - startY) * mmPerPx;
+        let newX = Math.round((startDx + dxMm) / GRID_MM) * GRID_MM;
+        let newY = Math.round((startDy + dyMm) / GRID_MM) * GRID_MM;
+        box.style.transform = `translate(${newX}mm, ${newY}mm)`;
+      }
+
+      async function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        box.classList.remove('dragging-piece');
+        document.body.style.userSelect = '';
+        const m = /translate\(([-\d.]+)mm,\s*([-\d.]+)mm\)/.exec(box.style.transform);
+        const finalX = m ? parseFloat(m[1]) : 0;
+        const finalY = m ? parseFloat(m[2]) : 0;
+        state.dutyPositions.set(key, { x: finalX, y: finalY });
+        await sb.from(T_DUTY_POSITIONS).upsert({ item_key: key, x: finalX, y: finalY }, { onConflict: 'item_key' });
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+
+// ==================== 起動 ====================
+init();
+</script>
+</body>
+</html>
