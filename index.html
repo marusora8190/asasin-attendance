@@ -849,8 +849,10 @@ function renderHelpView(container) {
         <p>スマホで、現場にいながら出欠(主に出席のチェック)を入力するための画面です。<strong>合言葉によるログインは不要</strong>で、URLを開けば直接使えます。</p>
         <ul>
           <li>URLの末尾に <code>?field=1</code> を付けて開くと、他の画面を含まないスマホ専用の表示になります。ホーム画面に追加しておくと便利です。</li>
-          <li>上部のタブで区分を切り替えます。表示される区分は「マスター」の「区分（タブ）を管理」で「スマホのリストに表示」にチェックが入っているものだけです。</li>
-          <li>「年」「月」のプルダウンで対象を選びます。「年」は立教○○○年の表記で、<strong>まだ作られていない先の年度を選んでも自動的にその年度が作成されます</strong>(常に最新から2年先まで選べます)。年ごとの区分では「月」の選択は出ません。</li>
+          <li>上部のプルダウン(リスト)で区分を切り替えます。リストに出る区分は「マスター」の「区分（タブ）を管理」で「スマホのリストに表示」にチェックが入っているものだけです。</li>
+          <li>「年」は立教○○○年の表記で、<strong>まだ作られていない先の年度を選んでも自動的にその年度が作成されます</strong>(常に最新から2年先まで選べます)。「慰労拝受(中元)」「慰労拝受(歳暮)」など年ごとの区分では、「月」の代わりに「事前調査」「会場外」「会場内」の3回から選びます。</li>
+          <li>「会場外」「会場内」を選んでいるときは、プルダウンの右横に共通の時刻入力欄が出ます。「0812」のように入力すると自動で「8:12」に変換されて、その回・その年の記録として1つだけ保存されます(名前ごとではありません)。</li>
+          <li>「事前調査」で×だった人は、「会場外」「会場内」を確認するとき、名前が赤く表示されて見分けられます。</li>
           <li>下の「営繕課・庶務係」「現場第一班」…「空調衛生係」「全体」のタブで、表示する班を絞り込めます。「全体」を選ぶと、出欠入力画面と同じ並び順で全員が表示されます。</li>
           <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。</li>
           <li>「全員出席」でその場に表示されている全員を出席にできます。入力が終わったら「この内容で保存」を押してください。保存した班のタブには✓が付き、内容を変えると✓は消えます。</li>
@@ -898,8 +900,9 @@ function renderHelpView(container) {
           <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
           <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
           <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
-          <li><strong>区分の名簿を管理</strong>：区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。</li>
-          <li><strong>区分（タブ）を管理</strong>：出欠入力・現場入力で使う区分そのものを管理します。名前の変更、並び替え、現場入力(スマホ)への表示・非表示、月ごと/年ごとの切り替え、新しい区分の追加・削除ができます。</li>
+          <li><strong>区分の名簿を管理</strong>：区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。見出し行は上部に固定されています。</li>
+          <li><strong>区分（タブ）を管理</strong>：出欠入力・現場入力で使う区分そのものを管理します。名前の変更、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、新しい区分の追加・削除ができます。並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
+          <li><strong>慰労拝受 記録（時間）</strong>：慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。時刻は「0812」のように入力すると自動で「8:12」に変換されます。入力中にEnterキーを押すと、右隣のセルにカーソルが移動します。一番左の年号の列は、横にスクロールしても常に見える位置に固定されています。</li>
         </ul>
       </section>
 
@@ -1180,7 +1183,6 @@ function buildCategoryMembersPanel() {
           const updated = { ...existing, member_id: memberId, category, is_active: false };
           state.categoryMembers.set(key, updated);
           await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-          renderView();
         }
       });
     });
@@ -1393,7 +1395,7 @@ async function loadCeremonyTimes() {
 function buildCeremonyTimesPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '900px';
+  panel.style.maxWidth = '1300px';
   panel.innerHTML = `
     <h2>慰労拝受 記録（時間）</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
@@ -1442,7 +1444,8 @@ function buildCeremonyTimesPanel() {
       <tbody>${rows}</tbody>
     `;
 
-    tableEl.querySelectorAll('.ceremony-time-input').forEach((input) => {
+    const allTimeInputs = Array.from(tableEl.querySelectorAll('.ceremony-time-input'));
+    allTimeInputs.forEach((input, idx) => {
       input.addEventListener('blur', async () => {
         const year = Number(input.dataset.year);
         const col = input.dataset.col;
@@ -1453,6 +1456,13 @@ function buildCeremonyTimesPanel() {
         existing[col] = value;
         state.ceremonyTimes.set(year, existing);
         await sb.from(T_CEREMONY_TIMES).upsert({ reiki_year: year, [col]: value }, { onConflict: 'reiki_year' });
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const next = allTimeInputs[idx + 1];
+          if (next) next.focus(); else input.blur();
+        }
       });
     });
   }
@@ -2060,6 +2070,10 @@ function renderGridView(container) {
     });
     const bulkCheckpointTimeInputEl = document.getElementById('bulk-checkpoint-time-input');
     if (bulkCheckpointTimeInputEl) {
+      bulkCheckpointTimeInputEl.addEventListener('input', () => {
+        const key = `${state.category}::${state.bulkActionFiscalYearId}::${state.bulkActionCheckpoint}`;
+        state.checkpointTimes.set(key, bulkCheckpointTimeInputEl.value);
+      });
       bulkCheckpointTimeInputEl.addEventListener('blur', () => {
         saveCheckpointTime(state.category, state.bulkActionFiscalYearId, state.bulkActionCheckpoint, bulkCheckpointTimeInputEl);
       });
@@ -2199,7 +2213,6 @@ async function addMemberToCategory(memberId, category) {
   const updated = { member_id: memberId, category, sort_order: maxOrder + 1, is_active: true };
   state.categoryMembers.set(key, updated);
   await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-  renderView();
 }
 
 // ==================== 現場入力（スマホ用） ====================
@@ -2335,6 +2348,12 @@ function renderFieldView(container) {
   }
   const checkpointTimeInputEl = document.getElementById('field-checkpoint-time-input');
   if (checkpointTimeInputEl) {
+    // タップで他のボタンに移る際、blurより先に再描画されて消えてしまうのを防ぐため、
+    // 入力の都度いったんそのままstateに反映しておく
+    checkpointTimeInputEl.addEventListener('input', () => {
+      const key = `${state.fieldCategory}::${state.fiscalYearId}::${state.fieldCheckpoint}`;
+      state.checkpointTimes.set(key, checkpointTimeInputEl.value);
+    });
     checkpointTimeInputEl.addEventListener('blur', () => {
       saveCheckpointTime(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
     });
