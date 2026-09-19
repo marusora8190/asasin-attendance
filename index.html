@@ -227,6 +227,11 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-chip.filled { border-color: var(--color-present); background: var(--color-present); color: white; font-weight: 700; }
 .field-chip.pre-absent { border-color: var(--color-absent); background: var(--color-absent); color: white; font-weight: 700; }
 .field-chip.pre-absent.filled { border-color: var(--color-absent); background: var(--color-absent); }
+.field-chip-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; color: white; background: var(--color-accent);
+  border-radius: 4px; padding: 0 3px; margin-right: 3px; vertical-align: middle;
+}
+.field-chip-badge.leader { background: var(--color-gold); }
 .field-checkpoint-time-input {
   width: 70px; box-sizing: border-box; padding: 8px; text-align: center;
   border: 1px solid var(--color-line); border-radius: 8px; font-size: 14px;
@@ -795,7 +800,7 @@ function getCategoryMemberEntries(category) {
       const cm = state.categoryMembers.get(`${category}::${m.id}`);
       const isActive = cm ? cm.is_active : true;
       const sortOrder = cm ? cm.sort_order : m.sort_order;
-      return isActive ? { ...m, _catSortOrder: sortOrder } : null;
+      return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a._catSortOrder - b._catSortOrder);
@@ -1134,22 +1139,25 @@ function buildMemberDeptPanel() {
 function buildCategoryMembersPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '560px';
+  panel.style.maxWidth = '760px';
   panel.innerHTML = `
     <h2>区分の名簿を管理</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
-      退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。
+      退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
+      「神」は神名流しなど特別な役割の人、「Ｌ」はそのリーダーを表します(名簿に入っている人だけ選べます)。
     </p>
-    <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;"></div>
-    <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;"></ul>
+    <div style="overflow-x:auto;">
+      <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:600px;"></div>
+      <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;min-width:600px;"></ul>
+    </div>
   `;
 
   function renderList() {
     const headerEl = panel.querySelector('#category-members-header');
     headerEl.innerHTML = `
       <span style="flex:1;min-width:0;">氏名</span>
-      ${ALL_CATEGORIES.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      ${ALL_CATEGORIES.map((c) => `<span style="width:90px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
     `;
 
     const listEl = panel.querySelector('#category-members-list');
@@ -1159,8 +1167,18 @@ function buildCategoryMembersPanel() {
         ${ALL_CATEGORIES.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
-          return `<span style="width:60px;text-align:center;flex-shrink:0;">
+          const isSpecial = cm ? !!cm.is_special : false;
+          const isLeader = cm ? !!cm.is_special_leader : false;
+          return `<span style="width:90px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
+            <span style="display:flex;gap:6px;font-size:10px;color:var(--color-ink-soft);">
+              <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
+                <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
+              </label>
+              <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
+                <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />Ｌ
+              </label>
+            </span>
           </span>`;
         }).join('')}
       </li>`).join('');
@@ -1171,6 +1189,7 @@ function buildCategoryMembersPanel() {
         const category = cb.dataset.category;
         if (cb.checked) {
           await addMemberToCategory(memberId, category);
+          renderList();
         } else {
           const m = state.members.find((mm) => mm.id === memberId);
           const label = m && m.name.trim() ? m.name : 'このメンバー';
@@ -1180,10 +1199,39 @@ function buildCategoryMembersPanel() {
           }
           const key = `${category}::${memberId}`;
           const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
-          const updated = { ...existing, member_id: memberId, category, is_active: false };
+          const updated = { ...existing, member_id: memberId, category, is_active: false, is_special: false, is_special_leader: false };
           state.categoryMembers.set(key, updated);
           await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+          renderList();
         }
+      });
+    });
+
+    listEl.querySelectorAll('.category-member-special-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        const key = `${category}::${memberId}`;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
+        const updated = { ...existing, member_id: memberId, category, is_special: cb.checked };
+        if (!cb.checked) updated.is_special_leader = false; // 特別を外したらリーダーも外す
+        state.categoryMembers.set(key, updated);
+        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+        renderList();
+      });
+    });
+
+    listEl.querySelectorAll('.category-member-leader-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        const key = `${category}::${memberId}`;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true, is_special: true };
+        const updated = { ...existing, member_id: memberId, category, is_special_leader: cb.checked };
+        state.categoryMembers.set(key, updated);
+        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
       });
     });
   }
@@ -1954,7 +2002,12 @@ function renderGridView(container) {
           <span class="drag-handle" data-member="${m.id}" title="ドラッグで並び替え">⠿</span>
         </td>
         <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
-        <td style="width:90px;min-width:90px;max-width:90px;"><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" /></td>
+        <td style="width:90px;min-width:90px;max-width:90px;">
+          <div style="display:flex;align-items:center;gap:2px;">
+            ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="flex-shrink:0;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;">Ｌ</span>' : m._isSpecial ? '<span title="神名流し" style="flex-shrink:0;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;">神</span>' : ''}
+            <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
+          </div>
+        </td>
         <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
         <td style="width:200px;min-width:200px;max-width:200px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
         ${cells}
@@ -2282,7 +2335,8 @@ function renderFieldView(container) {
     const isPreAbsent = isYearly && state.fieldCheckpoint !== 1 &&
       state.attendance.get(attKey(m.id, state.fieldCategory, 1)) === '×';
     const chipCls = ['field-chip', status === '○' ? 'filled' : '', isPreAbsent ? 'pre-absent' : ''].filter(Boolean).join(' ');
-    return `<button class="${chipCls}" data-member="${m.id}">${escapeHtml(m.name)}</button>`;
+    const badge = m._isSpecialLeader ? '<span class="field-chip-badge leader">Ｌ</span>' : m._isSpecial ? '<span class="field-chip-badge">神</span>' : '';
+    return `<button class="${chipCls}" data-member="${m.id}">${badge}${escapeHtml(m.name)}</button>`;
   }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
 
   container.innerHTML = `
