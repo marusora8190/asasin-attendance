@@ -454,6 +454,7 @@ const YEARLY_CHECKPOINTS = [
   { seq: 3, label: '会場内' },
 ];
 let FIELD_VISIBLE_CATEGORIES = []; // 現場入力（スマホ用）に表示する区分
+let GRID_VISIBLE_CATEGORIES = []; // 出欠入力（デスクトップ）に表示する区分
 const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
 const ROWS_PER_BLOCK = 19;
 
@@ -791,7 +792,12 @@ function applyCategoriesFromState() {
     .filter((c) => c.show_in_field)
     .sort((a, b) => (a.field_sort_order ?? a.sort_order) - (b.field_sort_order ?? b.sort_order))
     .map((c) => c.key);
+  GRID_VISIBLE_CATEGORIES = state.categories
+    .filter((c) => c.show_in_grid)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((c) => c.key);
   if (!ALL_CATEGORIES.includes(state.category)) state.category = ALL_CATEGORIES[0] ?? state.category;
+  if (!GRID_VISIBLE_CATEGORIES.includes(state.category)) state.category = GRID_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.category;
   if (!ALL_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
 }
 
@@ -1288,6 +1294,9 @@ function buildCategoriesPanel() {
       <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
         <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-grid-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_grid ? 'checked' : ''} /> 出欠入力に表示
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
           <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホのリストに表示
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
@@ -1322,6 +1331,16 @@ function buildCategoriesPanel() {
         const c = state.categories.find((cc) => cc.key === key);
         if (c) c.label = val;
         await sb.from(T_CATEGORIES).update({ label: val }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-grid-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.show_in_grid = cb.checked;
+        await sb.from(T_CATEGORIES).update({ show_in_grid: cb.checked }).eq('key', key);
         applyCategoriesFromState();
         renderView();
       });
@@ -1977,7 +1996,7 @@ function renderGridView(container) {
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
 
-  const catTabs = ALL_CATEGORIES.map(c =>
+  const catTabs = GRID_VISIBLE_CATEGORIES.map(c =>
     `<button data-cat="${c}" class="${state.category === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
 
