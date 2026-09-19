@@ -445,6 +445,7 @@ const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤�
 let CATEGORY_LABEL = {}; // {key: label} 起動時にDBから読み込む
 let ALL_CATEGORIES = []; // 区分キーの一覧（並び順）
 let YEARLY_CATEGORIES = []; // これらは「月」ではなく「立教年」ごとに1回の記録
+let SPECIAL_ROLE_CATEGORIES = []; // 「神」「Ｌ」（神名流し担当・リーダー）を使う区分
 // 年ごとの区分は、1年に3回（事前調査／会場外／会場内）まで出欠確認できる。
 // 内部的には month_seq の 1/2/3 をこの3回の記録として使い回す。
 const YEARLY_CHECKPOINTS = [
@@ -785,6 +786,7 @@ function applyCategoriesFromState() {
   CATEGORY_LABEL = Object.fromEntries(state.categories.map((c) => [c.key, c.label]));
   ALL_CATEGORIES = [...state.categories].sort((a, b) => a.sort_order - b.sort_order).map((c) => c.key);
   YEARLY_CATEGORIES = state.categories.filter((c) => c.is_yearly).map((c) => c.key);
+  SPECIAL_ROLE_CATEGORIES = state.categories.filter((c) => c.has_special_role).map((c) => c.key);
   FIELD_VISIBLE_CATEGORIES = state.categories
     .filter((c) => c.show_in_field)
     .sort((a, b) => (a.field_sort_order ?? a.sort_order) - (b.field_sort_order ?? b.sort_order))
@@ -1157,7 +1159,7 @@ function buildCategoryMembersPanel() {
     const headerEl = panel.querySelector('#category-members-header');
     headerEl.innerHTML = `
       <span style="flex:1;min-width:0;">氏名</span>
-      ${ALL_CATEGORIES.map((c) => `<span style="width:90px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      ${ALL_CATEGORIES.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 150 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
     `;
 
     const listEl = panel.querySelector('#category-members-list');
@@ -1169,16 +1171,19 @@ function buildCategoryMembersPanel() {
           const isActive = cm ? cm.is_active : true;
           const isSpecial = cm ? !!cm.is_special : false;
           const isLeader = cm ? !!cm.is_special_leader : false;
-          return `<span style="width:90px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          if (!SPECIAL_ROLE_CATEGORIES.includes(c)) {
+            return `<span style="width:60px;text-align:center;flex-shrink:0;">
+              <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
+            </span>`;
+          }
+          return `<span style="width:150px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--color-ink-soft);">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
-            <span style="display:flex;gap:6px;font-size:10px;color:var(--color-ink-soft);">
-              <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
-                <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
-              </label>
-              <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
-                <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />Ｌ
-              </label>
-            </span>
+            <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
+              <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
+            </label>
+            <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
+              <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />Ｌ
+            </label>
           </span>`;
         }).join('')}
       </li>`).join('');
@@ -1288,6 +1293,9 @@ function buildCategoriesPanel() {
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
           <input type="checkbox" class="category-yearly-checkbox" data-key="${escapeHtml(c.key)}" ${c.is_yearly ? 'checked' : ''} /> 年ごと
         </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-special-role-checkbox" data-key="${escapeHtml(c.key)}" ${c.has_special_role ? 'checked' : ''} /> 神・Ｌ欄を使う
+        </label>
         <button class="icon-btn danger category-delete-btn" data-key="${escapeHtml(c.key)}" title="この区分を削除">×</button>
       </li>`).join('');
 
@@ -1338,6 +1346,16 @@ function buildCategoriesPanel() {
         const c = state.categories.find((cc) => cc.key === key);
         if (c) c.is_yearly = cb.checked;
         await sb.from(T_CATEGORIES).update({ is_yearly: cb.checked }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-special-role-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.has_special_role = cb.checked;
+        await sb.from(T_CATEGORIES).update({ has_special_role: cb.checked }).eq('key', key);
         applyCategoriesFromState();
         renderView();
       });
