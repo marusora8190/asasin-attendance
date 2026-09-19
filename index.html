@@ -2430,12 +2430,11 @@ function renderFieldView(container) {
 
   // 朝の神殿掃除では、当番日（実際の日にち表示）で名簿を絞り込める
   const showDutyDayFilter = state.fieldCategory === 'asagami';
-  if (showDutyDayFilter && !state.fieldDutyDayFilter) state.fieldDutyDayFilter = 1;
+  if (showDutyDayFilter && (!state.fieldDutyDayFilter || state.fieldDutyDayFilter === 'all')) state.fieldDutyDayFilter = 1;
   const dutyDayOptions = [
     { value: '1', label: (state.rosterDay1 && state.rosterDay1.trim()) || '1日目' },
     { value: '2', label: (state.rosterDay2 && state.rosterDay2.trim()) || '2日目' },
     { value: '3', label: (state.rosterDay3 && state.rosterDay3.trim()) || '3日目' },
-    { value: 'all', label: '全体' },
   ].map((opt) => `<option value="${opt.value}" ${String(state.fieldDutyDayFilter ?? '') === opt.value ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`).join('');
 
   // 慰労拝受（中元/歳暮）は「月」の代わりに、選んだ確認回（事前調査/会場外/会場内）で記録する
