@@ -232,6 +232,7 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   border-radius: 4px; padding: 0 3px; margin-right: 3px; vertical-align: middle;
 }
 .field-chip-badge.leader { background: var(--color-gold); }
+.field-chip-badge.day-leader { background: var(--color-navy); }
 .field-checkpoint-time-input {
   width: 70px; box-sizing: border-box; padding: 8px; text-align: center;
   border: 1px solid var(--color-line); border-radius: 8px; font-size: 14px;
@@ -819,7 +820,7 @@ function getCategoryMemberEntries(category) {
       const cm = state.categoryMembers.get(`${category}::${m.id}`);
       const isActive = cm ? cm.is_active : true;
       const sortOrder = cm ? cm.sort_order : m.sort_order;
-      return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader } : null;
+      return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader, _isDayLeader: !!cm?.is_day_leader } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a._catSortOrder - b._catSortOrder);
@@ -1190,7 +1191,7 @@ function buildCategoryMembersPanel() {
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
-      「神」は神名流しなど特別な役割の人、「責」はそのリーダーを表します(名簿に入っている人だけ選べます)。
+      「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します(名簿に入っている人だけ選べます)。
     </p>
     <div style="overflow-x:auto;">
       <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:600px;"></div>
@@ -1202,7 +1203,7 @@ function buildCategoryMembersPanel() {
     const headerEl = panel.querySelector('#category-members-header');
     headerEl.innerHTML = `
       <span style="flex:1;min-width:0;">氏名</span>
-      ${ALL_CATEGORIES.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 150 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      ${ALL_CATEGORIES.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 190 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
     `;
 
     const listEl = panel.querySelector('#category-members-list');
@@ -1214,18 +1215,22 @@ function buildCategoryMembersPanel() {
           const isActive = cm ? cm.is_active : true;
           const isSpecial = cm ? !!cm.is_special : false;
           const isLeader = cm ? !!cm.is_special_leader : false;
+          const isDayLeader = cm ? !!cm.is_day_leader : false;
           if (!SPECIAL_ROLE_CATEGORIES.includes(c)) {
             return `<span style="width:60px;text-align:center;flex-shrink:0;">
               <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
             </span>`;
           }
-          return `<span style="width:150px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--color-ink-soft);">
+          return `<span style="width:190px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--color-ink-soft);">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
             <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
               <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
             </label>
             <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
               <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />責
+            </label>
+            <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
+              <input type="checkbox" class="category-member-day-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isDayLeader ? 'checked' : ''} ${isActive ? '' : 'disabled'} />総
             </label>
           </span>`;
         }).join('')}
@@ -1247,7 +1252,7 @@ function buildCategoryMembersPanel() {
           }
           const key = `${category}::${memberId}`;
           const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
-          const updated = { ...existing, member_id: memberId, category, is_active: false, is_special: false, is_special_leader: false };
+          const updated = { ...existing, member_id: memberId, category, is_active: false, is_special: false, is_special_leader: false, is_day_leader: false };
           state.categoryMembers.set(key, updated);
           await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
           renderList();
@@ -1280,6 +1285,35 @@ function buildCategoryMembersPanel() {
         const updated = { ...existing, member_id: memberId, category, is_special_leader: cb.checked };
         state.categoryMembers.set(key, updated);
         await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+      });
+    });
+
+    listEl.querySelectorAll('.category-member-day-leader-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        const wasChecked = cb.checked;
+
+        if (wasChecked) {
+          // その日全体の責任者は1人だけにする（他の人のチェックを外す）
+          const updates = [];
+          for (const [key, cm] of state.categoryMembers.entries()) {
+            if (cm.category === category && cm.is_day_leader && cm.member_id !== memberId) {
+              const cleared = { ...cm, is_day_leader: false };
+              state.categoryMembers.set(key, cleared);
+              updates.push(cleared);
+            }
+          }
+          if (updates.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(updates, { onConflict: 'member_id,category' });
+        }
+
+        const key = `${category}::${memberId}`;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
+        const updated = { ...existing, member_id: memberId, category, is_day_leader: wasChecked };
+        state.categoryMembers.set(key, updated);
+        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+        renderList();
       });
     });
   }
@@ -2106,6 +2140,7 @@ function renderGridView(container) {
         <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
         <td style="width:90px;min-width:90px;max-width:90px;">
           <div style="display:flex;align-items:center;gap:2px;">
+            ${m._isDayLeader ? '<span title="その日全体の責任者" style="flex-shrink:0;font-size:10px;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;">総</span>' : ''}
             ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="flex-shrink:0;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;">Ｌ</span>' : m._isSpecial ? '<span title="神名流し" style="flex-shrink:0;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;">神</span>' : ''}
             <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
           </div>
@@ -2392,7 +2427,8 @@ const FIELD_DEPT_GROUPS = [
   { key: 'mokko', label: '木工班', depts: ['木工班'] },
   { key: 'tekko', label: '鉄工班', depts: ['鉄工班'] },
   { key: 'kucho', label: '空調衛生係', depts: ['空調衛生係'] },
-  { key: 'all', label: '全体', depts: null },
+  { key: 'all', label: '日全体', depts: null, respectDutyDay: true },
+  { key: 'dept-all', label: '課全体', depts: null, respectDutyDay: false },
 ];
 
 function fieldSavedGroupKey(category, deptKey, fyId, seq) {
@@ -2446,12 +2482,12 @@ function renderFieldView(container) {
   }).join('');
 
   const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
-  // 「全体」タブは、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する
-  let orderedMembers = activeGroup.key === 'all'
+  // 部署の絞り込みがないタブ（日全体・課全体）は、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する
+  let orderedMembers = !activeGroup.depts
     ? getCategoryMemberEntries(state.fieldCategory)
     : getOrderedMembersForCategory(state.fieldCategory)
         .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
-  if (showDutyDayFilter && state.fieldDutyDayFilter && state.fieldDutyDayFilter !== 'all') {
+  if (showDutyDayFilter && state.fieldDutyDayFilter && state.fieldDutyDayFilter !== 'all' && activeGroup.respectDutyDay !== false) {
     orderedMembers = orderedMembers.filter((m) => effectiveDutyDay(m) === state.fieldDutyDayFilter);
   }
 
@@ -2461,8 +2497,11 @@ function renderFieldView(container) {
     const isPreAbsent = useCheckpoints && state.fieldCheckpoint !== 1 &&
       state.attendance.get(attKey(m.id, state.fieldCategory, 1)) === '×';
     const chipCls = ['field-chip', status === '○' ? 'filled' : '', isPreAbsent ? 'pre-absent' : ''].filter(Boolean).join(' ');
-    const badge = m._isSpecialLeader ? '<span class="field-chip-badge leader">責任</span>' : m._isSpecial ? '<span class="field-chip-badge">神名</span>' : '';
-    return `<button class="${chipCls}" data-member="${m.id}">${badge}${escapeHtml(m.name)}</button>`;
+    const badges = [
+      m._isDayLeader ? '<span class="field-chip-badge day-leader">責任者</span>' : '',
+      m._isSpecialLeader ? '<span class="field-chip-badge leader">神責</span>' : (m._isSpecial ? '<span class="field-chip-badge">神名</span>' : ''),
+    ].filter(Boolean).join('');
+    return `<button class="${chipCls}" data-member="${m.id}">${badges}${escapeHtml(m.name)}</button>`;
   }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
 
   container.innerHTML = `
