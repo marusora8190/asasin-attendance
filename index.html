@@ -2429,9 +2429,6 @@ function renderFieldView(container) {
       <div class="field-controls no-print" style="margin-top:8px;">
         <select id="field-fy-select">${fyOptions}</select>
         ${isYearly ? (useCheckpoints ? `<select id="field-checkpoint-select">${checkpointOptions}</select>` : '') : `<select id="field-month-select">${monthOptions}</select>`}
-        ${useCheckpoints && state.fieldCheckpoint !== 1 ? `<input type="text" id="field-checkpoint-time-input" class="field-checkpoint-time-input" value="${escapeHtml(state.checkpointTimes.get(`${state.fieldCategory}::${state.fiscalYearId}::${state.fieldCheckpoint}`) ?? '')}" placeholder="時刻" />
-        <button type="button" class="btn-dark" id="field-checkpoint-time-save-btn" style="padding:8px 14px;">時刻を保存</button>
-        <span id="checkpoint-time-status" style="font-size:11px;color:var(--color-present);"></span>` : ''}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
@@ -2479,27 +2476,6 @@ function renderFieldView(container) {
     checkpointSelectEl.addEventListener('change', (e) => {
       state.fieldCheckpoint = Number(e.target.value);
       renderView();
-    });
-  }
-  const checkpointTimeInputEl = document.getElementById('field-checkpoint-time-input');
-  if (checkpointTimeInputEl) {
-    // タップで他のボタンに移る際、blurより先に再描画されて消えてしまうのを防ぐため、
-    // 入力の都度いったんそのままstateに反映しつつ、少し待ってから自動保存もする
-    checkpointTimeInputEl.addEventListener('input', () => {
-      const key = `${state.fieldCategory}::${state.fiscalYearId}::${state.fieldCheckpoint}`;
-      state.checkpointTimes.set(key, checkpointTimeInputEl.value);
-      scheduleCheckpointTimeSave(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
-    });
-    checkpointTimeInputEl.addEventListener('blur', () => {
-      if (checkpointTimeSaveTimer) clearTimeout(checkpointTimeSaveTimer);
-      saveCheckpointTime(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
-    });
-  }
-  const checkpointTimeSaveBtn = document.getElementById('field-checkpoint-time-save-btn');
-  if (checkpointTimeSaveBtn) {
-    checkpointTimeSaveBtn.addEventListener('click', () => {
-      if (checkpointTimeSaveTimer) clearTimeout(checkpointTimeSaveTimer);
-      saveCheckpointTime(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
     });
   }
   document.getElementById('field-cat-select').addEventListener('change', (e) => {
