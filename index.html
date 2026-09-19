@@ -1155,7 +1155,7 @@ function buildCategoryMembersPanel() {
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
-      「神」は神名流しなど特別な役割の人、「Ｌ」はそのリーダーを表します(名簿に入っている人だけ選べます)。
+      「神」は神名流しなど特別な役割の人、「責」はそのリーダーを表します(名簿に入っている人だけ選べます)。
     </p>
     <div style="overflow-x:auto;">
       <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:600px;"></div>
@@ -1190,7 +1190,7 @@ function buildCategoryMembersPanel() {
               <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
             </label>
             <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
-              <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />Ｌ
+              <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />責
             </label>
           </span>`;
         }).join('')}
@@ -2397,7 +2397,7 @@ function renderFieldView(container) {
     const isPreAbsent = useCheckpoints && state.fieldCheckpoint !== 1 &&
       state.attendance.get(attKey(m.id, state.fieldCategory, 1)) === '×';
     const chipCls = ['field-chip', status === '○' ? 'filled' : '', isPreAbsent ? 'pre-absent' : ''].filter(Boolean).join(' ');
-    const badge = m._isSpecialLeader ? '<span class="field-chip-badge leader">Ｌ</span>' : m._isSpecial ? '<span class="field-chip-badge">神</span>' : '';
+    const badge = m._isSpecialLeader ? '<span class="field-chip-badge leader">責任</span>' : m._isSpecial ? '<span class="field-chip-badge">神名</span>' : '';
     return `<button class="${chipCls}" data-member="${m.id}">${badge}${escapeHtml(m.name)}</button>`;
   }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
 
