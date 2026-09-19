@@ -209,7 +209,6 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-view { max-width: 480px; margin: 0 auto; padding: 4px 16px 60px; }
 .field-header { margin-bottom: 12px; }
 .field-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.field-cat-tabs { display: flex; gap: 6px; }
 .field-dept-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .field-dept-tabs button {
   padding: 6px 12px; font-size: 12px; border-radius: 999px; border: 1px solid var(--color-line);
@@ -218,11 +217,6 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-dept-tabs button.active { background: var(--color-gold); color: white; border-color: var(--color-gold); font-weight: 500; }
 .field-dept-tabs button.saved { border-color: var(--color-present); color: var(--color-present); }
 .field-dept-tabs button.saved.active { background: var(--color-present); color: white; border-color: var(--color-present); }
-.field-cat-tabs button {
-  padding: 8px 14px; font-size: 14px; border-radius: 999px; border: 1px solid var(--color-line);
-  background: white; color: var(--color-ink-soft);
-}
-.field-cat-tabs button.active { background: var(--color-navy); color: white; border-color: var(--color-navy); font-weight: 500; }
 .field-controls select { border: 1px solid var(--color-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: white; }
 .field-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
 .field-chip {
@@ -231,6 +225,17 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .field-chip.filled { border-color: var(--color-present); background: var(--color-present); color: white; font-weight: 700; }
+.field-chip.pre-absent { border-color: var(--color-absent); background: var(--color-absent); color: white; font-weight: 700; }
+.field-chip.pre-absent.filled { border-color: var(--color-absent); background: var(--color-absent); }
+.field-chip-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; color: white; background: var(--color-accent);
+  border-radius: 4px; padding: 0 3px; margin-right: 3px; vertical-align: middle;
+}
+.field-chip-badge.leader { background: var(--color-gold); }
+.field-checkpoint-time-input {
+  width: 70px; box-sizing: border-box; padding: 8px; text-align: center;
+  border: 1px solid var(--color-line); border-radius: 8px; font-size: 14px;
+}
 .field-action-row { display: flex; gap: 10px; margin-top: 20px; }
 .field-save-btn {
   display: block; flex: 1; padding: 14px;
@@ -242,6 +247,11 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   display: block; flex: 1; padding: 14px;
   background: white; color: var(--color-present); border: 2px solid var(--color-present); border-radius: 10px;
   font-size: 16px; font-weight: 500;
+}
+.field-clear-btn {
+  display: block; flex: 1; padding: 14px 4px;
+  background: white; color: var(--color-absent); border: 2px solid var(--color-absent); border-radius: 10px;
+  font-size: 13px; font-weight: 500; white-space: nowrap;
 }
 
 .context-menu {
@@ -266,6 +276,16 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .modal-box h2 { margin: 0 0 4px; font-size: 16px; color: var(--color-navy); }
 .modal-hint { font-size: 11px; color: var(--color-ink-soft); margin: 0 0 10px; }
 .modal-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.ceremony-table { border-collapse: collapse; font-size: 12px; min-width: 1000px; }
+.ceremony-table th, .ceremony-table td { border: 1px solid var(--color-line); padding: 6px 4px; text-align: center; white-space: nowrap; }
+.ceremony-table thead th { background: var(--color-paper); font-weight: 500; }
+.ceremony-table td input { font-size: 12px; padding: 2px; background: transparent; white-space: nowrap; }
+.ceremony-table td input:focus { background: white; outline: 1px solid var(--color-accent); }
+.ceremony-table .ceremony-year-col {
+  position: sticky; left: 0; z-index: 2; background: var(--color-panel);
+  box-shadow: 2px 0 4px -2px rgba(0,0,0,0.15);
+}
+.ceremony-table thead th.ceremony-year-col { z-index: 3; background: var(--color-paper); }
 .modal-list li { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .modal-list .duty-day-select { flex-shrink: 0; width: 78px; font-size: 12px; padding: 3px 2px; }
 .modal-list input[type=text] { min-width: 0; }
@@ -416,6 +436,9 @@ const T_ATTENDANCE_ARCHIVE = 'asagami_attendance_archive';
 const T_DUTY_POSITIONS = 'asagami_duty_positions';
 const T_CATEGORY_MEMBERS = 'asagami_category_members';
 const T_CATEGORIES = 'asagami_categories';
+const T_CONFIG = 'asagami_config';
+const T_CEREMONY_TIMES = 'asagami_ceremony_times';
+const T_CHECKPOINT_TIMES = 'asagami_checkpoint_times';
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
@@ -423,7 +446,17 @@ const POSITION_ORDER = ['営繕課長','特別ひのきしん者','嘱託','勤�
 let CATEGORY_LABEL = {}; // {key: label} 起動時にDBから読み込む
 let ALL_CATEGORIES = []; // 区分キーの一覧（並び順）
 let YEARLY_CATEGORIES = []; // これらは「月」ではなく「立教年」ごとに1回の記録
+let SPECIAL_ROLE_CATEGORIES = []; // 「神」「Ｌ」（神名流し担当・リーダー）を使う区分
+let NO_CHECKPOINT_YEARLY_CATEGORIES = []; // 年ごとだが「事前調査/会場外/会場内」の3回チェックは使わない区分
+// 年ごとの区分は、1年に3回（事前調査／会場外／会場内）まで出欠確認できる。
+// 内部的には month_seq の 1/2/3 をこの3回の記録として使い回す。
+const YEARLY_CHECKPOINTS = [
+  { seq: 1, label: '事前調査' },
+  { seq: 2, label: '会場外' },
+  { seq: 3, label: '会場内' },
+];
 let FIELD_VISIBLE_CATEGORIES = []; // 現場入力（スマホ用）に表示する区分
+let GRID_VISIBLE_CATEGORIES = []; // 出欠入力（デスクトップ）に表示する区分
 const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二班', '現場第三班', '製材班', '大工班', '木工班', '鉄工班', '空調衛生係'];
 const ROWS_PER_BLOCK = 19;
 
@@ -491,19 +524,26 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, categories: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, categories: false, ceremonyTimes: false, dutyDayLabels: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
   archiveRows: [], // 選択中の年度・区分の保管記録
   bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
   yearlyAttendance: new Map(), // 慰労拝受（中元/歳暮）用: `${memberId}-${category}-${fiscalYearId}` -> '○'|'×'
+  checkpointTimes: new Map(), // `${category}::${fiscalYearId}::${checkpoint}` -> 会場外/会場内チェックの共通時刻
   yearlyAttendanceLoadedCategory: null,
   bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
+  bulkActionCheckpoint: 1, // 慰労拝受の一括操作の対象（事前調査/会場外/会場内）
   categoryMembers: new Map(), // `${category}::${memberId}` -> {member_id, category, sort_order, is_active}
+  ceremonyTimes: new Map(), // reiki_year -> {chugen_checkin, ...}
+  ceremonyTimesYears: [],
+  ceremonyTimesLoaded: false,
   categories: [], // asagami_categories の内容（区分の一覧・並び順・設定）
   fieldCategory: 'asagami',
   fieldMonth: new Date().getMonth() + 1,
+  fieldCheckpoint: 1, // 慰労拝受の現場入力での対象（事前調査/会場外/会場内）
+  fieldDutyDayFilter: null, // 朝の神殿掃除の現場入力での当番日絞り込み（1/2/3またはnull=全員）
   fieldDeptFilter: 'eizen-shomu',
   fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
   fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
@@ -739,6 +779,16 @@ async function loadFiscalYearsAndMembers() {
   state.categories = catData ?? [];
   applyCategoriesFromState();
 
+  const { data: checkpointTimeData } = await sb.from(T_CHECKPOINT_TIMES).select('*');
+  state.checkpointTimes = new Map((checkpointTimeData ?? []).map((r) => [`${r.category}::${r.fiscal_year_id}::${r.checkpoint}`, r.time_value]));
+
+  const { data: configData } = await sb.from(T_CONFIG).select('day1_label,day2_label,day3_label').eq('id', true).maybeSingle();
+  if (configData) {
+    state.rosterDay1 = configData.day1_label ?? state.rosterDay1;
+    state.rosterDay2 = configData.day2_label ?? state.rosterDay2;
+    state.rosterDay3 = configData.day3_label ?? state.rosterDay3;
+  }
+
   await loadAttendanceForFiscalYear();
 }
 
@@ -747,11 +797,18 @@ function applyCategoriesFromState() {
   CATEGORY_LABEL = Object.fromEntries(state.categories.map((c) => [c.key, c.label]));
   ALL_CATEGORIES = [...state.categories].sort((a, b) => a.sort_order - b.sort_order).map((c) => c.key);
   YEARLY_CATEGORIES = state.categories.filter((c) => c.is_yearly).map((c) => c.key);
+  SPECIAL_ROLE_CATEGORIES = state.categories.filter((c) => c.has_special_role).map((c) => c.key);
+  NO_CHECKPOINT_YEARLY_CATEGORIES = state.categories.filter((c) => c.is_yearly && c.has_checkpoints === false).map((c) => c.key);
   FIELD_VISIBLE_CATEGORIES = state.categories
     .filter((c) => c.show_in_field)
     .sort((a, b) => (a.field_sort_order ?? a.sort_order) - (b.field_sort_order ?? b.sort_order))
     .map((c) => c.key);
+  GRID_VISIBLE_CATEGORIES = state.categories
+    .filter((c) => c.show_in_grid)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((c) => c.key);
   if (!ALL_CATEGORIES.includes(state.category)) state.category = ALL_CATEGORIES[0] ?? state.category;
+  if (!GRID_VISIBLE_CATEGORIES.includes(state.category)) state.category = GRID_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.category;
   if (!ALL_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
 }
 
@@ -762,7 +819,7 @@ function getCategoryMemberEntries(category) {
       const cm = state.categoryMembers.get(`${category}::${m.id}`);
       const isActive = cm ? cm.is_active : true;
       const sortOrder = cm ? cm.sort_order : m.sort_order;
-      return isActive ? { ...m, _catSortOrder: sortOrder } : null;
+      return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a._catSortOrder - b._catSortOrder);
@@ -799,10 +856,11 @@ function renderHelpView(container) {
         <h2>① 出欠入力</h2>
         <p>メンバーごとに、区分ごとの出欠(○×)を入力する画面です。</p>
         <ul>
-          <li>上部のタブ(朝の神殿掃除・月例参拝・慰労拝受(中元)・慰労拝受(歳暮)など)で、入力する区分を切り替えます。区分の種類は「マスター」タブの「区分（タブ）を管理」で追加・変更できます。</li>
+          <li>上部のタブ(朝の神殿掃除・月例参拝・慰労拝受(中元)・慰労拝受(歳暮)など)で、入力する区分を切り替えます。区分の種類は「マスター」タブの「区分（タブ）を管理」で追加・変更でき、出欠入力画面に表示するかどうかも区分ごとに選べます。</li>
           <li>「朝の神殿掃除」「月例参拝」など月ごとの区分は、各月のマスをクリックすると空欄→○→×→空欄の順に切り替わります。</li>
-          <li>「慰労拝受(中元)」「慰労拝受(歳暮)」など「年ごと」に設定された区分は、月の代わりに「立教○○○年」の列が並びます(1年に1回の記録)。</li>
-          <li>氏名・部署・立場はその場で書き換えられます(部署・立場はプルダウンから選択)。</li>
+          <li>「年ごと」に設定された区分は、月の代わりに「立教○○○年」の列が並びます。「慰労拝受(中元)」「慰労拝受(歳暮)」のように「①事前調査 ②会場外 ③会場内」の3回チェックできる区分と、シンプルに年に1回だけの区分(例:にをいがけデー)があり、どちらにするかは区分ごとに設定できます。3回チェックできる区分では、事前調査で×だった人は、会場外・会場内の欄で氏名が赤く表示されます。</li>
+          <li>「会場外」「会場内」の列には、その回・その年の共通の時刻を1つだけ入力できます(名前ごとではありません)。「0812」のように入力すると自動で「8:12」に変換されます。</li>
+          <li>氏名・部署・立場はその場で書き換えられます(部署・立場はプルダウンから選択)。「神」「Ｌ」のバッジが付く人は、その区分で「神名流しなど特別な役割の人」「そのリーダー」であることを示します(該当する区分のみ)。</li>
           <li>行の左端の「⠿」を掴んでドラッグすると、メンバーの並び順を変えられます。「↑」「↓」ボタンでも1つずつ動かせます。<strong>この並び順は区分ごとに別々に管理されています。</strong></li>
           <li>「＋年度追加」で新しい年度を追加できます。今年度のデータが消えることはありません。</li>
           <li>月ごとの区分では「○月分 全員出席」「○月分未入力を○にする」「この月をクリア」、年ごとの区分では「立教○年分 全員出席」などの一括操作ができます。</li>
@@ -816,10 +874,11 @@ function renderHelpView(container) {
         <p>スマホで、現場にいながら出欠(主に出席のチェック)を入力するための画面です。<strong>合言葉によるログインは不要</strong>で、URLを開けば直接使えます。</p>
         <ul>
           <li>URLの末尾に <code>?field=1</code> を付けて開くと、他の画面を含まないスマホ専用の表示になります。ホーム画面に追加しておくと便利です。</li>
-          <li>上部のタブで区分を切り替えます。表示される区分は「マスター」の「区分（タブ）を管理」で「スマホに表示」にチェックが入っているものだけです。</li>
-          <li>「年」「月」のプルダウンで対象を選びます。「年」は立教○○○年の表記で、<strong>まだ作られていない先の年度を選んでも自動的にその年度が作成されます</strong>(常に最新から2年先まで選べます)。年ごとの区分では「月」の選択は出ません。</li>
+          <li>上部のプルダウン(リスト)で区分を切り替えます。リストに出る区分は「マスター」の「区分（タブ）を管理」で「スマホのリストに表示」にチェックが入っているものだけです。</li>
+          <li>「年」は立教○○○年の表記で、<strong>まだ作られていない先の年度を選んでも自動的にその年度が作成されます</strong>(常に最新から2年先まで選べます)。3回チェックできる年ごとの区分では、「月」の代わりに「事前調査」「会場外」「会場内」から選びます(年1回だけの区分では、この選択自体が出ません)。</li>
+          <li>「事前調査」で×だった人は、「会場外」「会場内」を確認するとき、名前が赤く表示されて見分けられます。</li>
           <li>下の「営繕課・庶務係」「現場第一班」…「空調衛生係」「全体」のタブで、表示する班を絞り込めます。「全体」を選ぶと、出欠入力画面と同じ並び順で全員が表示されます。</li>
-          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。</li>
+          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。「神名」「責任」のバッジが付く人は、その区分での特別な役割・リーダーです。</li>
           <li>「全員出席」でその場に表示されている全員を出席にできます。入力が終わったら「この内容で保存」を押してください。保存した班のタブには✓が付き、内容を変えると✓は消えます。</li>
           <li>右上の「Update」ボタンで、キャッシュを無視して最新版を読み込み直せます。</li>
         </ul>
@@ -865,8 +924,9 @@ function renderHelpView(container) {
           <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
           <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
           <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
-          <li><strong>区分の名簿を管理</strong>：区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。</li>
-          <li><strong>区分（タブ）を管理</strong>：出欠入力・現場入力で使う区分そのものを管理します。名前の変更、並び替え、現場入力(スマホ)への表示・非表示、月ごと/年ごとの切り替え、新しい区分の追加・削除ができます。</li>
+          <li><strong>区分の名簿を管理</strong>：区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。「神」「Ｌ(責)」欄がある区分では、特別な役割の人・そのリーダーもここで設定します。見出し行は上部に固定されています。</li>
+          <li><strong>区分（タブ）を管理</strong>：出欠入力・現場入力で使う区分そのものを管理します。名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、新しい区分の追加・削除ができます。並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
+          <li><strong>慰労拝受 記録（時間）</strong>：慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。時刻は「0812」のように入力すると自動で「8:12」に変換されます。入力中にEnterキーを押すと、右隣のセルにカーソルが移動します。一番左の年号の列は、横にスクロールしても常に見える位置に固定されています。</li>
         </ul>
       </section>
 
@@ -904,6 +964,8 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
         <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
         <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
+        <button class="btn-dark" id="edit-ceremony-times-btn">慰労拝受 記録（時間）</button>
+        <button class="btn-dark" id="edit-duty-day-labels-btn">当番日の表示名</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -937,6 +999,17 @@ function renderMasterView(container) {
     state.masterOpen.categories = !state.masterOpen.categories;
     renderMasterPanels();
   });
+  document.getElementById('edit-ceremony-times-btn').addEventListener('click', async () => {
+    state.masterOpen.ceremonyTimes = !state.masterOpen.ceremonyTimes;
+    if (state.masterOpen.ceremonyTimes && !state.ceremonyTimesLoaded) {
+      await loadCeremonyTimes();
+    }
+    renderMasterPanels();
+  });
+  document.getElementById('edit-duty-day-labels-btn').addEventListener('click', () => {
+    state.masterOpen.dutyDayLabels = !state.masterOpen.dutyDayLabels;
+    renderMasterPanels();
+  });
 
   renderMasterPanels();
 }
@@ -952,6 +1025,28 @@ function renderMasterPanels() {
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
   if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel());
   if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
+  if (state.masterOpen.ceremonyTimes) panelsEl.appendChild(buildCeremonyTimesPanel());
+  if (state.masterOpen.dutyDayLabels) panelsEl.appendChild(buildDutyDayLabelsPanel());
+}
+
+function buildDutyDayLabelsPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.innerHTML = `
+    <h2>当番日の表示名</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      朝の神殿掃除の当番表・現場入力(スマホ用)で使う、1〜3日目の表示名です。実際の日にち(例: 21日)を入れておくと分かりやすくなります。
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="field" style="min-width:100px;"><label>1日目</label><input type="text" id="master-day1" value="${escapeHtml(state.rosterDay1)}" placeholder="例: 21日" style="width:100%;" /></div>
+      <div class="field" style="min-width:100px;"><label>2日目</label><input type="text" id="master-day2" value="${escapeHtml(state.rosterDay2)}" placeholder="例: 22日" style="width:100%;" /></div>
+      <div class="field" style="min-width:100px;"><label>3日目</label><input type="text" id="master-day3" value="${escapeHtml(state.rosterDay3)}" placeholder="例: 23日" style="width:100%;" /></div>
+    </div>
+  `;
+  panel.querySelector('#master-day1').addEventListener('blur', (e) => { state.rosterDay1 = e.target.value; saveDutyDayLabels(); renderView(); });
+  panel.querySelector('#master-day2').addEventListener('blur', (e) => { state.rosterDay2 = e.target.value; saveDutyDayLabels(); renderView(); });
+  panel.querySelector('#master-day3').addEventListener('blur', (e) => { state.rosterDay3 = e.target.value; saveDutyDayLabels(); renderView(); });
+  return panel;
 }
 
 function buildDutyDayPanel() {
@@ -1089,31 +1184,49 @@ function buildMemberDeptPanel() {
 function buildCategoryMembersPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '560px';
+  panel.style.maxWidth = '760px';
   panel.innerHTML = `
     <h2>区分の名簿を管理</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
-      退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。
+      退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
+      「神」は神名流しなど特別な役割の人、「責」はそのリーダーを表します(名簿に入っている人だけ選べます)。
     </p>
-    <ul class="modal-list" id="category-members-list" style="max-height:440px;overflow-y:auto;"></ul>
+    <div style="overflow-x:auto;">
+      <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:600px;"></div>
+      <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;min-width:600px;"></ul>
+    </div>
   `;
 
   function renderList() {
+    const headerEl = panel.querySelector('#category-members-header');
+    headerEl.innerHTML = `
+      <span style="flex:1;min-width:0;">氏名</span>
+      ${ALL_CATEGORIES.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 150 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+    `;
+
     const listEl = panel.querySelector('#category-members-list');
-    listEl.innerHTML = `
-      <li style="justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;">
-        <span style="flex:1;min-width:0;">氏名</span>
-        ${ALL_CATEGORIES.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
-      </li>
-    ` + state.members.map((m) => `
+    listEl.innerHTML = state.members.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
         ${ALL_CATEGORIES.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
-          return `<span style="width:60px;text-align:center;flex-shrink:0;">
+          const isSpecial = cm ? !!cm.is_special : false;
+          const isLeader = cm ? !!cm.is_special_leader : false;
+          if (!SPECIAL_ROLE_CATEGORIES.includes(c)) {
+            return `<span style="width:60px;text-align:center;flex-shrink:0;">
+              <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
+            </span>`;
+          }
+          return `<span style="width:150px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--color-ink-soft);">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
+            <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
+              <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
+            </label>
+            <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
+              <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />責
+            </label>
           </span>`;
         }).join('')}
       </li>`).join('');
@@ -1124,6 +1237,7 @@ function buildCategoryMembersPanel() {
         const category = cb.dataset.category;
         if (cb.checked) {
           await addMemberToCategory(memberId, category);
+          renderList();
         } else {
           const m = state.members.find((mm) => mm.id === memberId);
           const label = m && m.name.trim() ? m.name : 'このメンバー';
@@ -1133,11 +1247,39 @@ function buildCategoryMembersPanel() {
           }
           const key = `${category}::${memberId}`;
           const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
-          const updated = { ...existing, member_id: memberId, category, is_active: false };
+          const updated = { ...existing, member_id: memberId, category, is_active: false, is_special: false, is_special_leader: false };
           state.categoryMembers.set(key, updated);
           await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-          renderView();
+          renderList();
         }
+      });
+    });
+
+    listEl.querySelectorAll('.category-member-special-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        const key = `${category}::${memberId}`;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
+        const updated = { ...existing, member_id: memberId, category, is_special: cb.checked };
+        if (!cb.checked) updated.is_special_leader = false; // 特別を外したらリーダーも外す
+        state.categoryMembers.set(key, updated);
+        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+        renderList();
+      });
+    });
+
+    listEl.querySelectorAll('.category-member-leader-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        const key = `${category}::${memberId}`;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true, is_special: true };
+        const updated = { ...existing, member_id: memberId, category, is_special_leader: cb.checked };
+        state.categoryMembers.set(key, updated);
+        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
       });
     });
   }
@@ -1170,7 +1312,7 @@ function buildCategoriesPanel() {
     <ul class="modal-list" id="grid-order-list" style="max-height:220px;overflow-y:auto;"></ul>
 
     <h2 style="margin-top:20px;">現場入力（スマホ用）の並び順</h2>
-    <p class="modal-hint" style="margin-bottom:6px;">「スマホに表示」がオンの区分だけが並びます。</p>
+    <p class="modal-hint" style="margin-bottom:6px;">「スマホのリストに表示」がオンの区分だけが並びます。</p>
     <ul class="modal-list" id="field-order-list" style="max-height:220px;overflow-y:auto;"></ul>
   `;
 
@@ -1189,10 +1331,16 @@ function buildCategoriesPanel() {
       <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
         <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
-          <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホに表示
+          <input type="checkbox" class="category-grid-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_grid ? 'checked' : ''} /> 出欠入力に表示
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホのリストに表示
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
           <input type="checkbox" class="category-yearly-checkbox" data-key="${escapeHtml(c.key)}" ${c.is_yearly ? 'checked' : ''} /> 年ごと
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+          <input type="checkbox" class="category-special-role-checkbox" data-key="${escapeHtml(c.key)}" ${c.has_special_role ? 'checked' : ''} /> 神・Ｌ欄を使う
         </label>
         <button class="icon-btn danger category-delete-btn" data-key="${escapeHtml(c.key)}" title="この区分を削除">×</button>
       </li>`).join('');
@@ -1211,7 +1359,7 @@ function buildCategoriesPanel() {
         <span style="flex:1;min-width:0;">${escapeHtml(c.label)}</span>
         <button class="icon-btn field-order-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
         <button class="icon-btn field-order-down-btn" data-key="${escapeHtml(c.key)}" ${i === byFieldOrder.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
-      </li>`).join('') || `<li style="color:var(--color-ink-soft);">「スマホに表示」がオンの区分がありません</li>`;
+      </li>`).join('') || `<li style="color:var(--color-ink-soft);">「スマホのリストに表示」がオンの区分がありません</li>`;
 
     listEl.querySelectorAll('.category-label-input').forEach((input) => {
       input.addEventListener('blur', async () => {
@@ -1220,6 +1368,16 @@ function buildCategoriesPanel() {
         const c = state.categories.find((cc) => cc.key === key);
         if (c) c.label = val;
         await sb.from(T_CATEGORIES).update({ label: val }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-grid-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.show_in_grid = cb.checked;
+        await sb.from(T_CATEGORIES).update({ show_in_grid: cb.checked }).eq('key', key);
         applyCategoriesFromState();
         renderView();
       });
@@ -1244,6 +1402,16 @@ function buildCategoriesPanel() {
         const c = state.categories.find((cc) => cc.key === key);
         if (c) c.is_yearly = cb.checked;
         await sb.from(T_CATEGORIES).update({ is_yearly: cb.checked }).eq('key', key);
+        applyCategoriesFromState();
+        renderView();
+      });
+    });
+    listEl.querySelectorAll('.category-special-role-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const key = cb.dataset.key;
+        const c = state.categories.find((cc) => cc.key === key);
+        if (c) c.has_special_role = cb.checked;
+        await sb.from(T_CATEGORIES).update({ has_special_role: cb.checked }).eq('key', key);
         applyCategoriesFromState();
         renderView();
       });
@@ -1321,6 +1489,119 @@ function buildCategoriesPanel() {
   });
 
   renderList();
+  return panel;
+}
+
+// ==================== 慰労拝受 記録（時間） ====================
+const CEREMONY_TIME_FIELDS = [
+  { key: 'checkin', label: '出欠確認時間' },
+  { key: 'lineup', label: '廊下整列時間' },
+  { key: 'end', label: '部終了時間' },
+];
+
+async function loadCeremonyTimes() {
+  const currentMax = state.fiscalYears.length > 0
+    ? Math.max(...state.fiscalYears.map((fy) => fy.start_reiki_year))
+    : (new Date().getFullYear() - 1837);
+  const years = [0, 1, 2, 3, 4].map((i) => currentMax - i);
+  state.ceremonyTimesYears = years;
+
+  // 過去5年より古い記録は自動的に削除する
+  await sb.from(T_CEREMONY_TIMES).delete().lt('reiki_year', currentMax - 4);
+
+  const { data } = await sb.from(T_CEREMONY_TIMES).select('*').in('reiki_year', years);
+  state.ceremonyTimes = new Map((data ?? []).map((r) => [r.reiki_year, r]));
+  state.ceremonyTimesLoaded = true;
+}
+
+function buildCeremonyTimesPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '1300px';
+  panel.innerHTML = `
+    <h2>慰労拝受 記録（時間）</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      慰労拝受(中元・歳暮)の各種時間を年度ごとに記録します。過去5年分だけ保存され、
+      新しい年度になると自動的に一番古い年の記録が消え、最新の年が一番上に追加されます。
+    </p>
+    <div style="overflow-x:auto;">
+      <table class="ceremony-table" id="ceremony-times-table"></table>
+    </div>
+  `;
+
+  function renderTable() {
+    const tableEl = panel.querySelector('#ceremony-times-table');
+    const fieldHeaders = `<th>日付</th>` + CEREMONY_TIME_FIELDS.map((f) => `<th>${f.label}</th>`).join('');
+    const rows = state.ceremonyTimesYears.map((y) => {
+      const rec = state.ceremonyTimes.get(y) ?? {};
+      const cells = ['chugen', 'seibo'].flatMap((cat) => {
+        const dateCol = `${cat}_date`;
+        const dateCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${dateCol}" value="${escapeHtml(rec[dateCol] || '')}" placeholder="例: 8/1" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
+        const fieldCells = CEREMONY_TIME_FIELDS.map((f) => {
+          const col = `${cat}_${f.key}`;
+          return `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${col}" value="${escapeHtml(rec[col] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
+        }).join('');
+        const joyuuCol = `${cat}_joyuu`;
+        const joyuuCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${joyuuCol}" value="${escapeHtml(rec[joyuuCol] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
+        const noteCol = `${cat}_note`;
+        const noteCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${noteCol}" value="${escapeHtml(rec[noteCol] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
+        return [dateCell, fieldCells, joyuuCell, noteCell];
+      });
+      return `<tr><td class="ceremony-year-col" style="font-weight:500;padding:4px 8px;">立教${y}年</td>${cells.join('')}</tr>`;
+    }).join('');
+
+    tableEl.innerHTML = `
+      <thead>
+        <tr>
+          <th rowspan="2" class="ceremony-year-col"></th>
+          <th colspan="4">勤務者慰労拝受（中元）</th>
+          <th rowspan="2">常傭拝受時間</th>
+          <th rowspan="2">備考</th>
+          <th colspan="4">勤務者慰労拝受（歳暮）</th>
+          <th rowspan="2">常傭拝受時間</th>
+          <th rowspan="2">備考</th>
+        </tr>
+        <tr>${fieldHeaders}${fieldHeaders}</tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    `;
+
+    const allTimeInputs = Array.from(tableEl.querySelectorAll('.ceremony-time-input'));
+    allTimeInputs.forEach((input, idx) => {
+      input.addEventListener('blur', async () => {
+        const year = Number(input.dataset.year);
+        const col = input.dataset.col;
+        const isDateField = col.endsWith('_date') || col.endsWith('_note');
+        const value = isDateField ? input.value.trim() : formatTimeInputValue(input.value);
+        input.value = value;
+        const existing = state.ceremonyTimes.get(year) ?? { reiki_year: year };
+        existing[col] = value;
+        state.ceremonyTimes.set(year, existing);
+        await sb.from(T_CEREMONY_TIMES).upsert({ reiki_year: year, [col]: value }, { onConflict: 'reiki_year' });
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const next = allTimeInputs[idx + 1];
+          if (next) next.focus(); else input.blur();
+        }
+      });
+    });
+  }
+
+// 「0812」のような3〜4桁の数字を「8:12」の時刻表記に変換する。それ以外はそのまま返す
+function formatTimeInputValue(raw) {
+  const trimmed = raw.trim();
+  if (/^\d{3,4}$/.test(trimmed)) {
+    const padded = trimmed.padStart(4, '0');
+    const hour = parseInt(padded.slice(0, 2), 10);
+    const minute = padded.slice(2, 4);
+    return `${hour}:${minute}`;
+  }
+  return raw;
+}
+
+  renderTable();
   return panel;
 }
 
@@ -1468,33 +1749,35 @@ function renderArchiveView(container) {
     });
   });
 }
-function yearlyAttKey(memberId, category, fiscalYearId) {
-  return `${memberId}-${category}-${fiscalYearId}`;
+function yearlyAttKey(memberId, category, fiscalYearId, checkpoint) {
+  return `${memberId}-${category}-${fiscalYearId}-${checkpoint}`;
 }
 
 async function loadYearlyAttendance(category) {
   const { data } = await sb.from(T_ATTENDANCE)
-    .select('member_id,fiscal_year_id,status')
+    .select('member_id,fiscal_year_id,month_seq,status')
     .eq('category', category)
-    .eq('month_seq', 1);
-  state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id), r.status]));
+    .in('month_seq', YEARLY_CHECKPOINTS.map((cp) => cp.seq));
+  state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id, r.month_seq), r.status]));
   state.yearlyAttendanceLoadedCategory = category;
 }
 
 function computeYearlySummary(memberId, category) {
   let present = 0, absent = 0;
   for (const fy of state.fiscalYears) {
-    const s = state.yearlyAttendance.get(yearlyAttKey(memberId, category, fy.id));
-    if (s === '○') present++;
-    if (s === '×') absent++;
+    for (const cp of YEARLY_CHECKPOINTS) {
+      const s = state.yearlyAttendance.get(yearlyAttKey(memberId, category, fy.id, cp.seq));
+      if (s === '○') present++;
+      if (s === '×') absent++;
+    }
   }
   const total = present + absent;
   return { present, absent, rate: total > 0 ? present / total : null };
 }
 
-async function toggleYearlyCell(memberId, fiscalYearId, btnEl) {
+async function toggleYearlyCell(memberId, fiscalYearId, checkpoint, btnEl) {
   const category = state.category;
-  const key = yearlyAttKey(memberId, category, fiscalYearId);
+  const key = yearlyAttKey(memberId, category, fiscalYearId, checkpoint);
   const current = state.yearlyAttendance.get(key) ?? null;
   const next = current === null ? '○' : current === '○' ? '×' : null;
 
@@ -1505,20 +1788,58 @@ async function toggleYearlyCell(memberId, fiscalYearId, btnEl) {
   if (next === '×') btnEl.classList.add('absent');
 
   if (next === null) {
-    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
   } else {
     await sb.from(T_ATTENDANCE).upsert(
-      { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: next },
+      { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint, status: next },
       { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
     );
   }
   renderView();
 }
 
-async function bulkMarkYear(fiscalYearId, mode) {
+async function saveCheckpointTime(category, fiscalYearId, checkpoint, inputEl) {
+  const key = `${category}::${fiscalYearId}::${checkpoint}`;
+  const value = formatTimeInputValue(inputEl.value);
+  if (document.activeElement !== inputEl) inputEl.value = value; // 入力中はカーソル位置を崩さないよう、離れた後だけ表示を整形
+  if (value) state.checkpointTimes.set(key, value); else state.checkpointTimes.delete(key);
+  const statusEl = document.getElementById('checkpoint-time-status');
+  if (statusEl) statusEl.textContent = '保存中…';
+  if (!fiscalYearId) {
+    if (statusEl) statusEl.textContent = '⚠ 年度が未選択のため保存できません';
+    console.error('checkpoint time save skipped: fiscalYearId is empty', { category, fiscalYearId, checkpoint });
+    return;
+  }
+  try {
+    const { error } = await sb.from(T_CHECKPOINT_TIMES).upsert(
+      { category, fiscal_year_id: fiscalYearId, checkpoint, time_value: value || null },
+      { onConflict: 'category,fiscal_year_id,checkpoint' }
+    );
+    if (error) {
+      console.error('checkpoint time save failed', error);
+      if (statusEl) statusEl.textContent = '⚠ 保存に失敗: ' + error.message;
+    } else {
+      if (statusEl) statusEl.textContent = value ? '✓ 保存しました' : '';
+    }
+  } catch (e) {
+    console.error('checkpoint time save threw', e);
+    if (statusEl) statusEl.textContent = '⚠ エラー: ' + e.message;
+  }
+}
+
+let checkpointTimeSaveTimer = null;
+function scheduleCheckpointTimeSave(category, fiscalYearId, checkpoint, inputEl) {
+  if (checkpointTimeSaveTimer) clearTimeout(checkpointTimeSaveTimer);
+  checkpointTimeSaveTimer = setTimeout(() => {
+    saveCheckpointTime(category, fiscalYearId, checkpoint, inputEl);
+  }, 600);
+}
+
+async function bulkMarkYear(fiscalYearId, checkpoint, mode) {
   const category = state.category;
   const fy = state.fiscalYears.find((f) => f.id === fiscalYearId);
-  const yearLabel = fy ? `立教${fy.start_reiki_year}年` : '';
+  const cp = YEARLY_CHECKPOINTS.find((c) => c.seq === checkpoint);
+  const yearLabel = fy ? `立教${fy.start_reiki_year}年・${cp ? cp.label : ''}` : '';
 
   if (mode === 'all-present') {
     if (!confirm(`${yearLabel}分を、${CATEGORY_LABEL[category]}について全員○にします。すでに入力されている×も上書きされます。よろしいですか？`)) return;
@@ -1527,19 +1848,19 @@ async function bulkMarkYear(fiscalYearId, mode) {
   }
 
   if (mode === 'clear') {
-    for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId));
-    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: 1 });
+    for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId, checkpoint));
+    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
     renderView();
     return;
   }
 
   const updates = [];
   for (const m of state.members) {
-    const key = yearlyAttKey(m.id, category, fiscalYearId);
+    const key = yearlyAttKey(m.id, category, fiscalYearId, checkpoint);
     const current = state.yearlyAttendance.get(key) ?? null;
     if (mode === 'all-present' || (mode === 'fill-blank-present' && current === null)) {
       state.yearlyAttendance.set(key, '○');
-      updates.push({ member_id: m.id, fiscal_year_id: fiscalYearId, category, month_seq: 1, status: '○' });
+      updates.push({ member_id: m.id, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint, status: '○' });
     }
   }
   if (updates.length === 0) { renderView(); return; }
@@ -1715,6 +2036,8 @@ async function bulkMarkMonth(monthCtx, mode) {
 
 function renderGridView(container) {
   const isYearly = YEARLY_CATEGORIES.includes(state.category);
+  const useCheckpoints = isYearly && !NO_CHECKPOINT_YEARLY_CATEGORIES.includes(state.category);
+  const activeCheckpoints = useCheckpoints ? YEARLY_CHECKPOINTS : [YEARLY_CHECKPOINTS[0]];
 
   if (isYearly && state.yearlyAttendanceLoadedCategory !== state.category) {
     container.innerHTML = `<div class="loading">読み込み中…</div>`;
@@ -1738,25 +2061,34 @@ function renderGridView(container) {
     `<option value="${fy.id}" ${fy.id === state.fiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
   ).join('');
 
-  const catTabs = ALL_CATEGORIES.map(c =>
+  const catTabs = GRID_VISIBLE_CATEGORIES.map(c =>
     `<button data-cat="${c}" class="${state.category === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
   ).join('');
 
   const bulkYearLabel = sortedFiscalYears.find((fy) => fy.id === state.bulkActionFiscalYearId);
   const bulkYearText = bulkYearLabel ? `立教${bulkYearLabel.start_reiki_year}年` : '';
+  const bulkCheckpointOptions = activeCheckpoints.map((cp) =>
+    `<option value="${cp.seq}" ${cp.seq === state.bulkActionCheckpoint ? 'selected' : ''}>${cp.label}</option>`
+  ).join('');
+  const bulkCheckpointLabel = activeCheckpoints.find((cp) => cp.seq === state.bulkActionCheckpoint)?.label ?? '';
 
   const categoryMembersList = getCategoryMemberEntries(state.category);
 
   const rowsHtml = categoryMembersList.map((m, index) => {
     const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
+    // 「事前調査」で×だった年度が1つでもあれば、名前を目立たせる（会場外・会場内でのチェック用）
+    const hasPreAbsent = isYearly && useCheckpoints && sortedFiscalYears.some((fy) =>
+      state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id, 1)) === '×'
+    );
     const cells = isYearly
-      ? sortedFiscalYears.map((fy) => {
-          const status = state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id)) ?? null;
+      ? sortedFiscalYears.map((fy) => activeCheckpoints.map((cp) => {
+          const status = state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id, cp.seq)) ?? null;
           const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
-          return `<td style="text-align:center;padding:2px;">
-            <button class="att-yearly-cell-btn ${cls}" data-member="${m.id}" data-fyid="${fy.id}" aria-label="立教${fy.start_reiki_year}年の出欠">${status ?? ''}</button>
+          const preAbsentAtThisYear = cp.seq !== 1 && state.yearlyAttendance.get(yearlyAttKey(m.id, state.category, fy.id, 1)) === '×';
+          return `<td style="text-align:center;padding:2px;${preAbsentAtThisYear ? 'background:var(--color-absent-bg);' : ''}">
+            <button class="att-yearly-cell-btn ${cls}" data-member="${m.id}" data-fyid="${fy.id}" data-checkpoint="${cp.seq}" aria-label="立教${fy.start_reiki_year}年${useCheckpoints ? cp.label : ''}の出欠">${status ?? ''}</button>
           </td>`;
-        }).join('')
+        }).join('')).join('')
       : MONTH_SEQUENCE.map((_, i) => {
           const seq = i + 1;
           const status = state.attendance.get(attKey(m.id, state.category, seq)) ?? null;
@@ -1772,7 +2104,12 @@ function renderGridView(container) {
           <span class="drag-handle" data-member="${m.id}" title="ドラッグで並び替え">⠿</span>
         </td>
         <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
-        <td style="width:90px;min-width:90px;max-width:90px;"><input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;" /></td>
+        <td style="width:90px;min-width:90px;max-width:90px;">
+          <div style="display:flex;align-items:center;gap:2px;">
+            ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="flex-shrink:0;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;">Ｌ</span>' : m._isSpecial ? '<span title="神名流し" style="flex-shrink:0;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;">神</span>' : ''}
+            <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
+          </div>
+        </td>
         <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
         <td style="width:200px;min-width:200px;max-width:200px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
         ${cells}
@@ -1791,14 +2128,21 @@ function renderGridView(container) {
   }).join('');
 
   const monthHeaders = isYearly
-    ? sortedFiscalYears.map((fy) => `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`).join('')
+    ? sortedFiscalYears.map((fy) => activeCheckpoints.map((cp) =>
+        useCheckpoints
+          ? `<th style="text-align:center;font-size:11px;">立教${fy.start_reiki_year}年<br>${cp.label}</th>`
+          : `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`
+      ).join('')).join('')
     : MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
 
+  const bulkCheckpointTimeValue = state.checkpointTimes.get(`${state.category}::${state.bulkActionFiscalYearId}::${state.bulkActionCheckpoint}`) ?? '';
   const bulkActionsHtml = isYearly ? `
           <select id="bulk-year-select">${bulkYearOptions}</select>
-          <button class="btn-dark" id="mark-all-present-btn">${bulkYearText}分 全員出席</button>
-          <button class="btn-light" id="fill-blank-present-btn">${bulkYearText}分未入力を○にする</button>
-          <button class="btn-light" id="clear-month-btn">${bulkYearText}分をクリア</button>
+          ${useCheckpoints ? `<select id="bulk-checkpoint-select">${bulkCheckpointOptions}</select>` : ''}
+          ${useCheckpoints && state.bulkActionCheckpoint !== 1 ? `<input type="text" id="bulk-checkpoint-time-input" class="field-checkpoint-time-input" value="${escapeHtml(bulkCheckpointTimeValue)}" placeholder="時刻" style="height:38px;box-sizing:border-box;" />` : ''}
+          <button class="btn-dark" id="mark-all-present-btn">${bulkYearText}${useCheckpoints ? `・${bulkCheckpointLabel}` : ''} 全員出席</button>
+          <button class="btn-light" id="fill-blank-present-btn">${bulkYearText}${useCheckpoints ? `・${bulkCheckpointLabel}` : ''} 未入力を○にする</button>
+          <button class="btn-light" id="clear-month-btn">${bulkYearText}${useCheckpoints ? `・${bulkCheckpointLabel}` : ''} をクリア</button>
   ` : `
           <select id="bulk-month-select">${bulkMonthOptions}</select>
           <button class="btn-dark" id="mark-all-present-btn">${monthCtx.calendarMonth}月分 全員出席</button>
@@ -1819,7 +2163,6 @@ function renderGridView(container) {
           ${bulkActionsHtml}
           <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
           <button class="btn-dark" id="export-excel-btn">Excelで書き出し</button>
-          <button class="btn-light" id="switch-to-field-btn">📱 現場入力（スマホ用）に切替</button>
         </div>
       </div>
 
@@ -1871,15 +2214,36 @@ function renderGridView(container) {
 
   if (isYearly) {
     document.querySelectorAll('.att-yearly-cell-btn').forEach(btn => {
-      btn.addEventListener('click', () => toggleYearlyCell(Number(btn.dataset.member), Number(btn.dataset.fyid), btn));
+      btn.addEventListener('click', () => toggleYearlyCell(Number(btn.dataset.member), Number(btn.dataset.fyid), Number(btn.dataset.checkpoint), btn));
     });
-    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'all-present'));
-    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'fill-blank-present'));
-    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, 'clear'));
+    document.getElementById('mark-all-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, state.bulkActionCheckpoint, 'all-present'));
+    document.getElementById('fill-blank-present-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, state.bulkActionCheckpoint, 'fill-blank-present'));
+    document.getElementById('clear-month-btn').addEventListener('click', () => bulkMarkYear(state.bulkActionFiscalYearId, state.bulkActionCheckpoint, 'clear'));
     document.getElementById('bulk-year-select').addEventListener('change', (e) => {
       state.bulkActionFiscalYearId = Number(e.target.value);
       renderView();
     });
+    const bulkCheckpointSelectEl = document.getElementById('bulk-checkpoint-select');
+    if (bulkCheckpointSelectEl) {
+      bulkCheckpointSelectEl.addEventListener('change', (e) => {
+        state.bulkActionCheckpoint = Number(e.target.value);
+        renderView();
+      });
+    } else {
+      state.bulkActionCheckpoint = 1;
+    }
+    const bulkCheckpointTimeInputEl = document.getElementById('bulk-checkpoint-time-input');
+    if (bulkCheckpointTimeInputEl) {
+      bulkCheckpointTimeInputEl.addEventListener('input', () => {
+        const key = `${state.category}::${state.bulkActionFiscalYearId}::${state.bulkActionCheckpoint}`;
+        state.checkpointTimes.set(key, bulkCheckpointTimeInputEl.value);
+        scheduleCheckpointTimeSave(state.category, state.bulkActionFiscalYearId, state.bulkActionCheckpoint, bulkCheckpointTimeInputEl);
+      });
+      bulkCheckpointTimeInputEl.addEventListener('blur', () => {
+        if (checkpointTimeSaveTimer) clearTimeout(checkpointTimeSaveTimer);
+        saveCheckpointTime(state.category, state.bulkActionFiscalYearId, state.bulkActionCheckpoint, bulkCheckpointTimeInputEl);
+      });
+    }
   } else {
     document.querySelectorAll('.att-cell-btn').forEach(btn => {
       btn.addEventListener('click', () => toggleCell(Number(btn.dataset.member), Number(btn.dataset.seq), btn));
@@ -1909,10 +2273,6 @@ function renderGridView(container) {
 
   document.getElementById('add-member-btn').addEventListener('click', addMember);
   document.getElementById('export-excel-btn').addEventListener('click', () => exportAllDataToExcel());
-  document.getElementById('switch-to-field-btn').addEventListener('click', () => {
-    state.view = 'field';
-    renderView();
-  });
 
   setupRowDragAndDrop();
 }
@@ -2019,7 +2379,6 @@ async function addMemberToCategory(memberId, category) {
   const updated = { member_id: memberId, category, sort_order: maxOrder + 1, is_active: true };
   state.categoryMembers.set(key, updated);
   await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-  renderView();
 }
 
 // ==================== 現場入力（スマホ用） ====================
@@ -2042,6 +2401,7 @@ function fieldSavedGroupKey(category, deptKey, fyId, seq) {
 
 function renderFieldView(container) {
   const isYearly = YEARLY_CATEGORIES.includes(state.fieldCategory);
+  const useCheckpoints = isYearly && !NO_CHECKPOINT_YEARLY_CATEGORIES.includes(state.fieldCategory);
 
   // 「年」は立教○○○年の短い表記。既存の年度に加えて、最新の年度から2年先までは
   // 年度が未作成でも常に選べるようにする（選ぶと自動でその年度を作成する）
@@ -2061,12 +2421,24 @@ function renderFieldView(container) {
   const monthOptions = Array.from({length:12}, (_,i)=>i+1).map(m =>
     `<option value="${m}" ${m === state.fieldMonth ? 'selected' : ''}>${m}月</option>`
   ).join('');
-  const catTabs = FIELD_VISIBLE_CATEGORIES.map(c =>
-    `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  const checkpointOptions = YEARLY_CHECKPOINTS.map((cp) =>
+    `<option value="${cp.seq}" ${cp.seq === state.fieldCheckpoint ? 'selected' : ''}>${cp.label}</option>`
+  ).join('');
+  const catOptions = FIELD_VISIBLE_CATEGORIES.map(c =>
+    `<option value="${c}" ${state.fieldCategory === c ? 'selected' : ''}>${CATEGORY_LABEL[c]}</option>`
   ).join('');
 
-  // 慰労拝受（中元/歳暮）は「月」ではなく、選択中の年度に対して1回だけ記録する
-  const monthSeq = isYearly ? 1 : calendarMonthToSeq(state.fieldMonth);
+  // 朝の神殿掃除では、当番日（実際の日にち表示）で名簿を絞り込める
+  const showDutyDayFilter = state.fieldCategory === 'asagami';
+  if (showDutyDayFilter && !state.fieldDutyDayFilter) state.fieldDutyDayFilter = 1;
+  const dutyDayOptions = [
+    { value: '1', label: (state.rosterDay1 && state.rosterDay1.trim()) || '1日目' },
+    { value: '2', label: (state.rosterDay2 && state.rosterDay2.trim()) || '2日目' },
+    { value: '3', label: (state.rosterDay3 && state.rosterDay3.trim()) || '3日目' },
+  ].map((opt) => `<option value="${opt.value}" ${String(state.fieldDutyDayFilter ?? '') === opt.value ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`).join('');
+
+  // 慰労拝受（中元/歳暮）は「月」の代わりに、選んだ確認回（事前調査/会場外/会場内）で記録する
+  const monthSeq = isYearly ? (useCheckpoints ? state.fieldCheckpoint : 1) : calendarMonthToSeq(state.fieldMonth);
 
   const deptTabs = FIELD_DEPT_GROUPS.map((g) => {
     const isSaved = state.fieldSavedGroups.has(fieldSavedGroupKey(state.fieldCategory, g.key, state.fiscalYearId, monthSeq));
@@ -2075,33 +2447,43 @@ function renderFieldView(container) {
 
   const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
   // 「全体」タブは、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する
-  const orderedMembers = activeGroup.key === 'all'
+  let orderedMembers = activeGroup.key === 'all'
     ? getCategoryMemberEntries(state.fieldCategory)
     : getOrderedMembersForCategory(state.fieldCategory)
         .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
+  if (showDutyDayFilter && state.fieldDutyDayFilter) {
+    orderedMembers = orderedMembers.filter((m) => effectiveDutyDay(m) === state.fieldDutyDayFilter);
+  }
 
   const chipsHtml = orderedMembers.map((m) => {
     const status = state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) ?? null;
-    return `<button class="field-chip ${status === '○' ? 'filled' : ''}" data-member="${m.id}">${escapeHtml(m.name)}</button>`;
+    // 「事前調査」で×だった人は、会場外・会場内のチェック時に赤く目立たせる
+    const isPreAbsent = useCheckpoints && state.fieldCheckpoint !== 1 &&
+      state.attendance.get(attKey(m.id, state.fieldCategory, 1)) === '×';
+    const chipCls = ['field-chip', status === '○' ? 'filled' : '', isPreAbsent ? 'pre-absent' : ''].filter(Boolean).join(' ');
+    const badge = m._isSpecialLeader ? '<span class="field-chip-badge leader">責任</span>' : m._isSpecial ? '<span class="field-chip-badge">神名</span>' : '';
+    return `<button class="${chipCls}" data-member="${m.id}">${badge}${escapeHtml(m.name)}</button>`;
   }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
 
   container.innerHTML = `
     <div class="field-view">
       <div class="field-controls no-print">
-        <div class="field-cat-tabs">${catTabs}</div>
+        <select id="field-cat-select">${catOptions}</select>
         <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">
           ${renderUpdateButtonHtml()}
         </div>
       </div>
       <div class="field-controls no-print" style="margin-top:8px;">
         <select id="field-fy-select">${fyOptions}</select>
-        ${isYearly ? '' : `<select id="field-month-select">${monthOptions}</select>`}
+        ${isYearly ? (useCheckpoints ? `<select id="field-checkpoint-select">${checkpointOptions}</select>` : '') : `<select id="field-month-select">${monthOptions}</select>`}
+        ${showDutyDayFilter ? `<select id="field-duty-day-select">${dutyDayOptions}</select>` : ''}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
       <div class="field-chip-grid">${chipsHtml}</div>
       <div class="field-action-row no-print">
         <button class="field-all-present-btn" id="field-all-present-btn">全員出席</button>
+        <button class="field-clear-btn" id="field-clear-btn">この内容をクリア</button>
         <button class="field-save-btn" id="field-save-btn">この内容で保存</button>
       </div>
       <p class="no-print" id="field-save-msg" style="text-align:center;font-size:13px;color:var(--color-present);font-weight:500;height:18px;margin-top:8px;"></p>
@@ -2137,11 +2519,23 @@ function renderFieldView(container) {
       renderView();
     });
   }
-  document.querySelectorAll('.field-cat-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.fieldCategory = btn.dataset.cat;
+  const checkpointSelectEl = document.getElementById('field-checkpoint-select');
+  if (checkpointSelectEl) {
+    checkpointSelectEl.addEventListener('change', (e) => {
+      state.fieldCheckpoint = Number(e.target.value);
       renderView();
     });
+  }
+  const dutyDaySelectEl = document.getElementById('field-duty-day-select');
+  if (dutyDaySelectEl) {
+    dutyDaySelectEl.addEventListener('change', (e) => {
+      state.fieldDutyDayFilter = e.target.value ? Number(e.target.value) : null;
+      renderView();
+    });
+  }
+  document.getElementById('field-cat-select').addEventListener('change', (e) => {
+    state.fieldCategory = e.target.value;
+    renderView();
   });
   document.querySelectorAll('.field-dept-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -2160,6 +2554,17 @@ function renderFieldView(container) {
       const key = attKey(memberId, state.fieldCategory, monthSeq);
       state.attendance.set(key, '○');
       chip.classList.add('filled');
+    });
+    state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, monthSeq));
+    const msgEl = document.getElementById('field-save-msg');
+    if (msgEl) msgEl.textContent = '';
+  });
+  document.getElementById('field-clear-btn').addEventListener('click', () => {
+    document.querySelectorAll('.field-chip').forEach((chip) => {
+      const memberId = Number(chip.dataset.member);
+      const key = attKey(memberId, state.fieldCategory, monthSeq);
+      state.attendance.delete(key);
+      chip.classList.remove('filled');
     });
     state.fieldSavedGroups.delete(fieldSavedGroupKey(state.fieldCategory, state.fieldDeptFilter, state.fiscalYearId, monthSeq));
     const msgEl = document.getElementById('field-save-msg');
@@ -2309,7 +2714,12 @@ async function exportAllDataToExcel() {
             '立場': m ? (m.position || '') : '',
             '出欠': a.status,
           };
-          if (isYearlyCat) row['対象年'] = periodLabel; else row['月'] = periodLabel;
+          if (isYearlyCat) {
+            row['対象年'] = periodLabel;
+            row['確認回'] = YEARLY_CHECKPOINTS.find((cp) => cp.seq === a.month_seq)?.label ?? '';
+          } else {
+            row['月'] = periodLabel;
+          }
           return row;
         });
       rows.sort((r1, r2) =>
@@ -2567,6 +2977,14 @@ function renderReportView(container, category) {
 }
 
 // ==================== 当番表 ====================
+async function saveDutyDayLabels() {
+  await sb.from(T_CONFIG).update({
+    day1_label: state.rosterDay1,
+    day2_label: state.rosterDay2,
+    day3_label: state.rosterDay3,
+  }).eq('id', true);
+}
+
 function effectiveDutyDay(member) {
   if (member.duty_day_override) return member.duty_day_override;
   const dept = state.departments.find((d) => d.name === member.department);
@@ -2799,11 +3217,11 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
   document.getElementById('roster-org').addEventListener('input', (e) => { state.rosterOrgName = e.target.value; });
   document.getElementById('roster-org').addEventListener('blur', () => renderView());
   document.getElementById('roster-day1').addEventListener('input', (e) => { state.rosterDay1 = e.target.value; });
-  document.getElementById('roster-day1').addEventListener('blur', () => renderView());
+  document.getElementById('roster-day1').addEventListener('blur', () => { saveDutyDayLabels(); renderView(); });
   document.getElementById('roster-day2').addEventListener('input', (e) => { state.rosterDay2 = e.target.value; });
-  document.getElementById('roster-day2').addEventListener('blur', () => renderView());
+  document.getElementById('roster-day2').addEventListener('blur', () => { saveDutyDayLabels(); renderView(); });
   document.getElementById('roster-day3').addEventListener('input', (e) => { state.rosterDay3 = e.target.value; });
-  document.getElementById('roster-day3').addEventListener('blur', () => renderView());
+  document.getElementById('roster-day3').addEventListener('blur', () => { saveDutyDayLabels(); renderView(); });
   document.getElementById('roster-show-month').addEventListener('change', (e) => {
     state.rosterShowMonth = e.target.checked;
     renderView();
