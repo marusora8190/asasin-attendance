@@ -209,7 +209,6 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-view { max-width: 480px; margin: 0 auto; padding: 4px 16px 60px; }
 .field-header { margin-bottom: 12px; }
 .field-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.field-cat-tabs { display: flex; gap: 6px; }
 .field-dept-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .field-dept-tabs button {
   padding: 6px 12px; font-size: 12px; border-radius: 999px; border: 1px solid var(--color-line);
@@ -218,11 +217,6 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-dept-tabs button.active { background: var(--color-gold); color: white; border-color: var(--color-gold); font-weight: 500; }
 .field-dept-tabs button.saved { border-color: var(--color-present); color: var(--color-present); }
 .field-dept-tabs button.saved.active { background: var(--color-present); color: white; border-color: var(--color-present); }
-.field-cat-tabs button {
-  padding: 8px 14px; font-size: 14px; border-radius: 999px; border: 1px solid var(--color-line);
-  background: white; color: var(--color-ink-soft);
-}
-.field-cat-tabs button.active { background: var(--color-navy); color: white; border-color: var(--color-navy); font-weight: 500; }
 .field-controls select { border: 1px solid var(--color-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: white; }
 .field-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
 .field-chip {
@@ -850,7 +844,7 @@ function renderHelpView(container) {
         <p>スマホで、現場にいながら出欠(主に出席のチェック)を入力するための画面です。<strong>合言葉によるログインは不要</strong>で、URLを開けば直接使えます。</p>
         <ul>
           <li>URLの末尾に <code>?field=1</code> を付けて開くと、他の画面を含まないスマホ専用の表示になります。ホーム画面に追加しておくと便利です。</li>
-          <li>上部のタブで区分を切り替えます。表示される区分は「マスター」の「区分（タブ）を管理」で「スマホに表示」にチェックが入っているものだけです。</li>
+          <li>上部のタブで区分を切り替えます。表示される区分は「マスター」の「区分（タブ）を管理」で「スマホのリストに表示」にチェックが入っているものだけです。</li>
           <li>「年」「月」のプルダウンで対象を選びます。「年」は立教○○○年の表記で、<strong>まだ作られていない先の年度を選んでも自動的にその年度が作成されます</strong>(常に最新から2年先まで選べます)。年ごとの区分では「月」の選択は出ません。</li>
           <li>下の「営繕課・庶務係」「現場第一班」…「空調衛生係」「全体」のタブで、表示する班を絞り込めます。「全体」を選ぶと、出欠入力画面と同じ並び順で全員が表示されます。</li>
           <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。</li>
@@ -1215,7 +1209,7 @@ function buildCategoriesPanel() {
     <ul class="modal-list" id="grid-order-list" style="max-height:220px;overflow-y:auto;"></ul>
 
     <h2 style="margin-top:20px;">現場入力（スマホ用）の並び順</h2>
-    <p class="modal-hint" style="margin-bottom:6px;">「スマホに表示」がオンの区分だけが並びます。</p>
+    <p class="modal-hint" style="margin-bottom:6px;">「スマホのリストに表示」がオンの区分だけが並びます。</p>
     <ul class="modal-list" id="field-order-list" style="max-height:220px;overflow-y:auto;"></ul>
   `;
 
@@ -1234,7 +1228,7 @@ function buildCategoriesPanel() {
       <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
         <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
-          <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホに表示
+          <input type="checkbox" class="category-field-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_field ? 'checked' : ''} /> スマホのリストに表示
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
           <input type="checkbox" class="category-yearly-checkbox" data-key="${escapeHtml(c.key)}" ${c.is_yearly ? 'checked' : ''} /> 年ごと
@@ -1256,7 +1250,7 @@ function buildCategoriesPanel() {
         <span style="flex:1;min-width:0;">${escapeHtml(c.label)}</span>
         <button class="icon-btn field-order-up-btn" data-key="${escapeHtml(c.key)}" ${i === 0 ? 'disabled' : ''} title="上へ">↑</button>
         <button class="icon-btn field-order-down-btn" data-key="${escapeHtml(c.key)}" ${i === byFieldOrder.length - 1 ? 'disabled' : ''} title="下へ">↓</button>
-      </li>`).join('') || `<li style="color:var(--color-ink-soft);">「スマホに表示」がオンの区分がありません</li>`;
+      </li>`).join('') || `<li style="color:var(--color-ink-soft);">「スマホのリストに表示」がオンの区分がありません</li>`;
 
     listEl.querySelectorAll('.category-label-input').forEach((input) => {
       input.addEventListener('blur', async () => {
@@ -2245,8 +2239,8 @@ function renderFieldView(container) {
   const checkpointOptions = YEARLY_CHECKPOINTS.map((cp) =>
     `<option value="${cp.seq}" ${cp.seq === state.fieldCheckpoint ? 'selected' : ''}>${cp.label}</option>`
   ).join('');
-  const catTabs = FIELD_VISIBLE_CATEGORIES.map(c =>
-    `<button data-cat="${c}" class="field-cat-btn ${state.fieldCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
+  const catOptions = FIELD_VISIBLE_CATEGORIES.map(c =>
+    `<option value="${c}" ${state.fieldCategory === c ? 'selected' : ''}>${CATEGORY_LABEL[c]}</option>`
   ).join('');
 
   // 慰労拝受（中元/歳暮）は「月」の代わりに、選んだ確認回（事前調査/会場外/会場内）で記録する
@@ -2276,7 +2270,7 @@ function renderFieldView(container) {
   container.innerHTML = `
     <div class="field-view">
       <div class="field-controls no-print">
-        <div class="field-cat-tabs">${catTabs}</div>
+        <select id="field-cat-select">${catOptions}</select>
         <div id="field-update-area" style="margin-left:auto;display:flex;align-items:center;gap:10px;">
           ${renderUpdateButtonHtml()}
         </div>
@@ -2340,11 +2334,9 @@ function renderFieldView(container) {
       saveCheckpointTime(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
     });
   }
-  document.querySelectorAll('.field-cat-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.fieldCategory = btn.dataset.cat;
-      renderView();
-    });
+  document.getElementById('field-cat-select').addEventListener('change', (e) => {
+    state.fieldCategory = e.target.value;
+    renderView();
   });
   document.querySelectorAll('.field-dept-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
