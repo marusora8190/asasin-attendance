@@ -1768,11 +1768,22 @@ async function saveCheckpointTime(category, fiscalYearId, checkpoint, inputEl) {
   const value = formatTimeInputValue(inputEl.value);
   if (document.activeElement !== inputEl) inputEl.value = value; // 入力中はカーソル位置を崩さないよう、離れた後だけ表示を整形
   if (value) state.checkpointTimes.set(key, value); else state.checkpointTimes.delete(key);
+  const statusEl = document.getElementById('checkpoint-time-status');
+  if (!fiscalYearId) {
+    if (statusEl) statusEl.textContent = '⚠ 年度が未選択のため保存できません';
+    console.error('checkpoint time save skipped: fiscalYearId is empty', { category, fiscalYearId, checkpoint });
+    return;
+  }
   const { error } = await sb.from(T_CHECKPOINT_TIMES).upsert(
     { category, fiscal_year_id: fiscalYearId, checkpoint, time_value: value || null },
     { onConflict: 'category,fiscal_year_id,checkpoint' }
   );
-  if (error) console.error('checkpoint time save failed', error);
+  if (error) {
+    console.error('checkpoint time save failed', error);
+    if (statusEl) statusEl.textContent = '⚠ 保存に失敗しました: ' + error.message;
+  } else {
+    if (statusEl) statusEl.textContent = value ? '✓ 保存しました' : '';
+  }
 }
 
 let checkpointTimeSaveTimer = null;
@@ -2412,7 +2423,8 @@ function renderFieldView(container) {
       <div class="field-controls no-print" style="margin-top:8px;">
         <select id="field-fy-select">${fyOptions}</select>
         ${isYearly ? (useCheckpoints ? `<select id="field-checkpoint-select">${checkpointOptions}</select>` : '') : `<select id="field-month-select">${monthOptions}</select>`}
-        ${useCheckpoints && state.fieldCheckpoint !== 1 ? `<input type="text" id="field-checkpoint-time-input" class="field-checkpoint-time-input" value="${escapeHtml(state.checkpointTimes.get(`${state.fieldCategory}::${state.fiscalYearId}::${state.fieldCheckpoint}`) ?? '')}" placeholder="時刻" />` : ''}
+        ${useCheckpoints && state.fieldCheckpoint !== 1 ? `<input type="text" id="field-checkpoint-time-input" class="field-checkpoint-time-input" value="${escapeHtml(state.checkpointTimes.get(`${state.fieldCategory}::${state.fiscalYearId}::${state.fieldCheckpoint}`) ?? '')}" placeholder="時刻" />
+        <span id="checkpoint-time-status" style="font-size:11px;color:var(--color-present);"></span>` : ''}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
       <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
