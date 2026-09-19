@@ -276,6 +276,11 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .ceremony-table thead th { background: var(--color-paper); font-weight: 500; }
 .ceremony-table td input { font-size: 12px; padding: 2px; background: transparent; white-space: nowrap; }
 .ceremony-table td input:focus { background: white; outline: 1px solid var(--color-accent); }
+.ceremony-table .ceremony-year-col {
+  position: sticky; left: 0; z-index: 2; background: var(--color-panel);
+  box-shadow: 2px 0 4px -2px rgba(0,0,0,0.15);
+}
+.ceremony-table thead th.ceremony-year-col { z-index: 3; background: var(--color-paper); }
 .modal-list li { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .modal-list .duty-day-select { flex-shrink: 0; width: 78px; font-size: 12px; padding: 3px 2px; }
 .modal-list input[type=text] { min-width: 0; }
@@ -1418,13 +1423,13 @@ function buildCeremonyTimesPanel() {
         const noteCell = `<td><input type="text" class="ceremony-time-input" data-year="${y}" data-col="${noteCol}" value="${escapeHtml(rec[noteCol] || '')}" style="width:100%;box-sizing:border-box;border:none;text-align:center;" /></td>`;
         return [dateCell, fieldCells, joyuuCell, noteCell];
       });
-      return `<tr><td style="white-space:nowrap;font-weight:500;padding:4px 8px;">立教${y}年</td>${cells.join('')}</tr>`;
+      return `<tr><td class="ceremony-year-col" style="font-weight:500;padding:4px 8px;">立教${y}年</td>${cells.join('')}</tr>`;
     }).join('');
 
     tableEl.innerHTML = `
       <thead>
         <tr>
-          <th rowspan="2"></th>
+          <th rowspan="2" class="ceremony-year-col"></th>
           <th colspan="4">勤務者慰労拝受（中元）</th>
           <th rowspan="2">常傭拝受時間</th>
           <th rowspan="2">備考</th>
