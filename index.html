@@ -2430,6 +2430,7 @@ function renderFieldView(container) {
         <select id="field-fy-select">${fyOptions}</select>
         ${isYearly ? (useCheckpoints ? `<select id="field-checkpoint-select">${checkpointOptions}</select>` : '') : `<select id="field-month-select">${monthOptions}</select>`}
         ${useCheckpoints && state.fieldCheckpoint !== 1 ? `<input type="text" id="field-checkpoint-time-input" class="field-checkpoint-time-input" value="${escapeHtml(state.checkpointTimes.get(`${state.fieldCategory}::${state.fiscalYearId}::${state.fieldCheckpoint}`) ?? '')}" placeholder="時刻" />
+        <button type="button" class="btn-dark" id="field-checkpoint-time-save-btn" style="padding:8px 14px;">時刻を保存</button>
         <span id="checkpoint-time-status" style="font-size:11px;color:var(--color-present);"></span>` : ''}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
@@ -2490,6 +2491,13 @@ function renderFieldView(container) {
       scheduleCheckpointTimeSave(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
     });
     checkpointTimeInputEl.addEventListener('blur', () => {
+      if (checkpointTimeSaveTimer) clearTimeout(checkpointTimeSaveTimer);
+      saveCheckpointTime(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
+    });
+  }
+  const checkpointTimeSaveBtn = document.getElementById('field-checkpoint-time-save-btn');
+  if (checkpointTimeSaveBtn) {
+    checkpointTimeSaveBtn.addEventListener('click', () => {
       if (checkpointTimeSaveTimer) clearTimeout(checkpointTimeSaveTimer);
       saveCheckpointTime(state.fieldCategory, state.fiscalYearId, state.fieldCheckpoint, checkpointTimeInputEl);
     });
