@@ -1187,7 +1187,7 @@ function buildMemberDeptPanel() {
 function buildCategoryMembersPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '760px';
+  panel.style.maxWidth = '1000px';
   panel.innerHTML = `
     <h2>区分の名簿を管理</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
@@ -1196,22 +1196,22 @@ function buildCategoryMembersPanel() {
       「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します(名簿に入っている人だけ選べます)。
     </p>
     <div style="overflow-x:auto;">
-      <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:600px;"></div>
-      <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;min-width:600px;"></ul>
+      <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:840px;"></div>
+      <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;min-width:840px;"></ul>
     </div>
   `;
 
   function renderList() {
     const headerEl = panel.querySelector('#category-members-header');
     headerEl.innerHTML = `
-      <span style="flex:1;min-width:0;">氏名</span>
+      <span style="width:180px;min-width:180px;flex-shrink:0;">氏名</span>
       ${ALL_CATEGORIES.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 190 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
     `;
 
     const listEl = panel.querySelector('#category-members-list');
     listEl.innerHTML = state.members.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
+        <span style="width:180px;min-width:180px;flex-shrink:0;white-space:nowrap;">${escapeHtml(m.name)}</span>
         ${ALL_CATEGORIES.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
