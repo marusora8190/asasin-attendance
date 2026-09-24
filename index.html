@@ -1240,8 +1240,8 @@ function buildCategoryMembersPanel(options) {
     const headerEl = panel.querySelector(`#category-members-header-${sortByCategory}`);
     headerEl.innerHTML = `
       <span style="width:90px;min-width:90px;flex-shrink:0;">氏名</span>
-      ${normalCatsInView.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
-      ${specialCatsInView.length > 0 ? `<span style="width:290px;text-align:center;flex-shrink:0;">にをいがけデー</span>` : ''}
+      ${normalCatsInView.map((c) => `<span style="min-width:44px;padding:0 4px;text-align:center;flex-shrink:0;white-space:nowrap;font-size:10px;">${escapeHtml(CATEGORY_LABEL[c])}</span>`).join('')}
+      ${specialCatsInView.length > 0 ? `<span style="width:120px;text-align:center;flex-shrink:0;">にをいがけデー</span>` : ''}
     `;
 
     // 表示順は、指定された区分（1つ目）での並び順に合わせる
@@ -1258,7 +1258,7 @@ function buildCategoryMembersPanel(options) {
         ${normalCatsInView.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
-          return `<span style="width:60px;text-align:center;flex-shrink:0;">
+          return `<span style="min-width:44px;padding:0 4px;text-align:center;flex-shrink:0;">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
           </span>`;
         }).join('')}
@@ -1326,14 +1326,14 @@ function buildCategoryMembersPanel(options) {
 function buildNioigakeRolesPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '700px';
+  panel.style.maxWidth = '900px';
   panel.innerHTML = `
     <h2>にをいがけデーの役割区分</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
       「区分の名簿を管理」で参加日を選んだ人だけがここに表示されます。
       「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します。
     </p>
-    <div id="nioigake-roles-body"></div>
+    <div id="nioigake-roles-body" style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;"></div>
   `;
 
   function renderRoles() {
@@ -1360,8 +1360,10 @@ function buildNioigakeRolesPanel() {
       }).join('') || `<li style="color:var(--color-ink-soft);">まだ誰も参加日が選ばれていません</li>`;
 
       return `
-        <h3 style="margin:16px 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category])}</h3>
-        <ul class="modal-list" data-category="${category}">${rows}</ul>
+        <div style="min-width:260px;flex:1;">
+          <h3 style="margin:0 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category])}</h3>
+          <ul class="modal-list" data-category="${category}">${rows}</ul>
+        </div>
       `;
     }).join('');
 
