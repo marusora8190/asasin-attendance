@@ -1345,6 +1345,7 @@ function buildNioigakeRolesPanel() {
         const isSpecial = cm ? !!cm.is_special : false;
         const isLeader = cm ? !!cm.is_special_leader : false;
         const isDayLeader = cm ? !!cm.is_day_leader : false;
+        const isTransport = cm ? !!cm.is_transport : false;
         return `<li data-id="${m.id}" style="justify-content:space-between;border-bottom:1px solid var(--color-line);padding:6px 0;">
           <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
           <label style="display:flex;align-items:center;gap:2px;font-size:12px;">
@@ -1356,12 +1357,15 @@ function buildNioigakeRolesPanel() {
           <label style="display:flex;align-items:center;gap:2px;font-size:12px;">
             <input type="checkbox" class="role-day-leader-checkbox" data-id="${m.id}" data-category="${category}" ${isDayLeader ? 'checked' : ''} />総
           </label>
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;">
+            <input type="checkbox" class="role-transport-checkbox" data-id="${m.id}" data-category="${category}" ${isTransport ? 'checked' : ''} />運
+          </label>
         </li>`;
       }).join('') || `<li style="color:var(--color-ink-soft);border-bottom:1px solid var(--color-line);padding:6px 0;">まだ誰も参加日が選ばれていません</li>`;
 
       return `
         <div style="min-width:260px;flex:1;${index > 0 ? 'border-left:1px solid var(--color-line);padding-left:20px;' : ''}">
-          <h3 style="margin:0 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category])}</h3>
+          <h3 style="margin:0 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category])}　　<span style="color:var(--color-ink-soft);font-weight:500;">${members.length}名</span></h3>
           <ul class="modal-list" data-category="${category}">${rows}</ul>
         </div>
       `;
@@ -1419,6 +1423,20 @@ function buildNioigakeRolesPanel() {
         const m = state.members.find((mm) => mm.id === memberId);
         const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
         const updated = { ...existing, member_id: memberId, category, is_day_leader: wasChecked };
+        state.categoryMembers.set(key, updated);
+        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+        renderRoles();
+      });
+    });
+
+    bodyEl.querySelectorAll('.role-transport-checkbox').forEach((cb) => {
+      cb.addEventListener('change', async () => {
+        const memberId = Number(cb.dataset.id);
+        const category = cb.dataset.category;
+        const key = `${category}::${memberId}`;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
+        const updated = { ...existing, member_id: memberId, category, is_transport: cb.checked };
         state.categoryMembers.set(key, updated);
         await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
         renderRoles();
