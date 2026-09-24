@@ -528,7 +528,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, nioigakeMembers: false, categories: false, ceremonyTimes: false, dutyDayLabels: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, categories: false, ceremonyTimes: false, dutyDayLabels: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -967,7 +967,6 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
         <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
-        <button class="btn-dark" id="edit-nioigake-members-btn">にをいがけデーの名簿を管理</button>
         <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
         <button class="btn-dark" id="edit-ceremony-times-btn">慰労拝受 記録（時間）</button>
         <button class="btn-dark" id="edit-duty-day-labels-btn">当番日の表示名</button>
@@ -1000,10 +999,6 @@ function renderMasterView(container) {
     state.masterOpen.categoryMembers = !state.masterOpen.categoryMembers;
     renderMasterPanels();
   });
-  document.getElementById('edit-nioigake-members-btn').addEventListener('click', () => {
-    state.masterOpen.nioigakeMembers = !state.masterOpen.nioigakeMembers;
-    renderMasterPanels();
-  });
   document.getElementById('edit-categories-btn').addEventListener('click', () => {
     state.masterOpen.categories = !state.masterOpen.categories;
     renderMasterPanels();
@@ -1033,7 +1028,6 @@ function renderMasterPanels() {
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
   if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel({ sortByCategory: null }));
-  if (state.masterOpen.nioigakeMembers) panelsEl.appendChild(buildNioigakeMembersPanel());
   if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
   if (state.masterOpen.ceremonyTimes) panelsEl.appendChild(buildCeremonyTimesPanel());
   if (state.masterOpen.dutyDayLabels) panelsEl.appendChild(buildDutyDayLabelsPanel());
@@ -1194,17 +1188,20 @@ function buildMemberDeptPanel() {
 function buildCategoryMembersPanel(options) {
   const opts = options || {};
   const title = opts.title || '区分の名簿を管理';
-  const categoriesToShow = opts.categories || ALL_CATEGORIES.filter((c) => !SPECIAL_ROLE_CATEGORIES.includes(c));
+  const categoriesToShow = opts.categories || ALL_CATEGORIES;
   const sortByCategory = opts.sortByCategory ?? categoriesToShow[0] ?? null;
+  const specialCatsInView = categoriesToShow.filter((c) => SPECIAL_ROLE_CATEGORIES.includes(c));
+  const normalCatsInView = categoriesToShow.filter((c) => !SPECIAL_ROLE_CATEGORIES.includes(c));
 
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '1000px';
+  panel.style.maxWidth = '1100px';
   panel.innerHTML = `
     <h2>${escapeHtml(title)}</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
+      ${specialCatsInView.length > 0 ? '「にをいがけデー」欄は参加日をプルダウンで選びます。' : ''}
       「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します(名簿に入っている人だけ選べます)。
     </p>
     <div style="overflow-x:auto;">
@@ -1213,11 +1210,39 @@ function buildCategoryMembersPanel(options) {
     </div>
   `;
 
+  function findActiveSpecialCat(memberId) {
+    return specialCatsInView.find((c) => state.categoryMembers.get(`${c}::${memberId}`)?.is_active);
+  }
+
+  function buildNioigakeCell(m) {
+    const activeCat = findActiveSpecialCat(m.id);
+    const cm = activeCat ? state.categoryMembers.get(`${activeCat}::${m.id}`) : null;
+    const isSpecial = cm ? !!cm.is_special : false;
+    const isLeader = cm ? !!cm.is_special_leader : false;
+    const isDayLeader = cm ? !!cm.is_day_leader : false;
+    return `<span style="width:290px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--color-ink-soft);">
+      <select class="nioigake-day-select" data-id="${m.id}" style="font-size:11px;max-width:90px;">
+        <option value="">－</option>
+        ${specialCatsInView.map((c) => `<option value="${c}" ${activeCat === c ? 'selected' : ''}>${escapeHtml(CATEGORY_LABEL[c])}</option>`).join('')}
+      </select>
+      <label style="display:flex;align-items:center;gap:2px;${activeCat ? '' : 'opacity:0.3;'}">
+        <input type="checkbox" class="nioigake-special-checkbox" data-id="${m.id}" ${isSpecial ? 'checked' : ''} ${activeCat ? '' : 'disabled'} />神
+      </label>
+      <label style="display:flex;align-items:center;gap:2px;${activeCat && isSpecial ? '' : 'opacity:0.3;'}">
+        <input type="checkbox" class="nioigake-leader-checkbox" data-id="${m.id}" ${isLeader ? 'checked' : ''} ${activeCat && isSpecial ? '' : 'disabled'} />責
+      </label>
+      <label style="display:flex;align-items:center;gap:2px;${activeCat ? '' : 'opacity:0.3;'}">
+        <input type="checkbox" class="nioigake-day-leader-checkbox" data-id="${m.id}" ${isDayLeader ? 'checked' : ''} ${activeCat ? '' : 'disabled'} />総
+      </label>
+    </span>`;
+  }
+
   function renderList() {
     const headerEl = panel.querySelector(`#category-members-header-${sortByCategory}`);
     headerEl.innerHTML = `
       <span style="width:180px;min-width:180px;flex-shrink:0;">氏名</span>
-      ${categoriesToShow.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 190 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      ${normalCatsInView.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      ${specialCatsInView.length > 0 ? `<span style="width:290px;text-align:center;flex-shrink:0;">にをいがけデー</span>` : ''}
     `;
 
     // 表示順は、指定された区分（1つ目）での並び順に合わせる
@@ -1231,30 +1256,14 @@ function buildCategoryMembersPanel(options) {
     listEl.innerHTML = membersInOrder.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
         <span style="width:180px;min-width:180px;flex-shrink:0;white-space:nowrap;">${escapeHtml(m.name)}</span>
-        ${categoriesToShow.map((c) => {
+        ${normalCatsInView.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
-          const isSpecial = cm ? !!cm.is_special : false;
-          const isLeader = cm ? !!cm.is_special_leader : false;
-          const isDayLeader = cm ? !!cm.is_day_leader : false;
-          if (!SPECIAL_ROLE_CATEGORIES.includes(c)) {
-            return `<span style="width:60px;text-align:center;flex-shrink:0;">
-              <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
-            </span>`;
-          }
-          return `<span style="width:190px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--color-ink-soft);">
+          return `<span style="width:60px;text-align:center;flex-shrink:0;">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
-            <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
-              <input type="checkbox" class="category-member-special-checkbox" data-id="${m.id}" data-category="${c}" ${isSpecial ? 'checked' : ''} ${isActive ? '' : 'disabled'} />神
-            </label>
-            <label style="display:flex;align-items:center;gap:2px;${isActive && isSpecial ? '' : 'opacity:0.3;'}">
-              <input type="checkbox" class="category-member-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isLeader ? 'checked' : ''} ${isActive && isSpecial ? '' : 'disabled'} />責
-            </label>
-            <label style="display:flex;align-items:center;gap:2px;${isActive ? '' : 'opacity:0.3;'}">
-              <input type="checkbox" class="category-member-day-leader-checkbox" data-id="${m.id}" data-category="${c}" ${isDayLeader ? 'checked' : ''} ${isActive ? '' : 'disabled'} />総
-            </label>
           </span>`;
         }).join('')}
+        ${specialCatsInView.length > 0 ? buildNioigakeCell(m) : ''}
       </li>`).join('');
 
     listEl.querySelectorAll('.category-member-checkbox').forEach((cb) => {
@@ -1281,42 +1290,75 @@ function buildCategoryMembersPanel(options) {
       });
     });
 
-    listEl.querySelectorAll('.category-member-special-checkbox').forEach((cb) => {
+    listEl.querySelectorAll('.nioigake-day-select').forEach((sel) => {
+      sel.addEventListener('change', async () => {
+        const memberId = Number(sel.dataset.id);
+        const newCat = sel.value || null;
+        const oldCat = findActiveSpecialCat(memberId);
+        if (oldCat === newCat) return;
+        const m = state.members.find((mm) => mm.id === memberId);
+        const writes = [];
+
+        if (oldCat) {
+          const key = `${oldCat}::${memberId}`;
+          const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category: oldCat, sort_order: (m?.sort_order ?? 9999) };
+          const cleared = { ...existing, member_id: memberId, category: oldCat, is_active: false, is_special: false, is_special_leader: false, is_day_leader: false };
+          state.categoryMembers.set(key, cleared);
+          writes.push(cleared);
+        }
+        if (newCat) {
+          const list = getCategoryMemberEntries(newCat);
+          const maxOrder = list.length > 0 ? Math.max(...list.map((mm) => mm._catSortOrder)) : 0;
+          const key = `${newCat}::${memberId}`;
+          const updated = { member_id: memberId, category: newCat, sort_order: maxOrder + 1, is_active: true };
+          state.categoryMembers.set(key, updated);
+          writes.push(updated);
+        }
+        if (writes.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(writes, { onConflict: 'member_id,category' });
+        renderList();
+      });
+    });
+
+    listEl.querySelectorAll('.nioigake-special-checkbox').forEach((cb) => {
       cb.addEventListener('change', async () => {
         const memberId = Number(cb.dataset.id);
-        const category = cb.dataset.category;
+        const category = findActiveSpecialCat(memberId);
+        if (!category) return;
         const key = `${category}::${memberId}`;
         const m = state.members.find((mm) => mm.id === memberId);
         const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
         const updated = { ...existing, member_id: memberId, category, is_special: cb.checked };
-        if (!cb.checked) updated.is_special_leader = false; // 特別を外したらリーダーも外す
+        if (!cb.checked) updated.is_special_leader = false;
         state.categoryMembers.set(key, updated);
         await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
         renderList();
       });
     });
 
-    listEl.querySelectorAll('.category-member-leader-checkbox').forEach((cb) => {
+    listEl.querySelectorAll('.nioigake-leader-checkbox').forEach((cb) => {
       cb.addEventListener('change', async () => {
         const memberId = Number(cb.dataset.id);
-        const category = cb.dataset.category;
+        const category = findActiveSpecialCat(memberId);
+        if (!category) return;
         const key = `${category}::${memberId}`;
         const m = state.members.find((mm) => mm.id === memberId);
         const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true, is_special: true };
         const updated = { ...existing, member_id: memberId, category, is_special_leader: cb.checked };
         state.categoryMembers.set(key, updated);
         await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+        renderList();
       });
     });
 
-    listEl.querySelectorAll('.category-member-day-leader-checkbox').forEach((cb) => {
+    listEl.querySelectorAll('.nioigake-day-leader-checkbox').forEach((cb) => {
       cb.addEventListener('change', async () => {
         const memberId = Number(cb.dataset.id);
-        const category = cb.dataset.category;
+        const category = findActiveSpecialCat(memberId);
+        if (!category) return;
         const wasChecked = cb.checked;
 
         if (wasChecked) {
-          // その日全体の責任者は1人だけにする（他の人のチェックを外す）
+          // その日全体の責任者は1人だけにする（同じ日の他の人のチェックを外す）
           const updates = [];
           for (const [key, cm] of state.categoryMembers.entries()) {
             if (cm.category === category && cm.is_day_leader && cm.member_id !== memberId) {
@@ -1341,14 +1383,6 @@ function buildCategoryMembersPanel(options) {
 
   renderList();
   return panel;
-}
-
-function buildNioigakeMembersPanel() {
-  return buildCategoryMembersPanel({
-    title: 'にをいがけデーの名簿を管理',
-    categories: SPECIAL_ROLE_CATEGORIES,
-    sortByCategory: SPECIAL_ROLE_CATEGORIES[0] ?? null,
-  });
 }
 
 function buildCategoriesPanel() {
