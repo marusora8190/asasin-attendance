@@ -528,7 +528,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, nioigakeRoles: false, categories: false, ceremonyTimes: false, dutyDayLabels: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, nioigakeRoles: false, categories: false, ceremonyTimes: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -977,7 +977,6 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-nioigake-roles-btn">にをいがけデーの役割区分</button>
         <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
         <button class="btn-dark" id="edit-ceremony-times-btn">慰労拝受 記録（時間）</button>
-        <button class="btn-dark" id="edit-duty-day-labels-btn">当番日の表示名</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -1022,10 +1021,6 @@ function renderMasterView(container) {
     }
     renderMasterPanels();
   });
-  document.getElementById('edit-duty-day-labels-btn').addEventListener('click', () => {
-    state.masterOpen.dutyDayLabels = !state.masterOpen.dutyDayLabels;
-    renderMasterPanels();
-  });
 
   renderMasterPanels();
 }
@@ -1043,27 +1038,6 @@ function renderMasterPanels() {
   if (state.masterOpen.nioigakeRoles) panelsEl.appendChild(buildNioigakeRolesPanel());
   if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
   if (state.masterOpen.ceremonyTimes) panelsEl.appendChild(buildCeremonyTimesPanel());
-  if (state.masterOpen.dutyDayLabels) panelsEl.appendChild(buildDutyDayLabelsPanel());
-}
-
-function buildDutyDayLabelsPanel() {
-  const panel = document.createElement('div');
-  panel.className = 'master-panel';
-  panel.innerHTML = `
-    <h2>当番日の表示名</h2>
-    <p class="modal-hint" style="margin-bottom:10px;">
-      朝の神殿掃除の当番表・現場入力(スマホ用)で使う、1〜3日目の表示名です。実際の日にち(例: 21日)を入れておくと分かりやすくなります。
-    </p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <div class="field" style="min-width:100px;"><label>1日目</label><input type="text" id="master-day1" value="${escapeHtml(state.rosterDay1)}" placeholder="例: 21日" style="width:100%;" /></div>
-      <div class="field" style="min-width:100px;"><label>2日目</label><input type="text" id="master-day2" value="${escapeHtml(state.rosterDay2)}" placeholder="例: 22日" style="width:100%;" /></div>
-      <div class="field" style="min-width:100px;"><label>3日目</label><input type="text" id="master-day3" value="${escapeHtml(state.rosterDay3)}" placeholder="例: 23日" style="width:100%;" /></div>
-    </div>
-  `;
-  panel.querySelector('#master-day1').addEventListener('blur', (e) => { state.rosterDay1 = e.target.value; saveDutyDayLabels(); renderView(); });
-  panel.querySelector('#master-day2').addEventListener('blur', (e) => { state.rosterDay2 = e.target.value; saveDutyDayLabels(); renderView(); });
-  panel.querySelector('#master-day3').addEventListener('blur', (e) => { state.rosterDay3 = e.target.value; saveDutyDayLabels(); renderView(); });
-  return panel;
 }
 
 function buildDutyDayPanel() {
