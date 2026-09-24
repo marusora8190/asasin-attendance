@@ -1451,7 +1451,7 @@ function buildNioigakeRolesPanel() {
 function buildCategoriesPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '620px';
+  panel.style.maxWidth = '760px';
   panel.innerHTML = `
     <h2>区分（タブ）を管理</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
@@ -1489,7 +1489,7 @@ function buildCategoriesPanel() {
     // ---- 名前・年ごと・スマホ表示・削除（並び順は関係なし） ----
     listEl.innerHTML = byGridOrder.map((c) => `
       <li data-key="${escapeHtml(c.key)}" style="justify-content:space-between;flex-wrap:wrap;">
-        <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:120px;" />
+        <input type="text" class="modal-rename-input category-label-input" data-key="${escapeHtml(c.key)}" value="${escapeHtml(c.label)}" style="flex:1;min-width:220px;" />
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
           <input type="checkbox" class="category-grid-checkbox" data-key="${escapeHtml(c.key)}" ${c.show_in_grid ? 'checked' : ''} /> 出欠入力に表示
         </label>
