@@ -528,7 +528,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, categories: false, ceremonyTimes: false, dutyDayLabels: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, nioigakeMembers: false, categories: false, ceremonyTimes: false, dutyDayLabels: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -967,6 +967,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
         <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
+        <button class="btn-dark" id="edit-nioigake-members-btn">にをいがけデーの名簿を管理</button>
         <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
         <button class="btn-dark" id="edit-ceremony-times-btn">慰労拝受 記録（時間）</button>
         <button class="btn-dark" id="edit-duty-day-labels-btn">当番日の表示名</button>
@@ -999,6 +1000,10 @@ function renderMasterView(container) {
     state.masterOpen.categoryMembers = !state.masterOpen.categoryMembers;
     renderMasterPanels();
   });
+  document.getElementById('edit-nioigake-members-btn').addEventListener('click', () => {
+    state.masterOpen.nioigakeMembers = !state.masterOpen.nioigakeMembers;
+    renderMasterPanels();
+  });
   document.getElementById('edit-categories-btn').addEventListener('click', () => {
     state.masterOpen.categories = !state.masterOpen.categories;
     renderMasterPanels();
@@ -1027,7 +1032,8 @@ function renderMasterPanels() {
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
-  if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel());
+  if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel({ sortByCategory: null }));
+  if (state.masterOpen.nioigakeMembers) panelsEl.appendChild(buildNioigakeMembersPanel());
   if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
   if (state.masterOpen.ceremonyTimes) panelsEl.appendChild(buildCeremonyTimesPanel());
   if (state.masterOpen.dutyDayLabels) panelsEl.appendChild(buildDutyDayLabelsPanel());
@@ -1185,35 +1191,47 @@ function buildMemberDeptPanel() {
   return panel;
 }
 
-function buildCategoryMembersPanel() {
+function buildCategoryMembersPanel(options) {
+  const opts = options || {};
+  const title = opts.title || '区分の名簿を管理';
+  const categoriesToShow = opts.categories || ALL_CATEGORIES.filter((c) => !SPECIAL_ROLE_CATEGORIES.includes(c));
+  const sortByCategory = opts.sortByCategory ?? categoriesToShow[0] ?? null;
+
   const panel = document.createElement('div');
   panel.className = 'master-panel';
   panel.style.maxWidth = '1000px';
   panel.innerHTML = `
-    <h2>区分の名簿を管理</h2>
+    <h2>${escapeHtml(title)}</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
       「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します(名簿に入っている人だけ選べます)。
     </p>
     <div style="overflow-x:auto;">
-      <div id="category-members-header" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:840px;"></div>
-      <ul class="modal-list" id="category-members-list" style="max-height:400px;overflow-y:auto;margin-top:0;min-width:840px;"></ul>
+      <div id="category-members-header-${sortByCategory}" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:840px;"></div>
+      <ul class="modal-list" id="category-members-list-${sortByCategory}" style="max-height:400px;overflow-y:auto;margin-top:0;min-width:840px;"></ul>
     </div>
   `;
 
   function renderList() {
-    const headerEl = panel.querySelector('#category-members-header');
+    const headerEl = panel.querySelector(`#category-members-header-${sortByCategory}`);
     headerEl.innerHTML = `
       <span style="width:180px;min-width:180px;flex-shrink:0;">氏名</span>
-      ${ALL_CATEGORIES.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 190 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
+      ${categoriesToShow.map((c) => `<span style="width:${SPECIAL_ROLE_CATEGORIES.includes(c) ? 190 : 60}px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
     `;
 
-    const listEl = panel.querySelector('#category-members-list');
-    listEl.innerHTML = state.members.map((m) => `
+    // 表示順は、指定された区分（1つ目）での並び順に合わせる
+    const membersInOrder = sortByCategory
+      ? getCategoryMemberEntries(sortByCategory).concat(
+          state.members.filter((m) => !getCategoryMemberEntries(sortByCategory).some((mm) => mm.id === m.id))
+        )
+      : state.members;
+
+    const listEl = panel.querySelector(`#category-members-list-${sortByCategory}`);
+    listEl.innerHTML = membersInOrder.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
         <span style="width:180px;min-width:180px;flex-shrink:0;white-space:nowrap;">${escapeHtml(m.name)}</span>
-        ${ALL_CATEGORIES.map((c) => {
+        ${categoriesToShow.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
           const isSpecial = cm ? !!cm.is_special : false;
@@ -1323,6 +1341,14 @@ function buildCategoryMembersPanel() {
 
   renderList();
   return panel;
+}
+
+function buildNioigakeMembersPanel() {
+  return buildCategoryMembersPanel({
+    title: 'にをいがけデーの名簿を管理',
+    categories: SPECIAL_ROLE_CATEGORIES,
+    sortByCategory: SPECIAL_ROLE_CATEGORIES[0] ?? null,
+  });
 }
 
 function buildCategoriesPanel() {
