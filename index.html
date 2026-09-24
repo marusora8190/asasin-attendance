@@ -817,6 +817,13 @@ function applyCategoriesFromState() {
 }
 
 // 指定区分の名簿（有効なメンバーのみ、区分ごとの並び順）を返す
+// 「にをいがけでー(9/28)」のような区分名から、括弧の中身（日付部分）だけを取り出す。
+// 括弧がなければそのまま返す
+function shortenCategoryLabelForDay(label) {
+  const match = label.match(/[（(]([^）)]+)[）)]/);
+  return match ? match[1] : label;
+}
+
 function getCategoryMemberEntries(category) {
   return state.members
     .map((m) => {
@@ -1220,10 +1227,10 @@ function buildCategoryMembersPanel(options) {
     const isSpecial = cm ? !!cm.is_special : false;
     const isLeader = cm ? !!cm.is_special_leader : false;
     const isDayLeader = cm ? !!cm.is_day_leader : false;
-    return `<span style="width:290px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--color-ink-soft);">
-      <select class="nioigake-day-select" data-id="${m.id}" style="font-size:11px;max-width:90px;">
+    return `<span style="width:300px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--color-ink-soft);">
+      <select class="nioigake-day-select" data-id="${m.id}" style="font-size:11px;max-width:110px;">
         <option value="">－</option>
-        ${specialCatsInView.map((c) => `<option value="${c}" ${activeCat === c ? 'selected' : ''}>${escapeHtml(CATEGORY_LABEL[c])}</option>`).join('')}
+        ${specialCatsInView.map((c) => `<option value="${c}" ${activeCat === c ? 'selected' : ''}>${escapeHtml(shortenCategoryLabelForDay(CATEGORY_LABEL[c]))}</option>`).join('')}
       </select>
       <label style="display:flex;align-items:center;gap:2px;${activeCat ? '' : 'opacity:0.3;'}">
         <input type="checkbox" class="nioigake-special-checkbox" data-id="${m.id}" ${isSpecial ? 'checked' : ''} ${activeCat ? '' : 'disabled'} />神
