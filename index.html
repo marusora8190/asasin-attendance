@@ -1339,7 +1339,7 @@ function buildNioigakeRolesPanel() {
   function renderRoles() {
     const bodyEl = panel.querySelector('#nioigake-roles-body');
     bodyEl.innerHTML = SPECIAL_ROLE_CATEGORIES.map((category, index) => {
-      const members = getCategoryMemberEntries(category);
+      const members = getOrderedMembersForCategory(category);
       const rows = members.map((m) => {
         const cm = state.categoryMembers.get(`${category}::${m.id}`);
         const isSpecial = cm ? !!cm.is_special : false;
