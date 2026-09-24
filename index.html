@@ -1195,7 +1195,7 @@ function buildCategoryMembersPanel(options) {
 
   const panel = document.createElement('div');
   panel.className = 'master-panel';
-  panel.style.maxWidth = '1100px';
+  panel.style.maxWidth = '1300px';
   panel.innerHTML = `
     <h2>${escapeHtml(title)}</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
@@ -1240,7 +1240,7 @@ function buildCategoryMembersPanel(options) {
   function renderList() {
     const headerEl = panel.querySelector(`#category-members-header-${sortByCategory}`);
     headerEl.innerHTML = `
-      <span style="width:180px;min-width:180px;flex-shrink:0;">氏名</span>
+      <span style="width:90px;min-width:90px;flex-shrink:0;">氏名</span>
       ${normalCatsInView.map((c) => `<span style="width:60px;text-align:center;flex-shrink:0;">${CATEGORY_LABEL[c].replace(/（.*）/, '')}</span>`).join('')}
       ${specialCatsInView.length > 0 ? `<span style="width:290px;text-align:center;flex-shrink:0;">にをいがけデー</span>` : ''}
     `;
@@ -1255,7 +1255,7 @@ function buildCategoryMembersPanel(options) {
     const listEl = panel.querySelector(`#category-members-list-${sortByCategory}`);
     listEl.innerHTML = membersInOrder.map((m) => `
       <li data-id="${m.id}" style="justify-content:space-between;">
-        <span style="width:180px;min-width:180px;flex-shrink:0;white-space:nowrap;">${escapeHtml(m.name)}</span>
+        <span style="width:90px;min-width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.name)}</span>
         ${normalCatsInView.map((c) => {
           const cm = state.categoryMembers.get(`${c}::${m.id}`);
           const isActive = cm ? cm.is_active : true;
