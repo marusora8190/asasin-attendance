@@ -538,7 +538,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, categoryMembers: false, nioigakeRoles: false, categories: false, ceremonyTimes: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   archiveCategory: 'asagami',
@@ -663,8 +663,12 @@ async function renderMainShell() {
             <button class="tab" data-view="report">神殿掃除報告書</button>
             <button class="tab" data-view="report-geppai">月例参拝報告書</button>
             <button class="tab" data-view="roster">神殿掃除当番表</button>
-            <button class="tab" data-view="archive">保管記録</button>
+            <button class="tab" data-view="archive">記録</button>
+            <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
             <button class="tab" data-view="master">マスター</button>
+            <button class="tab" data-view="category-members-page">区分名簿</button>
+            <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
+            <button class="tab" data-view="categories-page">表示区分</button>
             <button class="tab" data-view="help">使い方</button>
           </div>
           <div class="sidebar-footer" id="sidebar-footer">
@@ -764,6 +768,10 @@ function renderView() {
   else if (state.view === 'roster') renderRosterView(container);
   else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
+  else if (state.view === 'ceremony-times-page') renderCeremonyTimesPageView(container);
+  else if (state.view === 'category-members-page') renderCategoryMembersPageView(container);
+  else if (state.view === 'nioigake-roles-page') renderNioigakeRolesPageView(container);
+  else if (state.view === 'categories-page') renderCategoriesPageView(container);
   else if (state.view === 'help') renderHelpView(container);
 }
 
@@ -929,7 +937,7 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>⑤ 保管記録</h2>
+        <h2>⑤ 記録</h2>
         <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
         <ul>
           <li>年度・区分を選んで、部署ごとの出欠一覧を確認できます。</li>
@@ -938,18 +946,51 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>⑥ マスター</h2>
-        <p>部署・立場・区分など、システム全体で使う基本情報を管理する画面です。</p>
+        <h2>⑥ 慰労拝受記録</h2>
+        <p>慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。</p>
+        <ul>
+          <li>過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。</li>
+          <li>時刻は「0812」のように入力すると自動で「8:12」に変換されます。入力中にEnterキーを押すと、右隣のセルにカーソルが移動します。</li>
+          <li>一番左の年号の列は、横にスクロールしても常に見える位置に固定されています。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑦ マスター</h2>
+        <p>部署・立場など、システム全体で使う基本情報を管理する画面です。</p>
         <ul>
           <li><strong>部署を編集</strong>：部署名の追加・変更・削除と、部署ごとの既定の当番日(1〜3日目)を設定します。</li>
           <li><strong>立場を編集</strong>：立場(役職)名の一覧を管理します。</li>
           <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
           <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
           <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
-          <li><strong>区分の名簿を管理</strong>：区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。にをいがけデーは「参加日」を1つのプルダウンで選ぶ形式になっており、「神」「責」「総」の設定は「にをいがけデーの役割区分」で行います。見出し行は上部に固定されています。</li>
-          <li><strong>にをいがけデーの役割区分</strong>：「区分の名簿を管理」で参加日を選んだ人だけが、参加日ごとに横並びで表示されます。「神」(神名流し)・「責」(神名流しリーダー)・「総」(その日全体の責任者、1人だけ)・「運」(マイクロ運転手)をチェックできます。各見出しには参加人数が自動で表示されます。</li>
-          <li><strong>区分（タブ）を管理</strong>：出欠入力・現場入力で使う区分そのものを管理します。名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、「神・責欄を使う」の切り替え、新しい区分の追加・削除ができます。並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
-          <li><strong>慰労拝受 記録（時間）</strong>：慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。時刻は「0812」のように入力すると自動で「8:12」に変換されます。入力中にEnterキーを押すと、右隣のセルにカーソルが移動します。一番左の年号の列は、横にスクロールしても常に見える位置に固定されています。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑧ 区分名簿</h2>
+        <p>区分ごとに、名簿から外す・戻すをチェックボックスで切り替えられます。退職ではなく「その区分だけ対象外にする」ための機能です。</p>
+        <ul>
+          <li>にをいがけデーは「参加日」を1つのプルダウンで選ぶ形式になっており、「神」「責」「総」「運」の設定は「にをいがけデー役割」で行います。</li>
+          <li>見出し行は上部に固定されています。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑨ にをいがけデー役割</h2>
+        <p>「区分名簿」で参加日を選んだ人だけが、参加日ごとに横並びで表示されます。</p>
+        <ul>
+          <li>「神」(神名流し)・「責」(神名流しリーダー)・「総」(その日全体の責任者、1人だけ)・「運」(マイクロ運転手)をチェックできます。</li>
+          <li>各見出しには参加人数が自動で表示されます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑩ 表示区分</h2>
+        <p>出欠入力・現場入力で使う区分そのものを管理します。</p>
+        <ul>
+          <li>名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、「神・責欄を使う」の切り替え、新しい区分の追加・削除ができます。</li>
+          <li>並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
         </ul>
       </section>
 
@@ -957,7 +998,7 @@ function renderHelpView(container) {
         <h2>年度・記録・ログインについて</h2>
         <ul>
           <li>出欠データは年度ごとに分かれて保存されます。年度が変わっても、過去の年度のデータは消えず、「年度」のプルダウンでいつでも見返せます。</li>
-          <li>年度が終わる(3月末を過ぎる)と、自動的にその年度の記録が「保管記録」にコピーされます。</li>
+          <li>年度が終わる(3月末を過ぎる)と、自動的にその年度の記録が「記録」にコピーされます。</li>
           <li>退職者を出欠入力画面で「×」で外しても、記録は削除されず、通常の年度データ・保管記録にそのまま残ります。区分ごとに名簿から外すだけの場合は「区分の名簿を管理」を使ってください。</li>
           <li>合言葉によるログインは廃止しており、URLを知っていれば誰でも直接アプリを開けます。URLの管理にはご注意ください。</li>
         </ul>
@@ -985,10 +1026,6 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
-        <button class="btn-dark" id="edit-category-members-btn">区分の名簿を管理</button>
-        <button class="btn-dark" id="edit-nioigake-roles-btn">にをいがけデーの役割区分</button>
-        <button class="btn-dark" id="edit-categories-btn">区分（タブ）を管理</button>
-        <button class="btn-dark" id="edit-ceremony-times-btn">慰労拝受 記録（時間）</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -1014,27 +1051,77 @@ function renderMasterView(container) {
     state.masterOpen.memberDept = !state.masterOpen.memberDept;
     renderMasterPanels();
   });
-  document.getElementById('edit-category-members-btn').addEventListener('click', () => {
-    state.masterOpen.categoryMembers = !state.masterOpen.categoryMembers;
-    renderMasterPanels();
-  });
-  document.getElementById('edit-nioigake-roles-btn').addEventListener('click', () => {
-    state.masterOpen.nioigakeRoles = !state.masterOpen.nioigakeRoles;
-    renderMasterPanels();
-  });
-  document.getElementById('edit-categories-btn').addEventListener('click', () => {
-    state.masterOpen.categories = !state.masterOpen.categories;
-    renderMasterPanels();
-  });
-  document.getElementById('edit-ceremony-times-btn').addEventListener('click', async () => {
-    state.masterOpen.ceremonyTimes = !state.masterOpen.ceremonyTimes;
-    if (state.masterOpen.ceremonyTimes && !state.ceremonyTimesLoaded) {
-      await loadCeremonyTimes();
-    }
-    renderMasterPanels();
-  });
 
   renderMasterPanels();
+}
+
+function renderCeremonyTimesPageView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">慰労拝受記録</h1>
+        </div>
+      </div>
+      <div id="ceremony-times-page-body"></div>
+    </div>
+  `;
+  const bodyEl = document.getElementById('ceremony-times-page-body');
+  const render = () => {
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(buildCeremonyTimesPanel());
+  };
+  if (!state.ceremonyTimesLoaded) {
+    loadCeremonyTimes().then(render);
+  } else {
+    render();
+  }
+}
+
+function renderCategoryMembersPageView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">区分名簿</h1>
+        </div>
+      </div>
+      <div id="category-members-page-body"></div>
+    </div>
+  `;
+  document.getElementById('category-members-page-body').appendChild(buildCategoryMembersPanel({ sortByCategory: null }));
+}
+
+function renderNioigakeRolesPageView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">にをいがけデー役割</h1>
+        </div>
+      </div>
+      <div id="nioigake-roles-page-body"></div>
+    </div>
+  `;
+  document.getElementById('nioigake-roles-page-body').appendChild(buildNioigakeRolesPanel());
+}
+
+function renderCategoriesPageView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">表示区分</h1>
+        </div>
+      </div>
+      <div id="categories-page-body"></div>
+    </div>
+  `;
+  document.getElementById('categories-page-body').appendChild(buildCategoriesPanel());
 }
 
 function renderMasterPanels() {
@@ -1046,10 +1133,6 @@ function renderMasterPanels() {
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
-  if (state.masterOpen.categoryMembers) panelsEl.appendChild(buildCategoryMembersPanel({ sortByCategory: null }));
-  if (state.masterOpen.nioigakeRoles) panelsEl.appendChild(buildNioigakeRolesPanel());
-  if (state.masterOpen.categories) panelsEl.appendChild(buildCategoriesPanel());
-  if (state.masterOpen.ceremonyTimes) panelsEl.appendChild(buildCeremonyTimesPanel());
 }
 
 function buildDutyDayPanel() {
@@ -1200,7 +1283,7 @@ function buildCategoryMembersPanel(options) {
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
-      ${specialCatsInView.length > 0 ? '「にをいがけデー」欄は参加日をプルダウンで選びます。「神」「責」「総」の設定は「にをいがけデーの役割区分」で行います。' : ''}
+      ${specialCatsInView.length > 0 ? '「にをいがけデー」欄は参加日をプルダウンで選びます。「神」「責」「総」「運」の設定は「にをいがけデー役割」で行います。' : ''}
     </p>
     <div style="overflow-x:auto;">
       <div id="category-members-header-${sortByCategory}" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:840px;"></div>
