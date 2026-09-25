@@ -830,7 +830,7 @@ function getCategoryMemberEntries(category) {
       const cm = state.categoryMembers.get(`${category}::${m.id}`);
       const isActive = cm ? cm.is_active : true;
       const sortOrder = cm ? cm.sort_order : m.sort_order;
-      return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader, _isDayLeader: !!cm?.is_day_leader } : null;
+      return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader, _isDayLeader: !!cm?.is_day_leader, _isTransport: !!cm?.is_transport } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a._catSortOrder - b._catSortOrder);
@@ -2245,9 +2245,10 @@ function renderGridView(container) {
         <td style="width:90px;min-width:90px;max-width:90px;">
           <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
         </td>
-        ${isSpecialRoleCategory ? `<td style="width:100px;min-width:100px;max-width:100px;text-align:center;white-space:nowrap;">
+        ${isSpecialRoleCategory ? `<td style="width:140px;min-width:140px;max-width:140px;text-align:center;white-space:nowrap;">
           ${m._isDayLeader ? '<span title="その日全体の責任者" style="display:inline-block;font-size:10px;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">総責</span>' : ''}
           ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="display:inline-block;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神責</span>' : m._isSpecial ? '<span title="神名流し" style="display:inline-block;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名</span>' : ''}
+          ${m._isTransport ? '<span title="運転" style="display:inline-block;font-size:10px;background:var(--color-ink-soft);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">運転</span>' : ''}
         </td>` : ''}
         <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
         <td style="width:200px;min-width:200px;max-width:200px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
@@ -2314,7 +2315,7 @@ function renderGridView(container) {
               <th style="text-align:center;width:28px;"></th>
               <th style="text-align:center;width:40px;">No.</th>
               <th style="width:90px;min-width:90px;max-width:90px;">氏名</th>
-              ${isSpecialRoleCategory ? `<th style="width:100px;min-width:100px;max-width:100px;">役割</th>` : ''}
+              ${isSpecialRoleCategory ? `<th style="width:140px;min-width:140px;max-width:140px;">役割</th>` : ''}
               <th style="width:150px;min-width:150px;max-width:150px;">部署</th>
               <th style="width:200px;min-width:200px;max-width:200px;">立場</th>
               ${monthHeaders}
