@@ -360,15 +360,24 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 
 /* ---- 記録（配布資料など）の印刷 ---- */
 @media print {
-  @page { size: A4; margin: 12mm; }
+  @page { size: A4; margin: 10mm; }
   .grid-wrap { max-width: none !important; padding: 0 !important; margin: 0 !important; }
   .record-doc { display: none; }
   .record-doc.record-print-target { display: block !important; max-width: none !important; margin: 0 !important; }
+  .record-doc.record-print-target h2 { font-size: 15px !important; margin: 6px 0 !important; }
   .record-doc.record-print-target .record-page {
     border: none !important; box-shadow: none !important; padding: 0 !important;
     page-break-after: always; margin-bottom: 0 !important;
+    font-size: 11px !important; line-height: 1.3 !important;
   }
   .record-doc.record-print-target .record-page:last-child { page-break-after: auto; }
+  .record-doc.record-print-target .record-page h3 { font-size: 12.5px !important; margin: 8px 0 4px !important; }
+  .record-doc.record-print-target .record-page ul { margin: 2px 0 !important; padding-left: 18px !important; }
+  .record-doc.record-print-target .record-page li { margin: 0 !important; }
+  .record-doc.record-print-target .record-schedule-table td { padding: 2px 6px !important; font-size: 11px !important; }
+  .record-doc.record-print-target .record-roster-table th,
+  .record-doc.record-print-target .record-roster-table td { padding: 1px 4px !important; font-size: 10px !important; }
+  .record-doc.record-print-target .record-roster-cols { gap: 12px !important; margin-top: 4px !important; }
 }
 
 /* ---- 神殿掃除実施報告書（朝の神殿掃除提出） ---- */
