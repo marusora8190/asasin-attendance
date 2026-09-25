@@ -49,6 +49,11 @@ input, select, textarea, button {
 }
 .font-display { font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif; font-weight: 900; letter-spacing: 0.01em; }
 button { cursor: pointer; font-family: inherit; }
+.app-shell { display: flex; min-height: 100%; align-items: stretch; }
+#view-container { flex: 1; min-width: 0; }
+@media print {
+  .app-shell { display: block; }
+}
 button:active { filter: brightness(0.85); }
 .btn-light:active { background: var(--color-line); }
 .icon-btn:active:not(:disabled) { background: var(--color-line); }
@@ -99,21 +104,21 @@ select {
 .btn-primary:hover { background: var(--color-navy-soft); }
 .btn-primary:disabled { opacity: 0.4; cursor: default; }
 
-/* ---- ナビゲーション（上部横並び） ---- */
-.app-shell { display: block; }
-nav.app-nav { border-bottom: 1px solid var(--color-line); background: var(--color-panel); }
-nav.app-nav .inner {
-  max-width: 1400px; margin: 0 auto; padding: 0 16px;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+/* ---- ナビゲーション（サイドバー） ---- */
+nav.app-nav {
+  border-right: 1px solid var(--color-line); background: var(--color-panel);
+  width: 200px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between;
 }
-nav.app-nav .tabs { display: flex; flex-wrap: wrap; }
+nav.app-nav .inner { display: flex; flex-direction: column; height: 100%; }
+nav.app-nav .tabs { display: flex; flex-direction: column; padding: 8px 0; }
 nav.app-nav .tab {
-  padding: 12px 16px; font-size: 14px; background: none; border: none;
-  border-bottom: 2px solid transparent; color: var(--color-ink-soft);
+  padding: 12px 20px; font-size: 14px; background: none; border: none; text-align: left;
+  border-left: 3px solid transparent; color: var(--color-ink-soft);
 }
-nav.app-nav .tab.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; }
+nav.app-nav .tab.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; background: var(--color-paper); }
 nav.app-nav .sidebar-footer {
-  padding: 8px 0; display: flex; flex-direction: row; align-items: center; gap: 12px;
+  padding: 16px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  border-top: 1px solid var(--color-line); margin-top: 8px;
 }
 nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decoration: underline; background: none; border: none; }
 .btn-update {
