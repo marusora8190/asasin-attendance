@@ -220,10 +220,14 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .field-controls select { border: 1px solid var(--color-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; background: white; }
 .field-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 0; }
 .field-chip {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
   padding: 10px 6px; border-radius: 10px; border: 2px solid var(--color-line);
   background: white; font-size: 16px; font-weight: 500; color: var(--color-ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.field-chip-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; text-align: left;
+}
+.field-chip-badges { display: flex; gap: 2px; flex-shrink: 0; }
 .field-chip.filled { border-color: var(--color-present); background: var(--color-present); color: white; font-weight: 700; }
 .field-chip.pre-absent { border-color: var(--color-absent); background: var(--color-absent); color: white; font-weight: 700; }
 .field-chip.pre-absent.filled { border-color: var(--color-absent); background: var(--color-absent); }
@@ -231,10 +235,11 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   display: inline-flex; align-items: center; justify-content: center;
   writing-mode: vertical-rl; text-orientation: upright;
   font-size: 10px; font-weight: 700; color: white; background: var(--color-accent);
-  border-radius: 4px; padding: 2px 1px; margin-right: 4px; vertical-align: middle; line-height: 1.1;
+  border-radius: 4px; padding: 2px 1px; vertical-align: middle; line-height: 1.1;
 }
 .field-chip-badge.leader { background: var(--color-gold); }
 .field-chip-badge.day-leader { background: var(--color-navy); }
+.field-chip-badge.transport { background: var(--color-ink-soft); }
 .field-checkpoint-time-input {
   width: 70px; box-sizing: border-box; padding: 8px; text-align: center;
   border: 1px solid var(--color-line); border-radius: 8px; font-size: 14px;
@@ -2610,8 +2615,10 @@ function renderFieldView(container) {
     const badges = [
       m._isDayLeader ? '<span class="field-chip-badge day-leader">組責</span>' : '',
       m._isSpecialLeader ? '<span class="field-chip-badge leader">神責</span>' : (m._isSpecial ? '<span class="field-chip-badge">神名</span>' : ''),
+      m._isTransport ? '<span class="field-chip-badge transport">運転</span>' : '',
     ].filter(Boolean).join('');
-    return `<button class="${chipCls}" data-member="${m.id}">${badges}${escapeHtml(m.name)}</button>`;
+    const badgeWrap = badges ? `<span class="field-chip-badges">${badges}</span>` : '';
+    return `<button class="${chipCls}" data-member="${m.id}"><span class="field-chip-name">${escapeHtml(m.name)}</span>${badgeWrap}</button>`;
   }).join('') || `<p style="color:var(--color-ink-soft);grid-column:1/-1;">該当するメンバーがいません</p>`;
 
   container.innerHTML = `
