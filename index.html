@@ -167,6 +167,19 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .record-roster-table th, .record-roster-table td { border: 1px solid var(--color-line); padding: 3px 6px; text-align: center; }
 .record-roster-table td:nth-child(2) { text-align: left; }
 .record-year-btn.active { background: var(--color-navy); color: white; border-color: var(--color-navy); }
+.record-content.record-editing {
+  outline: 2px dashed var(--color-accent); outline-offset: 4px;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 8mm),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 8mm);
+  background-size: 8mm 8mm;
+}
+.record-content.record-editing table td, .record-content.record-editing table th { cursor: text; }
+.col-resize-handle {
+  position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize;
+  background: transparent; z-index: 5;
+}
+.col-resize-handle:hover { background: var(--color-accent); opacity: 0.5; }
 .help-section h2 { font-size: 16px; color: var(--color-navy); margin: 0 0 8px; }
 .help-section p { margin: 0 0 8px; color: var(--color-ink); }
 .help-section ul { margin: 0; padding-left: 20px; }
@@ -1934,9 +1947,14 @@ function renderArchiveView(container) {
         <div class="category-tabs no-print" style="margin-top:8px;">${recordYearTabs}</div>
         ${recordsForYear.length === 0 ? `<p class="hint-text">この年度の記録はありません。</p>` : recordsForYear.map((r) => `
           <div class="record-doc" data-record-id="${r.id}">
-            <button class="btn-dark no-print record-print-btn" data-record-id="${r.id}" style="margin-bottom:12px;">印刷 / PDFで保存</button>
+            <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+              <button class="btn-dark record-print-btn" data-record-id="${r.id}">印刷 / PDFで保存</button>
+              <button class="btn-light record-edit-btn" data-record-id="${r.id}">編集する</button>
+              <button class="btn-dark record-save-btn" data-record-id="${r.id}" style="display:none;">保存する</button>
+              <span class="record-edit-hint" style="display:none;font-size:12px;color:var(--color-ink-soft);align-self:center;">文字はクリックして書き換え、表の枠線をドラッグすると幅を調整できます。</span>
+            </div>
             <h2 style="font-size:18px;text-align:center;margin:16px 0;">${escapeHtml(r.title)}</h2>
-            ${r.body_html}
+            <div class="record-content" data-record-id="${r.id}">${r.body_html}</div>
           </div>
         `).join('')}
       `}
@@ -1963,6 +1981,59 @@ function renderArchiveView(container) {
           el.classList.toggle('record-print-target', el.dataset.recordId === btn.dataset.recordId);
         });
         window.print();
+      });
+    });
+    document.querySelectorAll('.record-edit-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.recordId;
+        const contentEl = document.querySelector(`.record-content[data-record-id="${id}"]`);
+        const docEl = document.querySelector(`.record-doc[data-record-id="${id}"]`);
+        contentEl.setAttribute('contenteditable', 'true');
+        contentEl.classList.add('record-editing');
+        makeTablesResizable(contentEl);
+        btn.style.display = 'none';
+        docEl.querySelector('.record-save-btn').style.display = '';
+        docEl.querySelector('.record-edit-hint').style.display = '';
+      });
+    });
+    document.querySelectorAll('.record-save-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.dataset.recordId);
+        const contentEl = document.querySelector(`.record-content[data-record-id="${id}"]`);
+        contentEl.querySelectorAll('.col-resize-handle').forEach((h) => h.remove());
+        const newHtml = contentEl.innerHTML;
+        await sb.from(T_RECORDS).update({ body_html: newHtml }).eq('id', id);
+        const rec = state.records.find((rr) => rr.id === id);
+        if (rec) rec.body_html = newHtml;
+        renderView();
+      });
+    });
+  }
+
+  // 表の各列にドラッグ用のハンドルを付け、掴んで動かすと列幅を変えられるようにする
+  function makeTablesResizable(container) {
+    container.querySelectorAll('table').forEach((table) => {
+      table.querySelectorAll('tr:first-child > th, tr:first-child > td').forEach((cell) => {
+        cell.style.position = 'relative';
+        if (cell.querySelector('.col-resize-handle')) return;
+        const handle = document.createElement('span');
+        handle.className = 'col-resize-handle';
+        cell.appendChild(handle);
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startWidth = cell.getBoundingClientRect().width;
+          const onMove = (moveEvent) => {
+            const newWidth = Math.max(20, startWidth + (moveEvent.clientX - startX));
+            cell.style.width = newWidth + 'px';
+          };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
       });
     });
   }
