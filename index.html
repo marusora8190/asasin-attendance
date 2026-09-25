@@ -2206,7 +2206,10 @@ function renderGridView(container) {
   ).join('');
   const bulkCheckpointLabel = activeCheckpoints.find((cp) => cp.seq === state.bulkActionCheckpoint)?.label ?? '';
 
-  const categoryMembersList = getCategoryMemberEntries(state.category);
+  // 「にをいがけデー」は、各部署内で主任が一番先に来るよう並べる
+  const categoryMembersList = SPECIAL_ROLE_CATEGORIES.includes(state.category)
+    ? getOrderedMembersForCategory(state.category)
+    : getCategoryMemberEntries(state.category);
 
   const rowsHtml = categoryMembersList.map((m, index) => {
     const s = isYearly ? computeYearlySummary(m.id, state.category) : computeSummary(m.id, state.category);
