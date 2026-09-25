@@ -2246,10 +2246,10 @@ function renderGridView(container) {
           <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
         </td>
         ${isSpecialRoleCategory ? `<td style="width:140px;min-width:140px;max-width:140px;">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-          ${m._isDayLeader ? '<span title="その日全体の責任者" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">組総責任者</span>' : ''}
-          ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名流し責任者</span>' : m._isSpecial ? '<span title="神名流し" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名流し</span>' : ''}
-          ${m._isTransport ? '<span title="運転" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-ink-soft);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">マイクロ運転手</span>' : ''}
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;">
+          ${m._isDayLeader ? '<span title="その日全体の責任者" style="display:inline-block;font-size:9px;white-space:nowrap;color:var(--color-navy);font-weight:700;">組総責任者</span>' : ''}
+          ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="display:inline-block;font-size:9px;white-space:nowrap;color:var(--color-gold);font-weight:700;">神名流し責任者</span>' : m._isSpecial ? '<span title="神名流し" style="display:inline-block;font-size:9px;white-space:nowrap;color:var(--color-accent);font-weight:700;">神名流し</span>' : ''}
+          ${m._isTransport ? '<span title="運転" style="display:inline-block;font-size:9px;white-space:nowrap;color:var(--color-ink-soft);font-weight:700;">マイクロ運転手</span>' : ''}
           </div>
         </td>` : ''}
         <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
