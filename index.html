@@ -2582,8 +2582,10 @@ function renderFieldView(container) {
   }).join('');
 
   const activeGroup = FIELD_DEPT_GROUPS.find((g) => g.key === state.fieldDeptFilter) ?? FIELD_DEPT_GROUPS[0];
-  // 部署の絞り込みがないタブ（日全体・課全体）は、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する
-  let orderedMembers = !activeGroup.depts
+  // 部署の絞り込みがないタブ（日全体・課全体）は、出欠入力画面と同じ並び順（区分ごとの表示順）で表示する。
+  // ただし「にをいがけデー」は、各部署内で主任が一番先に来るよう並べる
+  const useLeaderFirstOrder = !activeGroup.depts && SPECIAL_ROLE_CATEGORIES.includes(state.fieldCategory);
+  let orderedMembers = !activeGroup.depts && !useLeaderFirstOrder
     ? getCategoryMemberEntries(state.fieldCategory)
     : getOrderedMembersForCategory(state.fieldCategory)
         .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
