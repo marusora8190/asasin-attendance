@@ -342,6 +342,19 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
   .duty-day-block { flex: 0 1 auto !important; }
 }
 
+/* ---- 記録（配布資料など）の印刷 ---- */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  .grid-wrap { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .record-doc { display: none; }
+  .record-doc.record-print-target { display: block !important; max-width: none !important; margin: 0 !important; }
+  .record-doc.record-print-target .record-page {
+    border: none !important; box-shadow: none !important; padding: 0 !important;
+    page-break-after: always; margin-bottom: 0 !important;
+  }
+  .record-doc.record-print-target .record-page:last-child { page-break-after: auto; }
+}
+
 /* ---- 神殿掃除実施報告書（朝の神殿掃除提出） ---- */
 .report-preview { display:flex; flex-direction:column; align-items:center; gap:24px; }
 .report-page {
@@ -558,6 +571,7 @@ const state = {
   records: [], // asagami_records（にをいがけデーの要項などの記録）
   recordsLoaded: false,
   recordsYear: null,
+  recordsCategory: null,
   archiveCategory: 'asagami',
   archiveRows: [], // 選択中の年度・区分の保管記録
   bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
@@ -1895,18 +1909,32 @@ function renderArchiveView(container) {
     return;
   }
 
-  const recordYears = [...new Set(state.records.map((r) => r.reiki_year))];
+  const recordCategories = [...new Set(state.records.map((r) => r.record_category))];
+  if (!state.recordsCategory || !recordCategories.includes(state.recordsCategory)) {
+    state.recordsCategory = recordCategories[0] ?? null;
+  }
+  const recordCategoryTabs = recordCategories.map((c) =>
+    `<button data-record-category="${escapeHtml(c)}" class="record-category-btn ${state.recordsCategory === c ? 'active' : ''}">${escapeHtml(c)}</button>`
+  ).join('');
+
+  const recordsInCategory = state.records.filter((r) => r.record_category === state.recordsCategory);
+  const recordYears = [...new Set(recordsInCategory.map((r) => r.reiki_year))];
+  if (state.recordsYear === null || !recordYears.includes(state.recordsYear)) {
+    state.recordsYear = recordYears[0] ?? null;
+  }
   const recordYearTabs = recordYears.map((y) =>
     `<button data-record-year="${y}" class="record-year-btn ${state.recordsYear === y ? 'active' : ''}">立教${y}年</button>`
   ).join('');
-  const recordsForYear = state.records.filter((r) => r.reiki_year === state.recordsYear);
+  const recordsForYear = recordsInCategory.filter((r) => r.reiki_year === state.recordsYear);
   const recordsSectionHtml = `
     <div class="grid-wrap" style="margin-top:12px;">
       <div class="grid-header"><div><h2 class="font-display" style="font-size:22px;">記録（配布資料など）</h2></div></div>
-      ${recordYears.length === 0 ? `<p class="hint-text" style="margin-top:0;">まだ登録された記録はありません。</p>` : `
-        <div class="category-tabs">${recordYearTabs}</div>
+      ${recordCategories.length === 0 ? `<p class="hint-text" style="margin-top:0;">まだ登録された記録はありません。</p>` : `
+        <div class="category-tabs">${recordCategoryTabs}</div>
+        <div class="category-tabs no-print" style="margin-top:8px;">${recordYearTabs}</div>
         ${recordsForYear.length === 0 ? `<p class="hint-text">この年度の記録はありません。</p>` : recordsForYear.map((r) => `
-          <div class="record-doc">
+          <div class="record-doc" data-record-id="${r.id}">
+            <button class="btn-dark no-print record-print-btn" data-record-id="${r.id}" style="margin-bottom:12px;">印刷 / PDFで保存</button>
             <h2 style="font-size:18px;text-align:center;margin:16px 0;">${escapeHtml(r.title)}</h2>
             ${r.body_html}
           </div>
@@ -1916,10 +1944,25 @@ function renderArchiveView(container) {
   `;
 
   function attachRecordsListeners() {
+    document.querySelectorAll('.record-category-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.recordsCategory = btn.dataset.recordCategory;
+        state.recordsYear = null;
+        renderView();
+      });
+    });
     document.querySelectorAll('.record-year-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.recordsYear = Number(btn.dataset.recordYear);
         renderView();
+      });
+    });
+    document.querySelectorAll('.record-print-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.record-doc').forEach((el) => {
+          el.classList.toggle('record-print-target', el.dataset.recordId === btn.dataset.recordId);
+        });
+        window.print();
       });
     });
   }
