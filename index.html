@@ -2245,10 +2245,12 @@ function renderGridView(container) {
         <td style="width:90px;min-width:90px;max-width:90px;">
           <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
         </td>
-        ${isSpecialRoleCategory ? `<td style="width:140px;min-width:140px;max-width:140px;text-align:center;white-space:nowrap;">
-          ${m._isDayLeader ? '<span title="その日全体の責任者" style="display:inline-block;font-size:10px;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">総責</span>' : ''}
-          ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="display:inline-block;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神責</span>' : m._isSpecial ? '<span title="神名流し" style="display:inline-block;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名</span>' : ''}
-          ${m._isTransport ? '<span title="運転" style="display:inline-block;font-size:10px;background:var(--color-ink-soft);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">運転</span>' : ''}
+        ${isSpecialRoleCategory ? `<td style="width:140px;min-width:140px;max-width:140px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          ${m._isDayLeader ? '<span title="その日全体の責任者" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">組総責任者</span>' : ''}
+          ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名流し責任者</span>' : m._isSpecial ? '<span title="神名流し" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名流し</span>' : ''}
+          ${m._isTransport ? '<span title="運転" style="display:inline-block;font-size:9px;white-space:nowrap;background:var(--color-ink-soft);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">マイクロ運転手</span>' : ''}
+          </div>
         </td>` : ''}
         <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
         <td style="width:200px;min-width:200px;max-width:200px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
@@ -2606,7 +2608,7 @@ function renderFieldView(container) {
       state.attendance.get(attKey(m.id, state.fieldCategory, 1)) === '×';
     const chipCls = ['field-chip', status === '○' ? 'filled' : '', isPreAbsent ? 'pre-absent' : ''].filter(Boolean).join(' ');
     const badges = [
-      m._isDayLeader ? '<span class="field-chip-badge day-leader">総責</span>' : '',
+      m._isDayLeader ? '<span class="field-chip-badge day-leader">組責</span>' : '',
       m._isSpecialLeader ? '<span class="field-chip-badge leader">神責</span>' : (m._isSpecial ? '<span class="field-chip-badge">神名</span>' : ''),
     ].filter(Boolean).join('');
     return `<button class="${chipCls}" data-member="${m.id}">${badges}${escapeHtml(m.name)}</button>`;
