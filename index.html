@@ -2172,6 +2172,7 @@ function renderGridView(container) {
   const isYearly = YEARLY_CATEGORIES.includes(state.category);
   const useCheckpoints = isYearly && !NO_CHECKPOINT_YEARLY_CATEGORIES.includes(state.category);
   const activeCheckpoints = useCheckpoints ? YEARLY_CHECKPOINTS : [YEARLY_CHECKPOINTS[0]];
+  const isSpecialRoleCategory = SPECIAL_ROLE_CATEGORIES.includes(state.category);
 
   if (isYearly && state.yearlyAttendanceLoadedCategory !== state.category) {
     container.innerHTML = `<div class="loading">読み込み中…</div>`;
@@ -2242,12 +2243,12 @@ function renderGridView(container) {
         </td>
         <td style="text-align:center;color:var(--color-ink-soft);padding:0 8px;">${index + 1}</td>
         <td style="width:90px;min-width:90px;max-width:90px;">
-          <div style="display:flex;align-items:center;gap:2px;">
-            ${m._isDayLeader ? '<span title="その日全体の責任者" style="flex-shrink:0;font-size:10px;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;">総</span>' : ''}
-            ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="flex-shrink:0;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;">Ｌ</span>' : m._isSpecial ? '<span title="神名流し" style="flex-shrink:0;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;">神</span>' : ''}
-            <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
-          </div>
+          <input class="att-editable" data-field="name" data-member="${m.id}" value="${escapeHtml(m.name)}" style="width:100%;box-sizing:border-box;${hasPreAbsent ? 'background:var(--color-absent);color:white;font-weight:700;' : ''}" />
         </td>
+        ${isSpecialRoleCategory ? `<td style="width:100px;min-width:100px;max-width:100px;text-align:center;white-space:nowrap;">
+          ${m._isDayLeader ? '<span title="その日全体の責任者" style="display:inline-block;font-size:10px;background:var(--color-navy);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">総責</span>' : ''}
+          ${m._isSpecialLeader ? '<span title="神名流しリーダー" style="display:inline-block;font-size:10px;background:var(--color-gold);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神責</span>' : m._isSpecial ? '<span title="神名流し" style="display:inline-block;font-size:10px;background:var(--color-accent);color:white;border-radius:4px;padding:0 3px;margin:0 2px;">神名</span>' : ''}
+        </td>` : ''}
         <td style="width:150px;min-width:150px;max-width:150px;">${renderMasterSelect('department', m.id, m.department, state.departments, true)}</td>
         <td style="width:200px;min-width:200px;max-width:200px;">${renderMasterSelect('position', m.id, m.position, state.positions, true)}</td>
         ${cells}
@@ -2313,6 +2314,7 @@ function renderGridView(container) {
               <th style="text-align:center;width:28px;"></th>
               <th style="text-align:center;width:40px;">No.</th>
               <th style="width:90px;min-width:90px;max-width:90px;">氏名</th>
+              ${isSpecialRoleCategory ? `<th style="width:100px;min-width:100px;max-width:100px;">役割</th>` : ''}
               <th style="width:150px;min-width:150px;max-width:150px;">部署</th>
               <th style="width:200px;min-width:200px;max-width:200px;">立場</th>
               ${monthHeaders}
