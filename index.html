@@ -149,6 +149,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
   padding: 8px 16px; font-size: 14px; color: var(--color-ink); height: 38px; box-sizing: border-box;
 }
 .btn-light:hover { background: var(--color-paper); }
+.btn-light.active-toggle { background: var(--color-navy); color: white; border-color: var(--color-navy); }
 
 /* ---- 出欠入力グリッド ---- */
 .grid-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
@@ -553,6 +554,7 @@ const state = {
   recordsLoaded: false,
   recordsYear: null,
   recordsCategory: null,
+  nioigakeRolesHighlightOnly: false,
   archiveCategory: 'asagami',
   archiveRows: [], // 選択中の年度・区分の保管記録
   bulkActionMonth: new Date().getMonth() + 1, // 「全員出席」等の一括操作の対象月
@@ -1414,10 +1416,19 @@ function buildNioigakeRolesPanel() {
       「区分の名簿を管理」で参加日を選んだ人だけがここに表示されます。
       「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します。
     </p>
+    <button class="btn-light" id="roles-highlight-toggle-btn" style="margin-bottom:10px;">各役割のチェック済み</button>
     <div id="nioigake-roles-body" style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;"></div>
   `;
 
+  panel.querySelector('#roles-highlight-toggle-btn').addEventListener('click', () => {
+    state.nioigakeRolesHighlightOnly = !state.nioigakeRolesHighlightOnly;
+    renderRoles();
+  });
+
   function renderRoles() {
+    const highlightOnly = state.nioigakeRolesHighlightOnly;
+    const toggleBtn = panel.querySelector('#roles-highlight-toggle-btn');
+    toggleBtn.classList.toggle('active-toggle', highlightOnly);
     const bodyEl = panel.querySelector('#nioigake-roles-body');
     bodyEl.innerHTML = SPECIAL_ROLE_CATEGORIES.map((category, index) => {
       const members = getOrderedMembersForCategory(category);
@@ -1427,18 +1438,19 @@ function buildNioigakeRolesPanel() {
         const isLeader = cm ? !!cm.is_special_leader : false;
         const isDayLeader = cm ? !!cm.is_day_leader : false;
         const isTransport = cm ? !!cm.is_transport : false;
+        const fade = (checked) => (highlightOnly && !checked) ? 'opacity:0.15;' : '';
         return `<li data-id="${m.id}" style="justify-content:space-between;border-bottom:1px solid var(--color-line);padding:6px 0;">
           <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;">
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(isSpecial)}">
             <input type="checkbox" class="role-special-checkbox" data-id="${m.id}" data-category="${category}" ${isSpecial ? 'checked' : ''} />神
           </label>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${isSpecial ? '' : 'opacity:0.3;'}">
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${isSpecial ? fade(isLeader) : 'opacity:0.3;'}">
             <input type="checkbox" class="role-leader-checkbox" data-id="${m.id}" data-category="${category}" ${isLeader ? 'checked' : ''} ${isSpecial ? '' : 'disabled'} />責
           </label>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;">
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(isDayLeader)}">
             <input type="checkbox" class="role-day-leader-checkbox" data-id="${m.id}" data-category="${category}" ${isDayLeader ? 'checked' : ''} />総
           </label>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;">
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(isTransport)}">
             <input type="checkbox" class="role-transport-checkbox" data-id="${m.id}" data-category="${category}" ${isTransport ? 'checked' : ''} />運
           </label>
         </li>`;
