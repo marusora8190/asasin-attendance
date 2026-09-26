@@ -2052,7 +2052,7 @@ function renderArchiveView(container) {
 
   if (state.archiveFiscalYears.length === 0) {
     container.innerHTML = `
-      <div class="grid-wrap">
+      <div class="grid-wrap no-print">
         <div class="grid-header">
           <div><p class="eyebrow">出欠管理システム</p><h1 class="font-display">記録</h1></div>
         </div>
@@ -2116,7 +2116,7 @@ function renderArchiveView(container) {
   }).join('');
 
   container.innerHTML = `
-    <div class="grid-wrap">
+    <div class="grid-wrap no-print">
       <div class="grid-header">
         <div>
           <p class="eyebrow">出欠管理システム</p>
