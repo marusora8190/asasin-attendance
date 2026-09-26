@@ -166,7 +166,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .record-roster-table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .record-roster-table th, .record-roster-table td { border: 1px solid var(--color-line); padding: 3px 6px; text-align: center; }
 .record-roster-table td:nth-child(2) { text-align: left; }
-.record-year-btn.active { background: var(--color-navy); color: white; border-color: var(--color-navy); }
+.record-year-btn.active { background: var(--color-navy) !important; color: white !important; border-color: var(--color-navy) !important; }
 .record-content.record-editing {
   background-image:
     repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 8mm),
@@ -1925,13 +1925,6 @@ async function loadArchiveRows() {
 }
 
 function renderArchiveView(container) {
-  if (!state._archiveLoaded) {
-    container.innerHTML = `<div class="loading">読み込み中…</div>`;
-    loadArchiveFiscalYears()
-      .then(() => loadArchiveRows())
-      .then(() => { state._archiveLoaded = true; renderView(); });
-    return;
-  }
   if (!state.recordsLoaded) {
     container.innerHTML = `<div class="loading">読み込み中…</div>`;
     loadRecords().then(() => renderView());
@@ -1966,13 +1959,17 @@ function renderArchiveView(container) {
             <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
               <button class="btn-dark record-print-btn" data-record-id="${r.id}">印刷 / PDFで保存</button>
               <button class="btn-light record-edit-btn" data-record-id="${r.id}">編集する</button>
+              <button class="btn-light record-add-page-btn" data-record-id="${r.id}">＋ページ追加</button>
               <button class="btn-dark record-save-btn" data-record-id="${r.id}" style="display:none;">保存する</button>
+              <button class="btn-light record-cancel-btn" data-record-id="${r.id}" style="display:none;">編集を戻す</button>
               <span class="record-edit-hint" style="display:none;font-size:12px;color:var(--color-ink-soft);align-self:center;">文字はクリックして書き換え、表の枠線をドラッグすると幅を調整できます。</span>
             </div>
-            <h2 style="font-size:18px;text-align:center;margin:16px 0;">${escapeHtml(r.title)}</h2>
             <div class="record-content" data-record-id="${r.id}">${r.body_html}</div>
           </div>
         `).join('')}
+        <div class="no-print" style="margin-top:20px;">
+          <button class="btn-dark" id="record-add-new-btn">＋ この区分に新しい記録を追加</button>
+        </div>
       `}
     </div>
   `;
@@ -2009,6 +2006,7 @@ function renderArchiveView(container) {
         makeTablesResizable(contentEl);
         btn.style.display = 'none';
         docEl.querySelector('.record-save-btn').style.display = '';
+        docEl.querySelector('.record-cancel-btn').style.display = '';
         docEl.querySelector('.record-edit-hint').style.display = '';
       });
     });
@@ -2024,6 +2022,55 @@ function renderArchiveView(container) {
         renderView();
       });
     });
+    document.querySelectorAll('.record-cancel-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!confirm('編集内容を破棄して、保存済みの状態に戻します。よろしいですか？')) return;
+        renderView();
+      });
+    });
+    document.querySelectorAll('.record-add-page-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.recordId;
+        const contentEl = document.querySelector(`.record-content[data-record-id="${id}"]`);
+        const docEl = document.querySelector(`.record-doc[data-record-id="${id}"]`);
+        const newPage = document.createElement('div');
+        newPage.className = 'record-page';
+        newPage.innerHTML = '<h3>新しいページ</h3><p>ここに内容を入力してください。</p>';
+        contentEl.appendChild(newPage);
+        if (contentEl.getAttribute('contenteditable') !== 'true') {
+          contentEl.setAttribute('contenteditable', 'true');
+          contentEl.classList.add('record-editing');
+          makeTablesResizable(contentEl);
+          docEl.querySelector('.record-edit-btn').style.display = 'none';
+          docEl.querySelector('.record-save-btn').style.display = '';
+          docEl.querySelector('.record-cancel-btn').style.display = '';
+          docEl.querySelector('.record-edit-hint').style.display = '';
+        }
+        newPage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+    const addNewRecordBtn = document.getElementById('record-add-new-btn');
+    if (addNewRecordBtn) {
+      addNewRecordBtn.addEventListener('click', async () => {
+        const title = prompt('新しい記録のタイトルを入力してください（例: 全教一斉にをいがけデー　営繕課参加要項）');
+        if (!title || !title.trim()) return;
+        const yearInput = prompt('立教何年の記録ですか？（数字だけ入力。例: 190）', String(state.recordsYear ?? ''));
+        const reikiYear = Number(yearInput);
+        if (!yearInput || !Number.isFinite(reikiYear)) { alert('年の入力が正しくありません。'); return; }
+        const category = state.recordsCategory;
+        const maxOrder = state.records.filter((r) => r.record_category === category && r.reiki_year === reikiYear)
+          .reduce((max, r) => Math.max(max, r.sort_order), 0);
+        const { data, error } = await sb.from(T_RECORDS).insert({
+          reiki_year: reikiYear, title: title.trim(), record_category: category,
+          body_html: '<div class="record-page"><h3>' + escapeHtml(title.trim()) + '</h3><p>ここに内容を入力してください。</p></div>',
+          sort_order: maxOrder + 1,
+        }).select().single();
+        if (error) { alert('追加に失敗しました: ' + error.message); return; }
+        state.records.push(data);
+        state.recordsYear = reikiYear;
+        renderView();
+      });
+    }
   }
 
   // 表の各列にドラッグ用のハンドルを付け、掴んで動かすと列幅を変えられるようにする
@@ -2068,121 +2115,18 @@ function renderArchiveView(container) {
     });
   }
 
-  if (state.archiveFiscalYears.length === 0) {
-    container.innerHTML = `
-      <div class="grid-wrap no-print">
-        <div class="grid-header">
-          <div><p class="eyebrow">出欠管理システム</p><h1 class="font-display">記録</h1></div>
-        </div>
-        <p class="hint-text" style="margin-top:0;">
-          まだ保管された年度データはありません。年度が終了すると、自動的にここへ記録が保管されます。
-        </p>
-      </div>
-      ${recordsSectionHtml}`;
-    attachRecordsListeners();
-    return;
-  }
-
-  const fyOptions = state.archiveFiscalYears.map(fy =>
-    `<option value="${fy.id}" ${fy.id === state.archiveFiscalYearId ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`
-  ).join('');
-  const catTabs = ALL_CATEGORIES.map(c =>
-    `<button data-cat="${c}" class="${state.archiveCategory === c ? 'active' : ''}">${CATEGORY_LABEL[c]}</button>`
-  ).join('');
-
-  // 部署ごと・メンバーごとにまとめる（登録順=member_sort_orderを維持）
-  const groups = [];
-  const idxMap = new Map();
-  for (const r of state.archiveRows) {
-    const key = r.department || '（部署未設定）';
-    if (!idxMap.has(key)) { idxMap.set(key, groups.length); groups.push({ dept: key, members: new Map() }); }
-    const g = groups[idxMap.get(key)];
-    const memberKey = `${r.member_id ?? 'x'}-${r.member_name}`;
-    if (!g.members.has(memberKey)) g.members.set(memberKey, { name: r.member_name, months: {} });
-    g.members.get(memberKey).months[r.month_seq] = r.status;
-  }
-
-  const monthHeaders = MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
-
-  const bodyHtml = groups.map(g => {
-    const memberRows = Array.from(g.members.values()).map((m) => {
-      let present = 0, absent = 0;
-      const cells = MONTH_SEQUENCE.map((seq) => {
-        const status = m.months[seq] ?? null;
-        if (status === '○') present++;
-        if (status === '×') absent++;
-        const cls = status === '○' ? 'present' : status === '×' ? 'absent' : '';
-        return `<td style="text-align:center;padding:2px;">
-          <span class="att-cell-btn ${cls}" style="display:inline-flex;align-items:center;justify-content:center;">${status ?? ''}</span>
-        </td>`;
-      }).join('');
-      const total = present + absent;
-      const rate = total > 0 ? Math.round((present / total) * 100) + '%' : '—';
-      return `
-        <tr>
-          <td style="padding:2px 8px;">${escapeHtml(m.name)}</td>
-          ${cells}
-          <td style="text-align:center;color:var(--color-present);font-weight:500;">${present}</td>
-          <td style="text-align:center;color:var(--color-absent);font-weight:500;">${absent}</td>
-          <td style="text-align:center;color:var(--color-ink-soft);">${rate}</td>
-        </tr>`;
-    }).join('');
-    return `<tbody>
-      <tr><td colspan="${2 + MONTH_SEQUENCE.length + 2}" style="background:#f1efe8;font-weight:500;padding:4px 8px;">${escapeHtml(g.dept)}</td></tr>
-      ${memberRows}
-    </tbody>`;
-  }).join('');
-
   container.innerHTML = `
-    <div class="grid-wrap no-print">
+    <div class="grid-wrap no-print" style="padding-bottom:0;">
       <div class="grid-header">
         <div>
           <p class="eyebrow">出欠管理システム</p>
           <h1 class="font-display">記録</h1>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <select id="archive-fy-select">${fyOptions}</select>
-        </div>
       </div>
-      <p class="hint-text" style="margin-top:0;margin-bottom:16px;">
-        年度が終了すると自動的にここへ記録が保管されます。閲覧専用で、内容の編集はできません。
-      </p>
-      <div class="category-tabs">${catTabs}</div>
-      ${state.archiveRows.length === 0 ? `
-        <p class="hint-text">この年度・区分の保管記録はありません。</p>
-      ` : `
-        <div class="att-table-wrap">
-          <table class="att-table">
-            <thead>
-              <tr>
-                <th>氏名</th>
-                ${monthHeaders}
-                <th style="text-align:center;">出席</th>
-                <th style="text-align:center;">欠席</th>
-                <th style="text-align:center;">出席率</th>
-              </tr>
-            </thead>
-            ${bodyHtml}
-          </table>
-        </div>
-      `}
     </div>
     ${recordsSectionHtml}
   `;
   attachRecordsListeners();
-
-  document.getElementById('archive-fy-select').addEventListener('change', async (e) => {
-    state.archiveFiscalYearId = Number(e.target.value);
-    await loadArchiveRows();
-    renderView();
-  });
-  document.querySelectorAll('.category-tabs button').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      state.archiveCategory = btn.dataset.cat;
-      await loadArchiveRows();
-      renderView();
-    });
-  });
 }
 function yearlyAttKey(memberId, category, fiscalYearId, checkpoint) {
   return `${memberId}-${category}-${fiscalYearId}-${checkpoint}`;
