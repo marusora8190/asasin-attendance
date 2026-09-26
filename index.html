@@ -1953,9 +1953,9 @@ function renderArchiveView(container) {
   const recordsForYear = recordsInCategory.filter((r) => r.reiki_year === state.recordsYear);
   const recordsSectionHtml = `
     <div class="grid-wrap" style="margin-top:12px;">
-      <div class="grid-header"><div><h2 class="font-display" style="font-size:22px;">記録（配布資料など）</h2></div></div>
+      <div class="grid-header no-print"><div><h2 class="font-display" style="font-size:22px;">記録（配布資料など）</h2></div></div>
       ${recordCategories.length === 0 ? `<p class="hint-text" style="margin-top:0;">まだ登録された記録はありません。</p>` : `
-        <div class="category-tabs">${recordCategoryTabs}</div>
+        <div class="category-tabs no-print">${recordCategoryTabs}</div>
         <div class="category-tabs no-print" style="margin-top:8px;">${recordYearTabs}</div>
         ${recordsForYear.length === 0 ? `<p class="hint-text">この年度の記録はありません。</p>` : recordsForYear.map((r) => `
           <div class="record-doc" data-record-id="${r.id}">
