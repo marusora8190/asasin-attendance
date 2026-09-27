@@ -845,7 +845,10 @@ function applyCategoriesFromState() {
     .map((c) => c.key);
   if (!ALL_CATEGORIES.includes(state.category)) state.category = ALL_CATEGORIES[0] ?? state.category;
   if (!GRID_VISIBLE_CATEGORIES.includes(state.category)) state.category = GRID_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.category;
-  if (!ALL_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
+  // 現場入力は「スマホのリストに表示」がオンの区分しか選べないので、
+  // それ以外の区分が選ばれたままなら先頭の表示区分に切り替える
+  // （プルダウンの見た目と実際の区分がずれて、月・当番日の欄が残るのを防ぐ）
+  if (!FIELD_VISIBLE_CATEGORIES.includes(state.fieldCategory)) state.fieldCategory = FIELD_VISIBLE_CATEGORIES[0] ?? ALL_CATEGORIES[0] ?? state.fieldCategory;
 }
 
 // 指定区分の名簿（有効なメンバーのみ、区分ごとの並び順）を返す
