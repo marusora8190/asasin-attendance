@@ -654,6 +654,7 @@ function renderLogin() {
 
 // ==================== 全体シェル（ナビ＋各画面） ====================
 async function renderMainShell() {
+  restoreViewStateAfterUpdate();
   const isFieldOnly = isFieldOnlyMode();
 
   if (isFieldOnly) {
@@ -711,6 +712,34 @@ async function renderMainShell() {
 }
 
 const JUST_UPDATED_KEY = 'asagami_just_updated';
+const RESTORE_VIEW_KEY = 'asagami_restore_view';
+
+// 「Update」で再読み込みする前に、今開いている画面と現場入力の選択内容を覚えておく
+function saveViewStateBeforeUpdate() {
+  try {
+    sessionStorage.setItem(RESTORE_VIEW_KEY, JSON.stringify({
+      view: state.view,
+      fieldCategory: state.fieldCategory,
+      fieldDeptFilter: state.fieldDeptFilter,
+      fieldMonth: state.fieldMonth,
+      fieldCheckpoint: state.fieldCheckpoint,
+      fieldDutyDayFilter: state.fieldDutyDayFilter,
+    }));
+  } catch (e) { /* 保存できなくても再読み込み自体は続ける */ }
+}
+
+// 再読み込み後、覚えておいた画面（現場入力など）に戻す
+function restoreViewStateAfterUpdate() {
+  let saved = null;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(RESTORE_VIEW_KEY) || 'null');
+    sessionStorage.removeItem(RESTORE_VIEW_KEY);
+  } catch (e) { saved = null; }
+  if (!saved) return;
+  for (const k of ['view', 'fieldCategory', 'fieldDeptFilter', 'fieldMonth', 'fieldCheckpoint', 'fieldDutyDayFilter']) {
+    if (saved[k] !== undefined && saved[k] !== null) state[k] = saved[k];
+  }
+}
 
 function renderUpdateButtonHtml() {
   if (sessionStorage.getItem(JUST_UPDATED_KEY) === '1') {
@@ -724,6 +753,7 @@ function attachUpdateButtonHandler() {
   if (!btn) return;
   btn.addEventListener('click', () => {
     sessionStorage.setItem(JUST_UPDATED_KEY, '1');
+    saveViewStateBeforeUpdate();
     const msgEl = document.getElementById('update-message');
     if (msgEl) msgEl.textContent = '最新版を読み込んでいます…';
     setTimeout(() => {
