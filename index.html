@@ -790,7 +790,6 @@ async function renderMainShell() {
             <button class="tab" data-view="category-members-page">区分名簿</button>
             <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
             <button class="tab" data-view="docs">資料作成</button>
-            <button class="tab" data-view="archive">記録</button>
             <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
             <button class="tab" data-view="help">使い方</button>
           </div>
@@ -917,6 +916,8 @@ function showFieldShortcutMenu(x, y) {
 
 function renderView() {
   const container = document.getElementById('view-container');
+  // 「記録」タブは廃止したので、前に開いていた場合は出欠入力を表示する
+  if (state.view === 'archive') { state.view = 'grid'; updateNavActive(); }
   // 資料作成の画面から離れるときは、未保存の変更をすぐ保存する
   if (state.view !== 'docs' && typeof docsState !== 'undefined' && docsState.dirty) flushDocSave();
   if (state.view === 'docs') renderDocsView(container);
@@ -925,7 +926,6 @@ function renderView() {
   else if (state.view === 'report') renderReportView(container, 'asagami');
   else if (state.view === 'report-geppai') renderReportView(container, 'geppai');
   else if (state.view === 'roster') renderRosterView(container);
-  else if (state.view === 'archive') renderArchiveView(container);
   else if (state.view === 'master') renderMasterView(container);
   else if (state.view === 'ceremony-times-page') renderCeremonyTimesPageView(container);
   else if (state.view === 'category-members-page') renderCategoryMembersPageView(container);
@@ -1448,7 +1448,10 @@ async function flushDocSave() {
     return;
   }
   docsState.loaded = false; // 一覧の更新日時を読み直す
-  if (!docsState.dirty) setDocSaveStatus('✓ 保存しました');
+  if (!docsState.dirty) {
+    const now = new Date();
+    setDocSaveStatus(`✓ 保存しました（${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}）`);
+  }
 }
 function setDocSaveStatus(text, isError) {
   const el = document.getElementById('sheet-save-status');
@@ -1634,6 +1637,7 @@ function renderDocEditorView(container) {
       <div class="sheet-topbar no-print">
         <button class="btn-light" id="sheet-back-btn">← 一覧に戻る</button>
         <input type="text" id="sheet-title-input" class="sheet-title-input" value="${escapeHtml(doc.title)}" placeholder="資料の名前" />
+        <button class="btn-dark" id="sheet-save-btn" title="今の内容をすぐに保存します (Ctrl+S)">保存</button>
         <span id="sheet-save-status" class="sheet-save-status">✓ 保存済み</span>
       </div>
       <div class="sheet-toolbar no-print">
@@ -2535,6 +2539,28 @@ function attachSheetEditorHandlers() {
   const fx = document.getElementById('sheet-formula-input');
   const titleInput = document.getElementById('sheet-title-input');
 
+  // 「保存」ボタン（Ctrl+S でも保存）。自動保存を待たずに、すぐ保存する
+  const saveNow = async () => {
+    if (docsState.editing) commitCellEdit(0, 0);
+    docsState.dirty = true;
+    const btn = document.getElementById('sheet-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
+    await flushDocSave();
+    if (btn) { btn.disabled = false; btn.textContent = '保存'; }
+    positionCellEditor(true);
+  };
+  document.getElementById('sheet-save-btn').addEventListener('mousedown', (e) => e.preventDefault());
+  document.getElementById('sheet-save-btn').addEventListener('click', saveNow);
+  if (!docsState.saveKeyAttached) {
+    docsState.saveKeyAttached = true;
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && state.view === 'docs' && docsState.doc) {
+        e.preventDefault();
+        document.getElementById('sheet-save-btn')?.click();
+      }
+    });
+  }
+
   document.getElementById('sheet-back-btn').addEventListener('click', async () => {
     if (docsState.editing) commitCellEdit(0, 0);
     await flushDocSave();
@@ -3057,7 +3083,7 @@ function renderHelpView(container) {
           <li><strong>罫線</strong>:最初はすべてのセルに罫線があります。範囲を選んでツールバーの「罫線…」から「格子(すべての罫線)」「外枠だけ」「罫線なし」「下線だけ」「上線だけ」を選ぶと変えられます。画面では、罫線のある所は実線、無い所は薄い点線で表示されます(点線は印刷されません)。「罫線なし」にすると、選んだセルの周りの線はすべて消えます。隣の表の線まで消えてしまったときは、その表を選んで「格子」か「外枠だけ」を選び直してください。</li>
           <li>エクセルなどからコピーした表は、そのまま貼り付け(Ctrl+V)できます。Ctrl+Zで元に戻せます。</li>
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
-          <li>変更は自動で保存されます(資料名の横に「✓ 保存しました」と出ます)。</li>
+          <li>変更は自動で保存されます(資料名の横に「✓ 保存しました(時刻)」と出ます)。すぐに保存したいときは、資料名の横の「保存」ボタンを押すか、Ctrl+S(Macは⌘+S)を押してください。</li>
           <li>「Excelで書き出し」で .xlsx ファイルとして保存でき、一覧の「Excelファイルを読み込む」で既存のエクセルファイルを取り込めます(シートが複数ある場合は、シートごとに別の資料になります)。</li>
           <li><strong>印刷範囲の確認</strong>:表の上の「印刷設定」で、用紙(A4・B5・A3)と向き(縦・横)を選べます。画面では、印刷される範囲が青い点線の枠で囲まれ、2ページ以上になるときはページの区切りに「2ページ目」などの青い点線が出ます。用紙の幅に収まらない部分は赤い斜線で表示され、その部分は印刷されません。その場合は「横」にするか、「幅を用紙に合わせる」にチェックすると、幅がちょうど収まるように縮小して印刷されます。枠や線が邪魔なときは「印刷範囲を表示」のチェックを外すと消せます(印刷には影響しません)。ページの区切りの位置は目安です。</li>
           <li>「印刷」を押すと、入力のある範囲だけが印刷されます(資料名の見出し・行番号・列の記号は印刷されません)。印刷画面の上下に日付やURLが出る場合は、印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外すと消せます。</li>
@@ -3067,16 +3093,7 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>⑪ 記録</h2>
-        <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
-        <ul>
-          <li>年度・区分を選んで、部署ごとの出欠一覧を確認できます。</li>
-          <li>保管された記録は、保管されてから<strong>3年を過ぎると自動的に完全に削除</strong>されます。</li>
-        </ul>
-      </section>
-
-      <section class="help-section">
-        <h2>⑫ 慰労拝受記録</h2>
+        <h2>⑪ 慰労拝受記録</h2>
         <p>慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。</p>
         <ul>
           <li>過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。</li>
@@ -3086,13 +3103,12 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>年度・記録・ログインについて</h2>
+        <h2>年度・ログインについて</h2>
         <ul>
           <li>左のメニューの一番上にある「« メニューを隠す」を押すと、メニューが細くたたまれて画面を広く使えます。たたんだ後は、左端の「»」を押すと元に戻ります。この状態は次に開いたときも覚えています。</li>
           <li>左下の「Update」ボタンを押すと、最新版を読み込み直します。<strong>押す前に開いていた画面(開いていた資料も含む)にそのまま戻ります。</strong>資料作成で入力中の内容も、読み込み直す前に保存されます。</li>
           <li>出欠データは年度ごとに分かれて保存されます。年度が変わっても、過去の年度のデータは消えず、「年度」のプルダウンでいつでも見返せます。</li>
-          <li>年度が終わる(3月末を過ぎる)と、自動的にその年度の記録が「記録」にコピーされます。</li>
-          <li>退職者を出欠入力画面で「×」で外しても、記録は削除されず、通常の年度データ・保管記録にそのまま残ります。区分ごとに名簿から外すだけの場合は「区分名簿」タブを使ってください。</li>
+          <li>退職者を出欠入力画面で「×」で外しても、記録は削除されず、年度データにそのまま残ります。区分ごとに名簿から外すだけの場合は「区分名簿」タブを使ってください。</li>
           <li>合言葉によるログインは廃止しており、URLを知っていれば誰でも直接アプリを開けます。URLの管理にはご注意ください。</li>
         </ul>
       </section>
@@ -3937,174 +3953,6 @@ function formatTimeInputValue(raw) {
   return panel;
 }
 
-// ==================== 保管記録（閲覧専用） ====================
-async function loadRecords() {
-  const { data } = await sb.from(T_RECORDS).select('*').order('reiki_year', { ascending: false }).order('sort_order', { ascending: true });
-  state.records = data ?? [];
-  if (state.recordsYear === null && state.records.length > 0) state.recordsYear = state.records[0].reiki_year;
-  state.recordsLoaded = true;
-}
-
-async function loadArchiveFiscalYears() {
-  const { data } = await sb.from(T_FISCAL_YEARS)
-    .select('id,label,start_reiki_year')
-    .eq('archived', true)
-    .order('start_reiki_year', { ascending: false });
-  state.archiveFiscalYears = data ?? [];
-  if (!state.archiveFiscalYearId || !state.archiveFiscalYears.some(fy => fy.id === state.archiveFiscalYearId)) {
-    state.archiveFiscalYearId = state.archiveFiscalYears[0]?.id ?? null;
-  }
-}
-
-async function loadArchiveRows() {
-  if (!state.archiveFiscalYearId) { state.archiveRows = []; return; }
-  const { data } = await sb.from(T_ATTENDANCE_ARCHIVE)
-    .select('*')
-    .eq('fiscal_year_id', state.archiveFiscalYearId)
-    .eq('category', state.archiveCategory)
-    .order('member_sort_order', { ascending: true, nullsFirst: false })
-    .order('member_name', { ascending: true });
-  state.archiveRows = data ?? [];
-}
-
-function renderArchiveView(container) {
-  if (!state.recordsLoaded) {
-    container.innerHTML = `<div class="loading">読み込み中…</div>`;
-    loadRecords().then(() => renderView());
-    return;
-  }
-
-  const recordCategories = [...new Set(state.records.map((r) => r.record_category))];
-  if (!state.recordsCategory || !recordCategories.includes(state.recordsCategory)) {
-    state.recordsCategory = recordCategories[0] ?? null;
-  }
-  const recordCategoryTabs = recordCategories.map((c) =>
-    `<button data-record-category="${escapeHtml(c)}" class="record-category-btn ${state.recordsCategory === c ? 'active' : ''}">${escapeHtml(c)}</button>`
-  ).join('');
-
-  const recordsInCategory = state.recordsCategory ? state.records.filter((r) => r.record_category === state.recordsCategory) : [];
-  const recordYears = [...new Set(recordsInCategory.map((r) => r.reiki_year))];
-  if (state.recordsYear === null || !recordYears.includes(state.recordsYear)) {
-    state.recordsYear = recordYears[0] ?? null;
-  }
-  const recordYearTabs = recordYears.map((y) =>
-    `<button data-record-year="${y}" class="record-year-btn ${state.recordsYear === y ? 'active' : ''}">立教${y}年</button>`
-  ).join('');
-  const recordsForYear = recordsInCategory.filter((r) => r.reiki_year === state.recordsYear);
-
-  const recordsSectionHtml = `
-    <div class="grid-wrap" style="margin-top:12px;">
-      <div class="grid-header no-print"><div><h2 class="font-display" style="font-size:22px;">記録（配布資料など）</h2></div></div>
-      ${recordCategories.length === 0 ? `<p class="hint-text" style="margin-top:0;">まだ登録された記録はありません。下の欄からPDFを追加してください。</p>` : `
-        <div class="category-tabs no-print">${recordCategoryTabs}</div>
-        <div class="category-tabs no-print" style="margin-top:8px;">${recordYearTabs}</div>
-        ${recordsForYear.length === 0 ? `<p class="hint-text">この年度の記録はありません。</p>` : recordsForYear.map((r) => `
-          <div class="record-doc" data-record-id="${r.id}">
-            <div class="no-print" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
-              <a class="btn-dark" href="data:application/pdf;base64,${r.pdf_base64}" download="${escapeHtml(r.file_name || (r.title + '.pdf'))}">ダウンロード</a>
-              <button class="btn-light record-print-btn" data-record-id="${r.id}">印刷</button>
-              <button class="icon-btn danger record-delete-btn" data-record-id="${r.id}" title="この記録を削除">×</button>
-            </div>
-            <p style="font-weight:500;margin:0 0 8px;">${escapeHtml(r.title)}</p>
-            <iframe class="record-pdf-frame" src="data:application/pdf;base64,${r.pdf_base64}"></iframe>
-          </div>
-        `).join('')}
-      `}
-      <div class="no-print record-upload-form">
-        <h3 style="font-size:14px;margin:20px 0 10px;">＋ 新しいPDFを追加</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <input type="text" id="record-new-category" placeholder="区分名（例: にをいがけデー）" value="${escapeHtml(state.recordsCategory || '')}" style="min-width:180px;" />
-          <input type="number" id="record-new-year" placeholder="立教○年" value="${state.recordsYear ?? ''}" style="width:100px;" />
-          <input type="text" id="record-new-title" placeholder="タイトル" style="min-width:220px;flex:1;" />
-          <input type="file" id="record-new-file" accept="application/pdf" />
-          <button class="btn-dark" id="record-upload-btn">追加</button>
-        </div>
-        <p id="record-upload-status" style="font-size:12px;color:var(--color-ink-soft);margin-top:6px;"></p>
-      </div>
-    </div>
-  `;
-
-  function attachRecordsListeners() {
-    document.querySelectorAll('.record-category-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        state.recordsCategory = btn.dataset.recordCategory;
-        state.recordsYear = null;
-        renderView();
-      });
-    });
-    document.querySelectorAll('.record-year-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        state.recordsYear = Number(btn.dataset.recordYear);
-        renderView();
-      });
-    });
-    document.querySelectorAll('.record-print-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const rec = state.records.find((rr) => rr.id === Number(btn.dataset.recordId));
-        if (!rec) return;
-        const win = window.open('', '_blank');
-        win.document.write(`<iframe src="data:application/pdf;base64,${rec.pdf_base64}" style="border:none;width:100vw;height:100vh;"></iframe>`);
-        win.document.title = rec.title;
-      });
-    });
-    document.querySelectorAll('.record-delete-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = Number(btn.dataset.recordId);
-        const rec = state.records.find((rr) => rr.id === id);
-        if (!confirm(`「${rec?.title ?? 'この記録'}」を削除します。よろしいですか？`)) return;
-        await sb.from(T_RECORDS).delete().eq('id', id);
-        state.records = state.records.filter((rr) => rr.id !== id);
-        renderView();
-      });
-    });
-    const uploadBtn = document.getElementById('record-upload-btn');
-    if (uploadBtn) {
-      uploadBtn.addEventListener('click', async () => {
-        const categoryInput = document.getElementById('record-new-category');
-        const yearInput = document.getElementById('record-new-year');
-        const titleInput = document.getElementById('record-new-title');
-        const fileInput = document.getElementById('record-new-file');
-        const statusEl = document.getElementById('record-upload-status');
-
-        const category = categoryInput.value.trim();
-        const reikiYear = Number(yearInput.value);
-        const title = titleInput.value.trim();
-        const file = fileInput.files[0];
-
-        if (!category) { statusEl.textContent = '⚠ 区分名を入力してください。'; return; }
-        if (!yearInput.value || !Number.isFinite(reikiYear)) { statusEl.textContent = '⚠ 立教○年を数字で入力してください。'; return; }
-        if (!title) { statusEl.textContent = '⚠ タイトルを入力してください。'; return; }
-        if (!file) { statusEl.textContent = '⚠ PDFファイルを選んでください。'; return; }
-        if (file.type !== 'application/pdf') { statusEl.textContent = '⚠ PDFファイルのみ追加できます。'; return; }
-
-        statusEl.textContent = 'アップロード中…';
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
-        const maxOrder = state.records.filter((r) => r.record_category === category && r.reiki_year === reikiYear)
-          .reduce((max, r) => Math.max(max, r.sort_order), 0);
-        const { data, error } = await sb.from(T_RECORDS).insert({
-          reiki_year: reikiYear, title, record_category: category,
-          pdf_base64: base64, file_name: file.name, sort_order: maxOrder + 1,
-        }).select().single();
-        if (error) { statusEl.textContent = '⚠ 追加に失敗しました: ' + error.message; return; }
-        state.records.push(data);
-        state.recordsCategory = category;
-        state.recordsYear = reikiYear;
-        renderView();
-      });
-    }
-  }
-
-  container.innerHTML = `
-    ${recordsSectionHtml}
-  `;
-  attachRecordsListeners();
-}
 function yearlyAttKey(memberId, category, fiscalYearId, checkpoint) {
   return `${memberId}-${category}-${fiscalYearId}-${checkpoint}`;
 }
