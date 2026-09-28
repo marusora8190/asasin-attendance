@@ -507,6 +507,15 @@ function getOrderedMembersForCategory(category) {
   });
 }
 
+// にをいがけデー（「神・責欄を使う」区分）の全体名簿では、「総」（その日全体の責任者）の人を一番先頭にする。
+// それ以外の人の並び順はそのまま。
+function moveDayLeaderFirst(list, category) {
+  if (!SPECIAL_ROLE_CATEGORIES.includes(category)) return list;
+  const leaders = list.filter((m) => m._isDayLeader);
+  if (leaders.length === 0) return list;
+  return [...leaders, ...list.filter((m) => !m._isDayLeader)];
+}
+
 function calendarMonthToSeq(m) { return m >= 4 ? m - 3 : m + 9; }
 function getCurrentReikiMonthContext() {
   return getReikiMonthContext(new Date().getMonth() + 1);
@@ -2384,8 +2393,9 @@ function renderGridView(container) {
   const bulkCheckpointLabel = activeCheckpoints.find((cp) => cp.seq === state.bulkActionCheckpoint)?.label ?? '';
 
   // 「にをいがけデー」は、各部署内で主任が一番先に来るよう並べる
+  // さらに「総」（その日全体の責任者）の人は一番先頭に来るようにする
   const categoryMembersList = SPECIAL_ROLE_CATEGORIES.includes(state.category)
-    ? getOrderedMembersForCategory(state.category)
+    ? moveDayLeaderFirst(getOrderedMembersForCategory(state.category), state.category)
     : getCategoryMemberEntries(state.category);
 
   const rowsHtml = categoryMembersList.map((m, index) => {
@@ -2773,6 +2783,8 @@ function renderFieldView(container) {
     ? getCategoryMemberEntries(state.fieldCategory)
     : getOrderedMembersForCategory(state.fieldCategory)
         .filter((m) => !activeGroup.depts || activeGroup.depts.includes(m.department));
+  // にをいがけデーの「日全体」「課全体」では、「総」の人を一番先頭にする
+  if (useLeaderFirstOrder) orderedMembers = moveDayLeaderFirst(orderedMembers, state.fieldCategory);
   if (showDutyDayFilter && state.fieldDutyDayFilter && state.fieldDutyDayFilter !== 'all' && activeGroup.respectDutyDay !== false) {
     orderedMembers = orderedMembers.filter((m) => effectiveDutyDay(m) === state.fieldDutyDayFilter);
   }
