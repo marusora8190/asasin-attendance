@@ -172,12 +172,17 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-table { border-collapse: collapse; table-layout: fixed; width: max-content; user-select: none; -webkit-user-select: none; }
 .sheet-table th { position: sticky; background: #efece4; color: var(--color-ink-soft); font-size: 12px; font-weight: 500 !important; border: 1px solid var(--color-line); z-index: 3; }
 .sheet-table thead th { top: 0; height: 26px; }
-.sheet-table th.sheet-row-h { left: 0; text-align: center; z-index: 2; }
+.sheet-table th.sheet-row-h { left: 0; text-align: center; z-index: 2; overflow: visible; }
 .sheet-table th.sheet-corner { left: 0; z-index: 4; cursor: pointer; }
 .sheet-table th.hl { background: #dde6ee; color: var(--color-navy); }
 .sheet-table th.sheet-col-h { position: sticky; cursor: pointer; }
 .sheet-col-resizer { position: absolute; right: -3px; top: 0; width: 7px; height: 100%; cursor: col-resize; z-index: 5; }
-.sheet-table td.sc { border: 1px solid #e3dfd4; height: 26px; padding: 2px 6px; font-size: 14px; font-weight: 500 !important; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: cell; }
+.sheet-row-resizer { position: absolute; left: 0; bottom: -3px; width: 100%; height: 7px; cursor: row-resize; z-index: 5; }
+.sheet-size-label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--color-ink-soft); margin: 0 4px; }
+.sheet-size-input { width: 64px; height: 30px; border: 1px solid var(--color-line); border-radius: 6px; padding: 2px 6px; font-size: 13px; text-align: right; }
+.sheet-size-input:focus { outline: none; border-color: var(--color-accent); }
+.sheet-size-tip { position: fixed; z-index: 1000; display: none; background: var(--color-navy); color: white; font-size: 12px; padding: 3px 8px; border-radius: 4px; pointer-events: none; }
+.sheet-table td.sc { border: 1px solid #e3dfd4; padding: 2px 6px; font-size: 14px; font-weight: 500 !important; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: cell; }
 .sheet-table td.sc.bold { font-weight: 900 !important; }
 .sheet-table td.sc.err { color: var(--color-absent); font-size: 12px; }
 .sheet-table td.sc.sel { box-shadow: inset 0 0 0 9999px rgba(58,124,165,0.16); }
@@ -892,6 +897,9 @@ const T_DOCUMENTS = 'asagami_documents';
 const SHEET_DEFAULT_ROWS = 30;
 const SHEET_DEFAULT_COLS = 10;
 const SHEET_DEFAULT_COL_WIDTH = 100;
+const SHEET_DEFAULT_ROW_HEIGHT = 26;
+const SHEET_COL_WIDTH_MIN = 20, SHEET_COL_WIDTH_MAX = 800;
+const SHEET_ROW_HEIGHT_MIN = 18, SHEET_ROW_HEIGHT_MAX = 300;
 const SHEET_BG_COLORS = [
   { v: '', label: '背景色なし' },
   { v: '#fff3b0', label: '黄' },
@@ -930,6 +938,7 @@ function sheetColIndex(name) {
   return n - 1;
 }
 function sheetKey(r, c) { return `${r}:${c}`; }
+function sheetRowHeight(data, r) { return Number(data.rowHeights && data.rowHeights[r]) || SHEET_DEFAULT_ROW_HEIGHT; }
 function sheetA1(r, c) { return `${sheetColName(c)}${r + 1}`; }
 function sheetParseA1(ref) {
   const m = /^\$?([A-Z]+)\$?(\d+)$/i.exec(ref);
@@ -937,7 +946,7 @@ function sheetParseA1(ref) {
 }
 
 function newSheetData() {
-  return { rows: SHEET_DEFAULT_ROWS, cols: SHEET_DEFAULT_COLS, colWidths: Array(SHEET_DEFAULT_COLS).fill(SHEET_DEFAULT_COL_WIDTH), cells: {} };
+  return { rows: SHEET_DEFAULT_ROWS, cols: SHEET_DEFAULT_COLS, colWidths: Array(SHEET_DEFAULT_COLS).fill(SHEET_DEFAULT_COL_WIDTH), rowHeights: {}, cells: {} };
 }
 function normalizeSheetData(d) {
   const data = (d && typeof d === 'object') ? d : {};
@@ -947,6 +956,7 @@ function normalizeSheetData(d) {
   while (data.colWidths.length < data.cols) data.colWidths.push(SHEET_DEFAULT_COL_WIDTH);
   data.colWidths.length = data.cols;
   if (!data.cells || typeof data.cells !== 'object') data.cells = {};
+  if (!data.rowHeights || typeof data.rowHeights !== 'object' || Array.isArray(data.rowHeights)) data.rowHeights = {};
   return data;
 }
 
@@ -1446,6 +1456,10 @@ function sheetDataFromWorksheet(ws) {
   data.rows = Math.max(SHEET_DEFAULT_ROWS, range.e.r + 1 + 5);
   data.cols = Math.max(SHEET_DEFAULT_COLS, range.e.c + 1 + 2);
   data.colWidths = Array(data.cols).fill(SHEET_DEFAULT_COL_WIDTH);
+  (ws['!rows'] || []).forEach((row, i) => {
+    const px = row && (row.hpx || (row.hpt ? Math.round(row.hpt * 4 / 3) : null));
+    if (px && Math.round(px) !== SHEET_DEFAULT_ROW_HEIGHT) data.rowHeights[i] = Math.max(SHEET_ROW_HEIGHT_MIN, Math.min(SHEET_ROW_HEIGHT_MAX, Math.round(px)));
+  });
   (ws['!cols'] || []).forEach((col, i) => {
     if (col && i < data.cols) {
       const px = col.wpx || (col.wch ? Math.round(col.wch * 8 + 10) : null);
@@ -1496,6 +1510,13 @@ function renderDocEditorView(container) {
         <button class="sheet-tool" data-tool="col-insert" title="選択している列の左に1列挿入">列を挿入</button>
         <button class="sheet-tool" data-tool="col-delete" title="選択している列を削除">列を削除</button>
         <button class="sheet-tool" data-tool="rows-add" title="表の一番下に10行追加">＋10行</button>
+        <span class="sheet-tool-sep"></span>
+        <label class="sheet-size-label" title="選んでいる列の幅（ピクセル）。数字を入れてEnterで変更">列幅
+          <input type="number" id="sheet-col-width-input" class="sheet-size-input" min="${SHEET_COL_WIDTH_MIN}" max="${SHEET_COL_WIDTH_MAX}" step="1" />
+        </label>
+        <label class="sheet-size-label" title="選んでいる行の高さ（ピクセル）。数字を入れてEnterで変更">行の高さ
+          <input type="number" id="sheet-row-height-input" class="sheet-size-input" min="${SHEET_ROW_HEIGHT_MIN}" max="${SHEET_ROW_HEIGHT_MAX}" step="1" />
+        </label>
         <span class="sheet-tool-sep"></span>
         <button class="sheet-tool" data-tool="undo" title="元に戻す (Ctrl+Z)">↶ 元に戻す</button>
         <span class="sheet-tool-sep"></span>
@@ -1554,7 +1575,7 @@ function renderSheetGrid() {
       if (disp.isErr) cls.push('err');
       tds.push(`<td class="${cls.join(' ')}" data-r="${r}" data-c="${c}" style="${styles.join(';')}">${escapeHtml(disp.text)}</td>`);
     }
-    body.push(`<tr><th class="sheet-row-h" data-r="${r}">${r + 1}</th>${tds.join('')}</tr>`);
+    body.push(`<tr style="height:${sheetRowHeight(data, r)}px;"><th class="sheet-row-h" data-r="${r}">${r + 1}<span class="sheet-row-resizer" data-r="${r}"></span></th>${tds.join('')}</tr>`);
   }
   host.innerHTML = `
     <table class="sheet-table" id="sheet-table">
@@ -1584,6 +1605,7 @@ function updateSheetSelection(scroll = true) {
     const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
     fx.value = cell ? String(cell.v ?? '') : '';
   }
+  updateSheetSizeInputs();
   const bgSel = document.getElementById('sheet-bg-select');
   if (bgSel) {
     const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
@@ -1594,6 +1616,67 @@ function updateSheetSelection(scroll = true) {
     const td = table.querySelector(`td.sc[data-r="${s.fr}"][data-c="${s.fc}"]`);
     if (td) td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
+}
+
+// 選んでいる列の幅・行の高さを数字欄に表示する（範囲内でバラバラなら空欄）
+function updateSheetSizeInputs() {
+  const data = docsState.doc && docsState.doc.data;
+  if (!data) return;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const wIn = document.getElementById('sheet-col-width-input');
+  const hIn = document.getElementById('sheet-row-height-input');
+  if (wIn && document.activeElement !== wIn) {
+    const ws = new Set(); for (let c = c1; c <= c2; c++) ws.add(data.colWidths[c]);
+    wIn.value = ws.size === 1 ? [...ws][0] : '';
+    wIn.placeholder = ws.size === 1 ? '' : '混在';
+  }
+  if (hIn && document.activeElement !== hIn) {
+    const hs = new Set(); for (let r = r1; r <= r2; r++) hs.add(sheetRowHeight(data, r));
+    hIn.value = hs.size === 1 ? [...hs][0] : '';
+    hIn.placeholder = hs.size === 1 ? '' : '混在';
+  }
+}
+
+function applySheetColWidth(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || value === '') { updateSheetSizeInputs(); return; }
+  const w = Math.max(SHEET_COL_WIDTH_MIN, Math.min(SHEET_COL_WIDTH_MAX, n));
+  const { c1, c2 } = sheetSelRange();
+  const data = docsState.doc.data;
+  pushSheetUndo();
+  for (let c = c1; c <= c2; c++) data.colWidths[c] = w;
+  afterSheetChange();
+}
+function applySheetRowHeight(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || value === '') { updateSheetSizeInputs(); return; }
+  const h = Math.max(SHEET_ROW_HEIGHT_MIN, Math.min(SHEET_ROW_HEIGHT_MAX, n));
+  const { r1, r2 } = sheetSelRange();
+  const data = docsState.doc.data;
+  pushSheetUndo();
+  for (let r = r1; r <= r2; r++) {
+    if (h === SHEET_DEFAULT_ROW_HEIGHT) delete data.rowHeights[r]; else data.rowHeights[r] = h;
+  }
+  afterSheetChange();
+}
+
+// ドラッグ中に、今の幅・高さを数字で表示する小さな札
+function showSheetSizeTip(text, x, y) {
+  let tip = document.getElementById('sheet-size-tip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'sheet-size-tip';
+    tip.className = 'sheet-size-tip no-print';
+    document.body.appendChild(tip);
+  }
+  tip.textContent = text;
+  tip.style.left = `${x + 14}px`;
+  tip.style.top = `${y + 14}px`;
+  tip.style.display = 'block';
+}
+function hideSheetSizeTip() {
+  const tip = document.getElementById('sheet-size-tip');
+  if (tip) tip.style.display = 'none';
 }
 
 // 選択中のセルの上に入力欄を重ねておく（日本語入力もそのまま始められるように）
@@ -1762,6 +1845,12 @@ function sheetShiftStructure(kind, index, count) {
   }
   data.cells = newCells;
   if (isRow) {
+    const newHeights = {};
+    for (const [k, h] of Object.entries(data.rowHeights || {})) {
+      const nr = mapIndex(Number(k));
+      if (nr !== null) newHeights[nr] = h;
+    }
+    data.rowHeights = newHeights;
     data.rows = Math.max(1, data.rows + (isInsert ? count : -count));
   } else {
     if (isInsert) data.colWidths.splice(index, 0, ...Array(count).fill(SHEET_DEFAULT_COL_WIDTH));
@@ -1918,7 +2007,7 @@ function buildSheetPrintTable() {
       if (cell && cell.bg) st.push(`background:${cell.bg}`);
       tds.push(`<td class="${cell && cell.b ? 'bold' : ''}" style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
     }
-    rows.push(`<tr>${tds.join('')}</tr>`);
+    rows.push(`<tr style="height:${sheetRowHeight(data, r)}px;">${tds.join('')}</tr>`);
   }
   host.innerHTML = `<table class="sheet-print-table"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
 }
@@ -1945,6 +2034,7 @@ function exportSheetToXlsx() {
   }
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: maxC } });
   ws['!cols'] = data.colWidths.slice(0, maxC + 1).map((w) => ({ wpx: w }));
+  ws['!rows'] = Array.from({ length: maxR + 1 }, (_, r) => ({ hpx: sheetRowHeight(data, r) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   const safeName = (doc.title || '資料').replace(/[\\/:*?"<>|]/g, '_');
@@ -1987,26 +2077,93 @@ function attachSheetEditorHandlers() {
     positionCellEditor(true);
   });
 
+  // ---- 列幅・行の高さ（数字で指定） ----
+  const wIn = document.getElementById('sheet-col-width-input');
+  const hIn = document.getElementById('sheet-row-height-input');
+  [[wIn, applySheetColWidth], [hIn, applySheetRowHeight]].forEach(([input, apply]) => {
+    input.addEventListener('keydown', (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      else if (e.key === 'Escape') { e.preventDefault(); input.value = ''; updateSheetSizeInputs(); positionCellEditor(true); }
+    });
+    input.addEventListener('change', () => { apply(input.value); positionCellEditor(true); });
+    input.addEventListener('blur', () => { setTimeout(() => updateSheetSizeInputs(), 0); });
+  });
+
   // ---- マウス操作（セルの選択・範囲選択・列幅の変更） ----
   wrap.addEventListener('mousedown', (e) => {
     const resizer = e.target.closest('.sheet-col-resizer');
     if (resizer) {
       e.preventDefault();
+      e.stopPropagation();
       const c = +resizer.dataset.c;
+      const data = docsState.doc.data;
       const startX = e.clientX;
-      const startW = docsState.doc.data.colWidths[c];
-      const colEl = document.querySelectorAll('#sheet-table colgroup col')[c + 1];
+      const startW = data.colWidths[c];
+      // 複数の列を選んでいて、その中の列の端をドラッグしたときは、選んだ列すべてを同じ幅にする
+      const { r1, r2, c1, c2 } = sheetSelRange();
+      const wholeCols = r1 === 0 && r2 === data.rows - 1;
+      const targets = (wholeCols && c >= c1 && c <= c2) ? Array.from({ length: c2 - c1 + 1 }, (_, i) => c1 + i) : [c];
+      const colEls = document.querySelectorAll('#sheet-table colgroup col');
+      const wIn = document.getElementById('sheet-col-width-input');
+      pushSheetUndo();
+      let moved = false;
       const onMove = (ev) => {
-        const w = Math.max(30, Math.min(800, startW + ev.clientX - startX));
-        docsState.doc.data.colWidths[c] = w;
-        if (colEl) colEl.style.width = `${w}px`;
+        moved = true;
+        const w = Math.max(SHEET_COL_WIDTH_MIN, Math.min(SHEET_COL_WIDTH_MAX, Math.round(startW + ev.clientX - startX)));
+        targets.forEach((tc) => { data.colWidths[tc] = w; if (colEls[tc + 1]) colEls[tc + 1].style.width = `${w}px`; });
+        if (wIn) wIn.value = w;
+        showSheetSizeTip(`列幅: ${w}`, ev.clientX, ev.clientY);
       };
       const onUp = () => {
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
+        hideSheetSizeTip();
+        if (!moved) { docsState.undo.pop(); return; }
         positionCellEditor(true);
+        updateSheetSizeInputs();
         scheduleDocSave();
       };
+      showSheetSizeTip(`列幅: ${startW}`, e.clientX, e.clientY);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      return;
+    }
+    const rowResizer = e.target.closest('.sheet-row-resizer');
+    if (rowResizer) {
+      e.preventDefault();
+      e.stopPropagation();
+      const r = +rowResizer.dataset.r;
+      const data = docsState.doc.data;
+      const startY = e.clientY;
+      const startH = sheetRowHeight(data, r);
+      const { r1, r2, c1, c2 } = sheetSelRange();
+      const wholeRows = c1 === 0 && c2 === data.cols - 1;
+      const targets = (wholeRows && r >= r1 && r <= r2) ? Array.from({ length: r2 - r1 + 1 }, (_, i) => r1 + i) : [r];
+      const trs = document.querySelectorAll('#sheet-table tbody tr');
+      const hIn = document.getElementById('sheet-row-height-input');
+      pushSheetUndo();
+      let moved = false;
+      const onMove = (ev) => {
+        moved = true;
+        const h = Math.max(SHEET_ROW_HEIGHT_MIN, Math.min(SHEET_ROW_HEIGHT_MAX, Math.round(startH + ev.clientY - startY)));
+        targets.forEach((tr) => {
+          if (h === SHEET_DEFAULT_ROW_HEIGHT) delete data.rowHeights[tr]; else data.rowHeights[tr] = h;
+          if (trs[tr]) trs[tr].style.height = `${h}px`;
+        });
+        if (hIn) hIn.value = h;
+        showSheetSizeTip(`行の高さ: ${h}`, ev.clientX, ev.clientY);
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        hideSheetSizeTip();
+        if (!moved) { docsState.undo.pop(); return; }
+        positionCellEditor(true);
+        updateSheetSizeInputs();
+        scheduleDocSave();
+      };
+      showSheetSizeTip(`行の高さ: ${startH}`, e.clientX, e.clientY);
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
       return;
@@ -2402,7 +2559,8 @@ function renderHelpView(container) {
         <ul>
           <li>「＋ 新しい表を作成」で新しい表を作ります。作った表は一覧に並び、「開く」で続きを編集できます。「複製」でコピー、「削除」で削除できます。</li>
           <li>セルをクリックしてそのまま文字を打つと入力できます。今の内容を修正したいときは、ダブルクリックかF2キーを押します。Enterで下、Tabで右に移動します。上の「fx」欄でも入力・修正できます。</li>
-          <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を変えられます。</li>
+          <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を、行番号の下端をドラッグすると行の高さを変えられます(ドラッグ中は数字が表示されます)。</li>
+          <li>上のツールバーの「列幅」「行の高さ」の欄には、選んでいるセルの列幅・行の高さが数字(ピクセル)で表示されます。数字を入れてEnterを押すと、その大きさに変わります。範囲を選んでいれば、選んだ列・行をまとめて同じ大きさにできます(範囲内で大きさがバラバラのときは「混在」と表示されます)。標準は列幅100・行の高さ26です。</li>
           <li>エクセルなどからコピーした表は、そのまま貼り付け(Ctrl+V)できます。Ctrl+Zで元に戻せます。</li>
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
           <li>変更は自動で保存されます(資料名の横に「✓ 保存しました」と出ます)。</li>
