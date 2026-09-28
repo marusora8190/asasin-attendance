@@ -151,6 +151,58 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .btn-light:hover { background: var(--color-paper); }
 .btn-light.active-toggle { background: var(--color-navy); color: white; border-color: var(--color-navy); }
 
+
+/* ---- 資料作成（エクセルのような表） ---- */
+.sheet-page { padding: 20px 16px 32px; max-width: 100%; }
+.sheet-topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.sheet-title-input { flex: 1; min-width: 200px; max-width: 520px; font-size: 20px; padding: 6px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--color-navy); }
+.sheet-title-input:hover, .sheet-title-input:focus { border-color: var(--color-line); background: white; outline: none; }
+.sheet-save-status { font-size: 12px; color: var(--color-ink-soft); }
+.sheet-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 8px; background: white; border: 1px solid var(--color-line); border-radius: 8px 8px 0 0; }
+.sheet-tool { background: white; border: 1px solid transparent; border-radius: 6px; padding: 5px 10px; font-size: 13px; color: var(--color-ink); height: 32px; }
+.sheet-tool:hover { background: var(--color-paper); border-color: var(--color-line); }
+.sheet-tool-select { height: 32px; font-size: 13px; padding: 2px 8px; }
+.sheet-tool-sep { width: 1px; height: 22px; background: var(--color-line); margin: 0 4px; }
+.sheet-formula-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: white; border: 1px solid var(--color-line); border-top: none; }
+.sheet-namebox { min-width: 70px; font-size: 13px; color: var(--color-navy); padding: 4px 8px; border: 1px solid var(--color-line); border-radius: 6px; text-align: center; }
+.sheet-fx { font-size: 13px; color: var(--color-ink-soft); font-style: italic; }
+.sheet-formula-input { flex: 1; border: 1px solid var(--color-line); border-radius: 6px; padding: 6px 10px; font-size: 14px; }
+.sheet-formula-input:focus { outline: none; border-color: var(--color-accent); }
+.sheet-wrap { position: relative; overflow: auto; max-height: calc(100vh - 250px); min-height: 300px; background: white; border: 1px solid var(--color-line); border-top: none; border-radius: 0 0 8px 8px; }
+.sheet-table { border-collapse: collapse; table-layout: fixed; width: max-content; user-select: none; -webkit-user-select: none; }
+.sheet-table th { position: sticky; background: #efece4; color: var(--color-ink-soft); font-size: 12px; font-weight: 500 !important; border: 1px solid var(--color-line); z-index: 3; }
+.sheet-table thead th { top: 0; height: 26px; }
+.sheet-table th.sheet-row-h { left: 0; text-align: center; z-index: 2; }
+.sheet-table th.sheet-corner { left: 0; z-index: 4; cursor: pointer; }
+.sheet-table th.hl { background: #dde6ee; color: var(--color-navy); }
+.sheet-table th.sheet-col-h { position: sticky; cursor: pointer; }
+.sheet-col-resizer { position: absolute; right: -3px; top: 0; width: 7px; height: 100%; cursor: col-resize; z-index: 5; }
+.sheet-table td.sc { border: 1px solid #e3dfd4; height: 26px; padding: 2px 6px; font-size: 14px; font-weight: 500 !important; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: cell; }
+.sheet-table td.sc.bold { font-weight: 900 !important; }
+.sheet-table td.sc.err { color: var(--color-absent); font-size: 12px; }
+.sheet-table td.sc.sel { box-shadow: inset 0 0 0 9999px rgba(58,124,165,0.16); }
+.sheet-table td.sc.active { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.sheet-cell-editor { position: absolute; z-index: 1; opacity: 0; pointer-events: none; border: 2px solid var(--color-accent); padding: 2px 5px; font-size: 14px; font-weight: 500 !important; background: white; box-sizing: border-box; caret-color: transparent; }
+.sheet-cell-editor.editing { opacity: 1; pointer-events: auto; z-index: 2; caret-color: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.sheet-cell-editor:focus { outline: none; }
+.sheet-print-title { display: none; }
+.sheet-print-host { display: none; }
+.doc-list-table { width: 100%; max-width: 900px; border-collapse: collapse; background: white; border: 1px solid var(--color-line); border-radius: 8px; margin-top: 16px; }
+.doc-list-table th { font-size: 12px; color: var(--color-ink-soft); padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
+.doc-list-table td { padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
+.doc-list-table tr:last-child td { border-bottom: none; }
+.doc-list-table .btn-light { height: 32px; padding: 4px 12px; font-size: 13px; }
+.doc-title-link { background: none; border: none; padding: 0; font-size: 15px; color: var(--color-navy); text-align: left; }
+.doc-title-link:hover { text-decoration: underline; }
+@media print {
+  .sheet-page { padding: 0; }
+  .sheet-print-title { display: block; font-size: 16px; margin: 0 0 8px; }
+  .sheet-print-host { display: block; }
+  .sheet-print-table { border-collapse: collapse; table-layout: fixed; }
+  .sheet-print-table td { border: 1px solid #555; height: 6mm; padding: 2px 5px; font-size: 11px; font-weight: 500 !important; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet-print-table td.bold { font-weight: 900 !important; }
+}
+
 /* ---- 出欠入力グリッド ---- */
 .grid-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px; }
 .help-view { max-width: 820px; }
@@ -582,6 +634,7 @@ const state = {
   fieldCheckpoint: 1, // 慰労拝受の現場入力での対象（事前調査/会場外/会場内）
   fieldDutyDayFilter: null, // 朝の神殿掃除の現場入力での当番日絞り込み（1/2/3またはnull=全員）
   fieldDeptFilter: 'eizen-shomu',
+  docId: null, // 資料作成で開いている資料
   fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
   fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
 };
@@ -693,6 +746,7 @@ async function renderMainShell() {
             <button class="tab" data-view="category-members-page">区分名簿</button>
             <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
             <button class="tab" data-view="categories-page">表示区分</button>
+            <button class="tab" data-view="docs">資料作成</button>
             <button class="tab" data-view="help">使い方</button>
           </div>
           <div class="sidebar-footer" id="sidebar-footer">
@@ -733,6 +787,7 @@ function saveViewStateBeforeUpdate() {
       fieldMonth: state.fieldMonth,
       fieldCheckpoint: state.fieldCheckpoint,
       fieldDutyDayFilter: state.fieldDutyDayFilter,
+      docId: state.docId ?? null,
     }));
   } catch (e) { /* 保存できなくても再読み込み自体は続ける */ }
 }
@@ -745,7 +800,7 @@ function restoreViewStateAfterUpdate() {
     sessionStorage.removeItem(RESTORE_VIEW_KEY);
   } catch (e) { saved = null; }
   if (!saved) return;
-  for (const k of ['view', 'fieldCategory', 'fieldDeptFilter', 'fieldMonth', 'fieldCheckpoint', 'fieldDutyDayFilter']) {
+  for (const k of ['view', 'fieldCategory', 'fieldDeptFilter', 'fieldMonth', 'fieldCheckpoint', 'fieldDutyDayFilter', 'docId']) {
     if (saved[k] !== undefined && saved[k] !== null) state[k] = saved[k];
   }
 }
@@ -763,6 +818,7 @@ function attachUpdateButtonHandler() {
   btn.addEventListener('click', () => {
     sessionStorage.setItem(JUST_UPDATED_KEY, '1');
     saveViewStateBeforeUpdate();
+    if (typeof docsState !== 'undefined' && docsState.dirty) flushDocSave();
     const msgEl = document.getElementById('update-message');
     if (msgEl) msgEl.textContent = '最新版を読み込んでいます…';
     setTimeout(() => {
@@ -814,7 +870,10 @@ function showFieldShortcutMenu(x, y) {
 
 function renderView() {
   const container = document.getElementById('view-container');
-  if (state.view === 'grid') renderGridView(container);
+  // 資料作成の画面から離れるときは、未保存の変更をすぐ保存する
+  if (state.view !== 'docs' && typeof docsState !== 'undefined' && docsState.dirty) flushDocSave();
+  if (state.view === 'docs') renderDocsView(container);
+  else if (state.view === 'grid') renderGridView(container);
   else if (state.view === 'field') renderFieldView(container);
   else if (state.view === 'report') renderReportView(container, 'asagami');
   else if (state.view === 'report-geppai') renderReportView(container, 'geppai');
@@ -826,6 +885,1289 @@ function renderView() {
   else if (state.view === 'nioigake-roles-page') renderNioigakeRolesPageView(container);
   else if (state.view === 'categories-page') renderCategoriesPageView(container);
   else if (state.view === 'help') renderHelpView(container);
+}
+
+// ==================== 資料作成（エクセルのような表） ====================
+const T_DOCUMENTS = 'asagami_documents';
+const SHEET_DEFAULT_ROWS = 30;
+const SHEET_DEFAULT_COLS = 10;
+const SHEET_DEFAULT_COL_WIDTH = 100;
+const SHEET_BG_COLORS = [
+  { v: '', label: '背景色なし' },
+  { v: '#fff3b0', label: '黄' },
+  { v: '#dcefd9', label: '緑' },
+  { v: '#dbe9f6', label: '青' },
+  { v: '#f8dcd6', label: '赤' },
+  { v: '#e8e6e1', label: '灰' },
+];
+
+const docsState = {
+  list: [],
+  loaded: false,
+  doc: null,             // { id, title, data }
+  sel: { ar: 0, ac: 0, fr: 0, fc: 0 }, // ar/ac = 選択中のセル、fr/fc = 範囲のもう一方の端
+  editing: false,
+  editMode: 'enter',     // 'enter'（入力しながら矢印で移動）/ 'edit'（F2・ダブルクリック：矢印は文字の移動）
+  undo: [],
+  saveTimer: null,
+  saving: false,
+  dirty: false,
+  dragging: false,
+  clip: null,
+  values: new Map(),
+  globalHandlersAttached: false,
+};
+
+// ---- セル番地の変換 ----
+function sheetColName(i) {
+  let s = ''; let n = i + 1;
+  while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+function sheetColIndex(name) {
+  let n = 0;
+  for (const ch of name.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+function sheetKey(r, c) { return `${r}:${c}`; }
+function sheetA1(r, c) { return `${sheetColName(c)}${r + 1}`; }
+function sheetParseA1(ref) {
+  const m = /^\$?([A-Z]+)\$?(\d+)$/i.exec(ref);
+  return m ? { r: Number(m[2]) - 1, c: sheetColIndex(m[1]) } : null;
+}
+
+function newSheetData() {
+  return { rows: SHEET_DEFAULT_ROWS, cols: SHEET_DEFAULT_COLS, colWidths: Array(SHEET_DEFAULT_COLS).fill(SHEET_DEFAULT_COL_WIDTH), cells: {} };
+}
+function normalizeSheetData(d) {
+  const data = (d && typeof d === 'object') ? d : {};
+  data.rows = Math.max(1, Number(data.rows) || SHEET_DEFAULT_ROWS);
+  data.cols = Math.max(1, Number(data.cols) || SHEET_DEFAULT_COLS);
+  if (!Array.isArray(data.colWidths)) data.colWidths = [];
+  while (data.colWidths.length < data.cols) data.colWidths.push(SHEET_DEFAULT_COL_WIDTH);
+  data.colWidths.length = data.cols;
+  if (!data.cells || typeof data.cells !== 'object') data.cells = {};
+  return data;
+}
+
+// ---- 計算式 ----
+function sheetIsFormula(s) { return typeof s === 'string' && (s.startsWith('=') || s.startsWith('＝')) && s.length > 1; }
+// 全角で入力された計算式（＝ＳＵＭ（Ａ１：Ａ３）など）も半角にそろえる
+function sheetNormalizeFormula(s) { return s.normalize('NFKC'); }
+function sheetParseNumber(s) {
+  if (typeof s !== 'string') return null;
+  const t = s.normalize('NFKC').replace(/,/g, '').trim();
+  if (/^[-+]?(\d+\.?\d*|\.\d+)$/.test(t)) return Number(t);
+  return null;
+}
+function sheetErr(code) { const e = new Error(code); e.sheetError = true; return e; }
+
+function sheetTokenize(src) {
+  const toks = [];
+  let i = 0;
+  while (i < src.length) {
+    const rest = src.slice(i);
+    let m;
+    if (/^\s/.test(rest)) { i++; continue; }
+    if ((m = /^(\d+\.?\d*|\.\d+)/.exec(rest))) { toks.push({ t: 'num', v: Number(m[1]) }); i += m[0].length; continue; }
+    if ((m = /^"([^"]*)"/.exec(rest))) { toks.push({ t: 'str', v: m[1] }); i += m[0].length; continue; }
+    if ((m = /^(\$?[A-Za-z]{1,3}\$?\d+)(?![A-Za-z0-9_(])/.exec(rest))) { toks.push({ t: 'ref', v: m[1].toUpperCase() }); i += m[0].length; continue; }
+    if ((m = /^(TRUE|FALSE)(?![A-Za-z0-9_(])/i.exec(rest))) { toks.push({ t: 'bool', v: m[1].toUpperCase() === 'TRUE' }); i += m[0].length; continue; }
+    if ((m = /^[A-Za-z_][A-Za-z0-9_.]*/.exec(rest))) { toks.push({ t: 'name', v: m[0].toUpperCase() }); i += m[0].length; continue; }
+    if ((m = /^(<=|>=|<>)/.exec(rest))) { toks.push({ t: 'op', v: m[1] }); i += 2; continue; }
+    if ('+-*/^&(),:=<>%'.includes(rest[0])) { toks.push({ t: 'op', v: rest[0] }); i++; continue; }
+    throw sheetErr('#構文エラー');
+  }
+  return toks;
+}
+
+function sheetToNum(v) {
+  if (Array.isArray(v)) throw sheetErr('#VALUE!');
+  if (v === '' || v == null) return 0;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  const n = sheetParseNumber(String(v));
+  if (n === null) throw sheetErr('#VALUE!');
+  return n;
+}
+function sheetToStr(v) {
+  if (Array.isArray(v)) throw sheetErr('#VALUE!');
+  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+  if (typeof v === 'number') return sheetFormatNumber(v);
+  return v == null ? '' : String(v);
+}
+function sheetTruthy(v) {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (v === '' || v == null) return false;
+  const n = sheetParseNumber(String(v));
+  if (n !== null) return n !== 0;
+  const up = String(v).toUpperCase();
+  if (up === 'TRUE') return true;
+  if (up === 'FALSE') return false;
+  throw sheetErr('#VALUE!');
+}
+function sheetCompare(op, a, b) {
+  let x = a, y = b;
+  const na = typeof a === 'number' ? a : sheetParseNumber(String(a ?? ''));
+  const nb = typeof b === 'number' ? b : sheetParseNumber(String(b ?? ''));
+  if (na !== null && nb !== null) { x = na; y = nb; }
+  else { x = sheetToStr(a).toLowerCase(); y = sheetToStr(b).toLowerCase(); }
+  switch (op) {
+    case '=': return x === y;
+    case '<>': return x !== y;
+    case '<': return x < y;
+    case '>': return x > y;
+    case '<=': return x <= y;
+    case '>=': return x >= y;
+  }
+  return false;
+}
+function sheetMatchCriteria(v, crit) {
+  if (typeof crit === 'number') return sheetCompare('=', v, crit);
+  const s = String(crit ?? '');
+  const m = /^(<=|>=|<>|<|>|=)(.*)$/.exec(s);
+  if (m) {
+    if (m[2] === '' && (m[1] === '=' || m[1] === '<>')) {
+      const empty = v === '' || v == null;
+      return m[1] === '=' ? empty : !empty;
+    }
+    return sheetCompare(m[1], v, m[2]);
+  }
+  return sheetCompare('=', v, s);
+}
+
+function sheetCallFunction(name, args) {
+  const flat = (list) => list.flatMap((a) => Array.isArray(a) ? a : [a]);
+  const numsFrom = (list) => {
+    const out = [];
+    for (const a of list) {
+      if (Array.isArray(a)) { for (const v of a) { if (typeof v === 'number') out.push(v); } }
+      else out.push(sheetToNum(a));
+    }
+    return out;
+  };
+  const need = (n) => { if (args.length < n) throw sheetErr('#引数不足'); };
+  switch (name) {
+    case 'SUM': return numsFrom(args).reduce((s, x) => s + x, 0);
+    case 'AVERAGE': { const n = numsFrom(args); if (!n.length) throw sheetErr('#DIV/0!'); return n.reduce((s, x) => s + x, 0) / n.length; }
+    case 'MIN': { const n = numsFrom(args); return n.length ? Math.min(...n) : 0; }
+    case 'MAX': { const n = numsFrom(args); return n.length ? Math.max(...n) : 0; }
+    case 'COUNT': return flat(args).filter((v) => typeof v === 'number').length;
+    case 'COUNTA': return flat(args).filter((v) => v !== '' && v != null).length;
+    case 'COUNTBLANK': return flat(args).filter((v) => v === '' || v == null).length;
+    case 'COUNTIF': { need(2); const range = Array.isArray(args[0]) ? args[0] : [args[0]]; return range.filter((v) => sheetMatchCriteria(v, args[1])).length; }
+    case 'SUMIF': {
+      need(2);
+      const range = Array.isArray(args[0]) ? args[0] : [args[0]];
+      const sumRange = args[2] === undefined ? range : (Array.isArray(args[2]) ? args[2] : [args[2]]);
+      let total = 0;
+      range.forEach((v, i) => { if (sheetMatchCriteria(v, args[1])) { const s = sumRange[i]; if (typeof s === 'number') total += s; } });
+      return total;
+    }
+    case 'ROUND': case 'ROUNDUP': case 'ROUNDDOWN': {
+      need(1);
+      const x = sheetToNum(args[0]); const d = args[1] === undefined ? 0 : Math.trunc(sheetToNum(args[1]));
+      const f = Math.pow(10, d);
+      const y = Math.abs(x) * f;
+      const r = name === 'ROUND' ? Math.round(y + 1e-9) : name === 'ROUNDUP' ? Math.ceil(y - 1e-9) : Math.floor(y + 1e-9);
+      return Math.sign(x) * r / f;
+    }
+    case 'INT': need(1); return Math.floor(sheetToNum(args[0]));
+    case 'ABS': need(1); return Math.abs(sheetToNum(args[0]));
+    case 'IF': need(2); return sheetTruthy(args[0]) ? args[1] : (args[2] === undefined ? false : args[2]);
+    case 'AND': return flat(args).every((v) => sheetTruthy(v));
+    case 'OR': return flat(args).some((v) => sheetTruthy(v));
+    case 'NOT': need(1); return !sheetTruthy(args[0]);
+    case 'CONCAT': case 'CONCATENATE': return flat(args).map(sheetToStr).join('');
+    case 'LEN': need(1); return sheetToStr(args[0]).length;
+    case 'TODAY': { const d = new Date(); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; }
+    default: throw sheetErr('#NAME?');
+  }
+}
+
+function sheetEvalFormula(src, getCell) {
+  const toks = sheetTokenize(src);
+  let p = 0;
+  const peek = () => toks[p];
+  const isOp = (v) => peek() && peek().t === 'op' && peek().v === v;
+  const expect = (v) => { const t = toks[p++]; if (!t || t.v !== v) throw sheetErr('#構文エラー'); };
+
+  function rangeValues(a, b) {
+    const s = sheetParseA1(a), e = sheetParseA1(b);
+    if (!s || !e) throw sheetErr('#REF!');
+    const out = [];
+    for (let r = Math.min(s.r, e.r); r <= Math.max(s.r, e.r); r++) {
+      for (let c = Math.min(s.c, e.c); c <= Math.max(s.c, e.c); c++) out.push(getCell(r, c));
+    }
+    return out;
+  }
+  function parseCompare() {
+    let a = parseConcat();
+    while (peek() && peek().t === 'op' && ['=', '<>', '<', '>', '<=', '>='].includes(peek().v)) {
+      const op = toks[p++].v; const b = parseConcat();
+      a = sheetCompare(op, a, b);
+    }
+    return a;
+  }
+  function parseConcat() {
+    let a = parseAdd();
+    while (isOp('&')) { p++; a = sheetToStr(a) + sheetToStr(parseAdd()); }
+    return a;
+  }
+  function parseAdd() {
+    let a = parseMul();
+    while (isOp('+') || isOp('-')) {
+      const op = toks[p++].v; const b = parseMul();
+      a = op === '+' ? sheetToNum(a) + sheetToNum(b) : sheetToNum(a) - sheetToNum(b);
+    }
+    return a;
+  }
+  function parseMul() {
+    let a = parsePow();
+    while (isOp('*') || isOp('/')) {
+      const op = toks[p++].v; const b = parsePow();
+      if (op === '/') { const d = sheetToNum(b); if (d === 0) throw sheetErr('#DIV/0!'); a = sheetToNum(a) / d; }
+      else a = sheetToNum(a) * sheetToNum(b);
+    }
+    return a;
+  }
+  function parsePow() {
+    let a = parseUnary();
+    while (isOp('^')) { p++; a = Math.pow(sheetToNum(a), sheetToNum(parseUnary())); }
+    return a;
+  }
+  function parseUnary() {
+    if (isOp('-')) { p++; return -sheetToNum(parseUnary()); }
+    if (isOp('+')) { p++; return sheetToNum(parseUnary()); }
+    let v = parsePrimary();
+    while (isOp('%')) { p++; v = sheetToNum(v) / 100; }
+    return v;
+  }
+  function parsePrimary() {
+    const t = toks[p++];
+    if (!t) throw sheetErr('#構文エラー');
+    if (t.t === 'num' || t.t === 'str' || t.t === 'bool') return t.v;
+    if (t.t === 'op' && t.v === '(') { const v = parseCompare(); expect(')'); return v; }
+    if (t.t === 'ref') {
+      if (isOp(':')) {
+        p++;
+        const t2 = toks[p++];
+        if (!t2 || t2.t !== 'ref') throw sheetErr('#構文エラー');
+        return rangeValues(t.v, t2.v);
+      }
+      const rc = sheetParseA1(t.v);
+      return getCell(rc.r, rc.c);
+    }
+    if (t.t === 'name') {
+      expect('(');
+      const args = [];
+      if (!isOp(')')) {
+        args.push(parseCompare());
+        while (isOp(',')) { p++; args.push(parseCompare()); }
+      }
+      expect(')');
+      return sheetCallFunction(t.v, args);
+    }
+    throw sheetErr('#構文エラー');
+  }
+  const v = parseCompare();
+  if (p < toks.length) throw sheetErr('#構文エラー');
+  return v;
+}
+
+function sheetFormatNumber(v) {
+  if (!Number.isFinite(v)) return '#NUM!';
+  const r = Math.round(v * 1e10) / 1e10;
+  return String(r);
+}
+
+// すべてのセルを計算して、表示用の値をまとめて返す
+function sheetEvaluateAll(data) {
+  const memo = new Map();
+  const visiting = new Set();
+  function cellValue(r, c) {
+    const key = sheetKey(r, c);
+    if (memo.has(key)) { const m = memo.get(key); if (m.err) throw sheetErr(m.err); return m.v; }
+    const cell = data.cells[key];
+    const raw = cell ? cell.v : '';
+    if (raw == null || raw === '') return '';
+    const s = String(raw);
+    if (!sheetIsFormula(s)) {
+      const n = sheetParseNumber(s);
+      const v = n !== null ? n : s;
+      memo.set(key, { v });
+      return v;
+    }
+    if (visiting.has(key)) throw sheetErr('#循環参照');
+    visiting.add(key);
+    try {
+      let v = sheetEvalFormula(sheetNormalizeFormula(s).slice(1), cellValue);
+      if (Array.isArray(v)) v = v.length === 1 ? v[0] : (() => { throw sheetErr('#VALUE!'); })();
+      memo.set(key, { v });
+      return v;
+    } catch (e) {
+      const err = e && e.sheetError ? e.message : '#エラー';
+      memo.set(key, { err });
+      throw sheetErr(err);
+    } finally {
+      visiting.delete(key);
+    }
+  }
+  const out = new Map();
+  for (const key of Object.keys(data.cells)) {
+    const [r, c] = key.split(':').map(Number);
+    if (r >= data.rows || c >= data.cols) continue;
+    try {
+      const v = cellValue(r, c);
+      out.set(key, { v });
+    } catch (e) {
+      out.set(key, { err: e.sheetError ? e.message : '#エラー' });
+    }
+  }
+  return out;
+}
+
+function sheetDisplayText(key) {
+  const res = docsState.values.get(key);
+  if (!res) return { text: '', isNum: false, isErr: false };
+  if (res.err) return { text: res.err, isNum: false, isErr: true };
+  const cell = docsState.doc.data.cells[key];
+  const raw = cell ? String(cell.v ?? '') : '';
+  const v = res.v;
+  if (!sheetIsFormula(raw)) return { text: raw, isNum: typeof v === 'number', isErr: false };
+  if (typeof v === 'number') return { text: sheetFormatNumber(v), isNum: true, isErr: false };
+  if (typeof v === 'boolean') return { text: v ? 'TRUE' : 'FALSE', isNum: false, isErr: false };
+  return { text: String(v ?? ''), isNum: false, isErr: false };
+}
+
+// 計算式の中のセル番地を書き換える（行・列の挿入/削除、コピー貼り付けで使う）
+// mapRC(r, c, absR, absC) → {r, c} または null（参照先がなくなった）
+function sheetShiftFormulaRefs(formula, mapRC) {
+  return formula.split(/("[^"]*")/).map((seg, i) => {
+    if (i % 2 === 1) return seg;
+    return seg.replace(/(\$?)([A-Za-z]{1,3})(\$?)(\d+)(?![A-Za-z0-9_(])/g, (m, d1, col, d2, row, offset, str) => {
+      const prev = str[offset - 1];
+      if (prev && /[A-Za-z0-9_.]/.test(prev)) return m;
+      const rc = mapRC(Number(row) - 1, sheetColIndex(col), d2 === '$', d1 === '$');
+      if (!rc || rc.r < 0 || rc.c < 0) return '#REF!';
+      return `${d1}${sheetColName(rc.c)}${d2}${rc.r + 1}`;
+    });
+  }).join('');
+}
+
+// ---- データベース ----
+async function loadDocsList() {
+  const { data, error } = await sb.from(T_DOCUMENTS).select('id,title,updated_at').order('updated_at', { ascending: false });
+  if (error) { console.error(error); alert('資料の一覧を読み込めませんでした: ' + error.message); return; }
+  docsState.list = data ?? [];
+  docsState.loaded = true;
+}
+async function createDoc(title, data) {
+  const { data: row, error } = await sb.from(T_DOCUMENTS).insert({ title, data }).select().single();
+  if (error) { alert('資料を作成できませんでした: ' + error.message); return null; }
+  return row;
+}
+async function openDoc(id) {
+  const { data, error } = await sb.from(T_DOCUMENTS).select('*').eq('id', id).maybeSingle();
+  if (error || !data) {
+    alert('資料を開けませんでした' + (error ? ': ' + error.message : '（削除された可能性があります）'));
+    state.docId = null;
+    docsState.doc = null;
+    renderView();
+    return;
+  }
+  docsState.doc = { id: data.id, title: data.title, data: normalizeSheetData(data.data) };
+  docsState.sel = { ar: 0, ac: 0, fr: 0, fc: 0 };
+  docsState.undo = [];
+  docsState.editing = false;
+  docsState.dirty = false;
+  state.docId = data.id;
+  renderView();
+}
+function scheduleDocSave() {
+  docsState.dirty = true;
+  setDocSaveStatus('未保存の変更があります…');
+  clearTimeout(docsState.saveTimer);
+  docsState.saveTimer = setTimeout(flushDocSave, 800);
+}
+async function flushDocSave() {
+  clearTimeout(docsState.saveTimer);
+  docsState.saveTimer = null;
+  const doc = docsState.doc;
+  if (!doc || !docsState.dirty) return;
+  docsState.dirty = false;
+  docsState.saving = true;
+  setDocSaveStatus('保存中…');
+  const { error } = await sb.from(T_DOCUMENTS)
+    .update({ title: doc.title, data: doc.data, updated_at: new Date().toISOString() })
+    .eq('id', doc.id);
+  docsState.saving = false;
+  if (error) {
+    docsState.dirty = true;
+    setDocSaveStatus('保存できませんでした（' + error.message + '）', true);
+    return;
+  }
+  docsState.loaded = false; // 一覧の更新日時を読み直す
+  if (!docsState.dirty) setDocSaveStatus('✓ 保存しました');
+}
+function setDocSaveStatus(text, isError) {
+  const el = document.getElementById('sheet-save-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? 'var(--color-absent)' : 'var(--color-ink-soft)';
+}
+window.addEventListener('beforeunload', (e) => {
+  if (docsState.dirty || docsState.saving) {
+    flushDocSave();
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+function formatDocDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ---- 画面 ----
+function renderDocsView(container) {
+  if (!state.docId) { renderDocsListView(container); return; }
+  if (!docsState.doc || docsState.doc.id !== state.docId) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    openDoc(state.docId);
+    return;
+  }
+  renderDocEditorView(container);
+}
+
+async function renderDocsListView(container) {
+  if (!docsState.loaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    await loadDocsList();
+    if (state.view !== 'docs' || state.docId) return;
+  }
+  const rows = docsState.list.map((d) => `
+    <tr>
+      <td><button class="doc-title-link" data-act="open" data-id="${d.id}">${escapeHtml(d.title || '無題の資料')}</button></td>
+      <td style="color:var(--color-ink-soft);font-size:13px;white-space:nowrap;">${formatDocDate(d.updated_at)}</td>
+      <td style="white-space:nowrap;text-align:right;">
+        <button class="btn-light" data-act="open" data-id="${d.id}">開く</button>
+        <button class="btn-light" data-act="dup" data-id="${d.id}">複製</button>
+        <button class="btn-light" data-act="del" data-id="${d.id}" style="color:var(--color-absent);">削除</button>
+      </td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">資料作成</h1>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 16px;">
+        <button class="btn-dark" id="doc-new-btn">＋ 新しい表を作成</button>
+        <label class="btn-light" style="display:inline-flex;align-items:center;cursor:pointer;">
+          Excelファイルを読み込む
+          <input type="file" id="doc-import-input" accept=".xlsx,.xls,.csv" style="display:none;" />
+        </label>
+        <span id="doc-list-msg" style="font-size:13px;color:var(--color-ink-soft);"></span>
+      </div>
+      <p class="hint-text">エクセルのような表を作って保存できます。作った表はこの一覧に並び、いつでも開いて続きを編集できます(自動で保存されます)。</p>
+      ${docsState.list.length ? `
+        <table class="doc-list-table">
+          <thead><tr><th style="text-align:left;">資料名</th><th style="text-align:left;">最終更新</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>` : `<p style="color:var(--color-ink-soft);margin-top:24px;">まだ資料がありません。「＋ 新しい表を作成」から作ってください。</p>`}
+    </div>
+  `;
+
+  document.getElementById('doc-new-btn').addEventListener('click', async () => {
+    const title = prompt('資料の名前を入力してください', '無題の資料');
+    if (title === null) return;
+    const row = await createDoc(title.trim() || '無題の資料', newSheetData());
+    if (row) { docsState.loaded = false; openDoc(row.id); }
+  });
+
+  document.getElementById('doc-import-input').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const msg = document.getElementById('doc-list-msg');
+    msg.textContent = '読み込み中…';
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array', cellFormula: true });
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      let firstId = null;
+      for (const sheetName of wb.SheetNames) {
+        const data = sheetDataFromWorksheet(wb.Sheets[sheetName]);
+        const title = wb.SheetNames.length > 1 ? `${baseName}（${sheetName}）` : baseName;
+        const row = await createDoc(title, data);
+        if (row && !firstId) firstId = row.id;
+      }
+      docsState.loaded = false;
+      if (firstId) openDoc(firstId); else renderView();
+    } catch (err) {
+      console.error(err);
+      msg.textContent = '読み込めませんでした: ' + err.message;
+    }
+  });
+
+  container.querySelectorAll('[data-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const item = docsState.list.find((d) => d.id === id);
+      if (btn.dataset.act === 'open') { openDoc(id); return; }
+      if (btn.dataset.act === 'dup') {
+        const { data: src, error } = await sb.from(T_DOCUMENTS).select('*').eq('id', id).maybeSingle();
+        if (error || !src) { alert('複製できませんでした'); return; }
+        const row = await createDoc(`${src.title}のコピー`, src.data);
+        if (row) { docsState.loaded = false; renderView(); }
+        return;
+      }
+      if (btn.dataset.act === 'del') {
+        if (!confirm(`「${item ? item.title : ''}」を削除します。元に戻せません。よろしいですか？`)) return;
+        const { error } = await sb.from(T_DOCUMENTS).delete().eq('id', id);
+        if (error) { alert('削除できませんでした: ' + error.message); return; }
+        docsState.loaded = false;
+        renderView();
+      }
+    });
+  });
+}
+
+function sheetDataFromWorksheet(ws) {
+  const data = newSheetData();
+  if (!ws || !ws['!ref']) return data;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  data.rows = Math.max(SHEET_DEFAULT_ROWS, range.e.r + 1 + 5);
+  data.cols = Math.max(SHEET_DEFAULT_COLS, range.e.c + 1 + 2);
+  data.colWidths = Array(data.cols).fill(SHEET_DEFAULT_COL_WIDTH);
+  (ws['!cols'] || []).forEach((col, i) => {
+    if (col && i < data.cols) {
+      const px = col.wpx || (col.wch ? Math.round(col.wch * 8 + 10) : null);
+      if (px) data.colWidths[i] = Math.max(40, Math.min(600, px));
+    }
+  });
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (!cell) continue;
+      let v;
+      if (cell.f) v = '=' + cell.f;
+      else if (cell.w !== undefined) v = String(cell.w);
+      else if (cell.v !== undefined) v = String(cell.v);
+      if (v === undefined || v === '') continue;
+      data.cells[sheetKey(r, c)] = { v };
+    }
+  }
+  return data;
+}
+
+function sheetSelRange() {
+  const s = docsState.sel;
+  return { r1: Math.min(s.ar, s.fr), r2: Math.max(s.ar, s.fr), c1: Math.min(s.ac, s.fc), c2: Math.max(s.ac, s.fc) };
+}
+
+function renderDocEditorView(container) {
+  const doc = docsState.doc;
+  const bgOptions = SHEET_BG_COLORS.map((b) => `<option value="${b.v}">${b.label}</option>`).join('');
+  container.innerHTML = `
+    <div class="sheet-page">
+      <div class="sheet-topbar no-print">
+        <button class="btn-light" id="sheet-back-btn">← 一覧に戻る</button>
+        <input type="text" id="sheet-title-input" class="sheet-title-input" value="${escapeHtml(doc.title)}" placeholder="資料の名前" />
+        <span id="sheet-save-status" class="sheet-save-status">✓ 保存済み</span>
+      </div>
+      <div class="sheet-toolbar no-print">
+        <button class="sheet-tool" data-tool="bold" title="太字 (Ctrl+B)"><b>B</b> 太字</button>
+        <span class="sheet-tool-sep"></span>
+        <button class="sheet-tool" data-tool="align-left" title="左揃え">左</button>
+        <button class="sheet-tool" data-tool="align-center" title="中央揃え">中央</button>
+        <button class="sheet-tool" data-tool="align-right" title="右揃え">右</button>
+        <span class="sheet-tool-sep"></span>
+        <select id="sheet-bg-select" class="sheet-tool-select" title="背景色">${bgOptions}</select>
+        <span class="sheet-tool-sep"></span>
+        <button class="sheet-tool" data-tool="row-insert" title="選択している行の上に1行挿入">行を挿入</button>
+        <button class="sheet-tool" data-tool="row-delete" title="選択している行を削除">行を削除</button>
+        <button class="sheet-tool" data-tool="col-insert" title="選択している列の左に1列挿入">列を挿入</button>
+        <button class="sheet-tool" data-tool="col-delete" title="選択している列を削除">列を削除</button>
+        <button class="sheet-tool" data-tool="rows-add" title="表の一番下に10行追加">＋10行</button>
+        <span class="sheet-tool-sep"></span>
+        <button class="sheet-tool" data-tool="undo" title="元に戻す (Ctrl+Z)">↶ 元に戻す</button>
+        <span class="sheet-tool-sep"></span>
+        <button class="sheet-tool" data-tool="export" title="Excelファイル(.xlsx)として保存">Excelで書き出し</button>
+        <button class="sheet-tool" data-tool="print" title="印刷">印刷</button>
+      </div>
+      <div class="sheet-formula-bar no-print">
+        <span id="sheet-namebox" class="sheet-namebox">A1</span>
+        <span class="sheet-fx">fx</span>
+        <input type="text" id="sheet-formula-input" class="sheet-formula-input" placeholder="セルの内容（=SUM(A1:A5) のような計算式も使えます）" />
+      </div>
+      <h2 class="sheet-print-title">${escapeHtml(doc.title)}</h2>
+      <div id="sheet-print-host" class="sheet-print-host"></div>
+      <div class="sheet-wrap no-print" id="sheet-wrap">
+        <div id="sheet-grid-host"></div>
+        <input type="text" id="sheet-cell-editor" class="sheet-cell-editor" autocomplete="off" spellcheck="false" />
+      </div>
+      <p class="hint-text no-print" style="margin-top:10px;">
+        セルをクリックして文字を打つと入力できます(ダブルクリックかF2で今の内容を修正)。Enterで下、Tabで右に移動します。
+        エクセルなどからコピーした表も、そのまま貼り付け(Ctrl+V)できます。「=」から始めると計算式になります
+        (例: =A1+B1、=SUM(B2:B20)、=COUNTIF(C2:C30,"○"))。変更は自動で保存されます。
+      </p>
+    </div>
+  `;
+
+  renderSheetGrid();
+  attachSheetEditorHandlers();
+  positionCellEditor(true);
+}
+
+function renderSheetGrid() {
+  const doc = docsState.doc;
+  const data = doc.data;
+  docsState.values = sheetEvaluateAll(data);
+  const host = document.getElementById('sheet-grid-host');
+  if (!host) return;
+  const cols = [];
+  for (let c = 0; c < data.cols; c++) cols.push(`<col style="width:${data.colWidths[c]}px;">`);
+  const head = [];
+  for (let c = 0; c < data.cols; c++) {
+    head.push(`<th class="sheet-col-h" data-c="${c}">${sheetColName(c)}<span class="sheet-col-resizer" data-c="${c}"></span></th>`);
+  }
+  const body = [];
+  for (let r = 0; r < data.rows; r++) {
+    const tds = [];
+    for (let c = 0; c < data.cols; c++) {
+      const key = sheetKey(r, c);
+      const cell = data.cells[key];
+      const disp = sheetDisplayText(key);
+      const styles = [];
+      const align = cell && cell.a ? cell.a : (disp.isNum ? 'right' : (disp.isErr ? 'center' : 'left'));
+      styles.push(`text-align:${align}`);
+      if (cell && cell.bg) styles.push(`background:${cell.bg}`);
+      const cls = ['sc'];
+      if (cell && cell.b) cls.push('bold');
+      if (disp.isErr) cls.push('err');
+      tds.push(`<td class="${cls.join(' ')}" data-r="${r}" data-c="${c}" style="${styles.join(';')}">${escapeHtml(disp.text)}</td>`);
+    }
+    body.push(`<tr><th class="sheet-row-h" data-r="${r}">${r + 1}</th>${tds.join('')}</tr>`);
+  }
+  host.innerHTML = `
+    <table class="sheet-table" id="sheet-table">
+      <colgroup><col style="width:44px;">${cols.join('')}</colgroup>
+      <thead><tr><th class="sheet-corner" title="すべて選択"></th>${head.join('')}</tr></thead>
+      <tbody>${body.join('')}</tbody>
+    </table>`;
+  updateSheetSelection(false);
+}
+
+function updateSheetSelection(scroll = true) {
+  const table = document.getElementById('sheet-table');
+  if (!table) return;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const s = docsState.sel;
+  table.querySelectorAll('td.sc').forEach((td) => {
+    const r = +td.dataset.r, c = +td.dataset.c;
+    td.classList.toggle('sel', r >= r1 && r <= r2 && c >= c1 && c <= c2 && !(r1 === r2 && c1 === c2));
+    td.classList.toggle('active', r === s.ar && c === s.ac);
+  });
+  table.querySelectorAll('th.sheet-col-h').forEach((th) => { const c = +th.dataset.c; th.classList.toggle('hl', c >= c1 && c <= c2); });
+  table.querySelectorAll('th.sheet-row-h').forEach((th) => { const r = +th.dataset.r; th.classList.toggle('hl', r >= r1 && r <= r2); });
+  const nameBox = document.getElementById('sheet-namebox');
+  if (nameBox) nameBox.textContent = (r1 === r2 && c1 === c2) ? sheetA1(s.ar, s.ac) : `${sheetA1(r1, c1)}:${sheetA1(r2, c2)}`;
+  const fx = document.getElementById('sheet-formula-input');
+  if (fx && document.activeElement !== fx) {
+    const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
+    fx.value = cell ? String(cell.v ?? '') : '';
+  }
+  const bgSel = document.getElementById('sheet-bg-select');
+  if (bgSel) {
+    const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
+    bgSel.value = (cell && cell.bg) || '';
+  }
+  if (!docsState.editing) positionCellEditor(true);
+  if (scroll) {
+    const td = table.querySelector(`td.sc[data-r="${s.fr}"][data-c="${s.fc}"]`);
+    if (td) td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+}
+
+// 選択中のセルの上に入力欄を重ねておく（日本語入力もそのまま始められるように）
+function positionCellEditor(focus) {
+  const editor = document.getElementById('sheet-cell-editor');
+  const table = document.getElementById('sheet-table');
+  if (!editor || !table) return;
+  const s = docsState.sel;
+  const td = table.querySelector(`td.sc[data-r="${s.ar}"][data-c="${s.ac}"]`);
+  if (!td) return;
+  editor.style.top = `${table.offsetTop + td.offsetTop}px`;
+  editor.style.left = `${table.offsetLeft + td.offsetLeft}px`;
+  editor.style.width = `${Math.max(td.offsetWidth, 60)}px`;
+  editor.style.height = `${td.offsetHeight}px`;
+  if (!docsState.editing) {
+    editor.classList.remove('editing');
+    editor.value = '';
+  }
+  if (focus) {
+    const active = document.activeElement;
+    const typingElsewhere = active && active !== editor && (active.id === 'sheet-title-input' || active.id === 'sheet-formula-input');
+    if (!typingElsewhere) editor.focus({ preventScroll: true });
+  }
+}
+
+function startCellEdit(mode, initialText) {
+  const editor = document.getElementById('sheet-cell-editor');
+  if (!editor) return;
+  docsState.editing = true;
+  docsState.editMode = mode;
+  positionCellEditor(false);
+  editor.classList.add('editing');
+  if (initialText !== undefined) editor.value = initialText;
+  editor.focus({ preventScroll: true });
+  const len = editor.value.length;
+  try { editor.setSelectionRange(len, len); } catch (e) { /* 無視 */ }
+}
+
+function commitCellEdit(moveR, moveC) {
+  const editor = document.getElementById('sheet-cell-editor');
+  if (!docsState.editing || !editor) return;
+  const s = docsState.sel;
+  setCellRaw(s.ar, s.ac, editor.value, true);
+  docsState.editing = false;
+  editor.classList.remove('editing');
+  editor.value = '';
+  afterSheetChange();
+  if (moveR || moveC) moveSheetSelection(moveR, moveC, false);
+  else updateSheetSelection();
+}
+function cancelCellEdit() {
+  const editor = document.getElementById('sheet-cell-editor');
+  docsState.editing = false;
+  if (editor) { editor.classList.remove('editing'); editor.value = ''; }
+  updateSheetSelection();
+}
+
+function pushSheetUndo() {
+  docsState.undo.push(JSON.stringify(docsState.doc.data));
+  if (docsState.undo.length > 50) docsState.undo.shift();
+}
+function sheetUndo() {
+  const prev = docsState.undo.pop();
+  if (!prev) return;
+  docsState.doc.data = normalizeSheetData(JSON.parse(prev));
+  const d = docsState.doc.data;
+  const clamp = (v, max) => Math.max(0, Math.min(v, max - 1));
+  const s = docsState.sel;
+  docsState.sel = { ar: clamp(s.ar, d.rows), ac: clamp(s.ac, d.cols), fr: clamp(s.fr, d.rows), fc: clamp(s.fc, d.cols) };
+  renderSheetGrid();
+  scheduleDocSave();
+}
+
+function setCellRaw(r, c, value, withUndo) {
+  const data = docsState.doc.data;
+  const key = sheetKey(r, c);
+  let v = value == null ? '' : String(value);
+  if (sheetIsFormula(v)) v = sheetNormalizeFormula(v);
+  const cur = data.cells[key];
+  if ((cur ? String(cur.v ?? '') : '') === v) return;
+  if (withUndo) pushSheetUndo();
+  if (r >= data.rows) data.rows = r + 1;
+  if (c >= data.cols) { while (data.colWidths.length <= c) data.colWidths.push(SHEET_DEFAULT_COL_WIDTH); data.cols = c + 1; }
+  if (v === '') {
+    if (cur) {
+      delete cur.v;
+      if (!cur.b && !cur.a && !cur.bg) delete data.cells[key];
+    }
+  } else {
+    data.cells[key] = { ...(cur || {}), v };
+  }
+}
+
+function afterSheetChange() {
+  renderSheetGrid();
+  scheduleDocSave();
+}
+
+function moveSheetSelection(dr, dc, extend) {
+  const d = docsState.doc.data;
+  const s = docsState.sel;
+  if (extend) {
+    s.fr = Math.max(0, Math.min(d.rows - 1, s.fr + dr));
+    s.fc = Math.max(0, Math.min(d.cols - 1, s.fc + dc));
+  } else {
+    // 下に移動し続けて表の端に来たら、自動で行を増やす
+    if (s.ar + dr >= d.rows && dr > 0) { d.rows += 1; renderSheetGrid(); scheduleDocSave(); }
+    s.ar = Math.max(0, Math.min(d.rows - 1, s.ar + dr));
+    s.ac = Math.max(0, Math.min(d.cols - 1, s.ac + dc));
+    s.fr = s.ar; s.fc = s.ac;
+  }
+  updateSheetSelection();
+}
+
+function applyToSelectionCells(fn) {
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const data = docsState.doc.data;
+  pushSheetUndo();
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      const key = sheetKey(r, c);
+      const cell = { ...(data.cells[key] || {}) };
+      fn(cell);
+      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg;
+      if (empty) delete data.cells[key]; else data.cells[key] = cell;
+    }
+  }
+  afterSheetChange();
+}
+
+function clearSelectionValues() {
+  applyToSelectionCells((cell) => { delete cell.v; });
+}
+
+function toggleBoldSelection() {
+  const data = docsState.doc.data;
+  const s = docsState.sel;
+  const cur = data.cells[sheetKey(s.ar, s.ac)];
+  const makeBold = !(cur && cur.b);
+  applyToSelectionCells((cell) => { if (makeBold) cell.b = true; else delete cell.b; });
+}
+
+function sheetShiftStructure(kind, index, count) {
+  // kind: 'row-insert' | 'row-delete' | 'col-insert' | 'col-delete'
+  const data = docsState.doc.data;
+  const isRow = kind.startsWith('row');
+  const isInsert = kind.endsWith('insert');
+  const end = index + count - 1;
+  const mapIndex = (i) => {
+    if (isInsert) return i >= index ? i + count : i;
+    if (i >= index && i <= end) return null;
+    return i > end ? i - count : i;
+  };
+  const mapRC = (r, c) => {
+    if (isRow) { const nr = mapIndex(r); return nr === null ? null : { r: nr, c }; }
+    const nc = mapIndex(c); return nc === null ? null : { r, c: nc };
+  };
+  const newCells = {};
+  for (const [key, cell] of Object.entries(data.cells)) {
+    const [r, c] = key.split(':').map(Number);
+    const rc = mapRC(r, c);
+    if (!rc) continue;
+    const copy = { ...cell };
+    if (sheetIsFormula(String(copy.v ?? ''))) copy.v = sheetShiftFormulaRefs(String(copy.v), (fr, fc) => mapRC(fr, fc));
+    newCells[sheetKey(rc.r, rc.c)] = copy;
+  }
+  data.cells = newCells;
+  if (isRow) {
+    data.rows = Math.max(1, data.rows + (isInsert ? count : -count));
+  } else {
+    if (isInsert) data.colWidths.splice(index, 0, ...Array(count).fill(SHEET_DEFAULT_COL_WIDTH));
+    else data.colWidths.splice(index, count);
+    data.cols = Math.max(1, data.cols + (isInsert ? count : -count));
+    while (data.colWidths.length < data.cols) data.colWidths.push(SHEET_DEFAULT_COL_WIDTH);
+  }
+}
+
+function runSheetTool(tool) {
+  const data = docsState.doc.data;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const s = docsState.sel;
+  switch (tool) {
+    case 'bold': toggleBoldSelection(); break;
+    case 'align-left': applyToSelectionCells((cell) => { cell.a = 'left'; }); break;
+    case 'align-center': applyToSelectionCells((cell) => { cell.a = 'center'; }); break;
+    case 'align-right': applyToSelectionCells((cell) => { cell.a = 'right'; }); break;
+    case 'row-insert':
+      pushSheetUndo(); sheetShiftStructure('row-insert', r1, r2 - r1 + 1); afterSheetChange(); break;
+    case 'row-delete':
+      if (data.rows - (r2 - r1 + 1) < 1) { alert('すべての行は削除できません'); break; }
+      pushSheetUndo(); sheetShiftStructure('row-delete', r1, r2 - r1 + 1);
+      s.ar = s.fr = Math.min(r1, data.rows - 1); s.fc = s.ac;
+      afterSheetChange(); break;
+    case 'col-insert':
+      pushSheetUndo(); sheetShiftStructure('col-insert', c1, c2 - c1 + 1); afterSheetChange(); break;
+    case 'col-delete':
+      if (data.cols - (c2 - c1 + 1) < 1) { alert('すべての列は削除できません'); break; }
+      pushSheetUndo(); sheetShiftStructure('col-delete', c1, c2 - c1 + 1);
+      s.ac = s.fc = Math.min(c1, data.cols - 1); s.fr = s.ar;
+      afterSheetChange(); break;
+    case 'rows-add':
+      pushSheetUndo(); data.rows += 10; afterSheetChange(); break;
+    case 'undo': sheetUndo(); break;
+    case 'export': exportSheetToXlsx(); break;
+    case 'print': buildSheetPrintTable(); window.print(); break;
+  }
+  positionCellEditor(true);
+}
+
+function sheetSelectionToTsv() {
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const lines = [];
+  for (let r = r1; r <= r2; r++) {
+    const vals = [];
+    for (let c = c1; c <= c2; c++) {
+      const t = sheetDisplayText(sheetKey(r, c)).text;
+      vals.push(/[\t\n"]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t);
+    }
+    lines.push(vals.join('\t'));
+  }
+  return lines.join('\n');
+}
+function sheetParseTsv(text) {
+  const rows = [];
+  let row = [], field = '', i = 0, inQ = false;
+  const t = text.replace(/\r\n?/g, '\n');
+  while (i < t.length) {
+    const ch = t[i];
+    if (inQ) {
+      if (ch === '"' && t[i + 1] === '"') { field += '"'; i += 2; continue; }
+      if (ch === '"') { inQ = false; i++; continue; }
+      field += ch; i++; continue;
+    }
+    if (ch === '"' && field === '') { inQ = true; i++; continue; }
+    if (ch === '\t') { row.push(field); field = ''; i++; continue; }
+    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+    field += ch; i++;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function sheetCopy(cut) {
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const data = docsState.doc.data;
+  const raws = [];
+  for (let r = r1; r <= r2; r++) {
+    const line = [];
+    for (let c = c1; c <= c2; c++) { const cell = data.cells[sheetKey(r, c)]; line.push(cell ? { ...cell } : null); }
+    raws.push(line);
+  }
+  const text = sheetSelectionToTsv();
+  docsState.clip = { text, raws, r1, c1 };
+  if (cut) clearSelectionValues();
+  return text;
+}
+
+function sheetPaste(text) {
+  const data = docsState.doc.data;
+  const s = docsState.sel;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const internal = docsState.clip && docsState.clip.text.replace(/\r/g, '') === text.replace(/\r/g, '').replace(/\n$/, '');
+  pushSheetUndo();
+  if (internal) {
+    const clip = docsState.clip;
+    const h = clip.raws.length, w = clip.raws[0].length;
+    // 1つのセルをコピーして範囲を選んでいる場合は、範囲全体に貼り付ける
+    const fillR = (h === 1 && w === 1) ? r2 - r1 + 1 : h;
+    const fillC = (h === 1 && w === 1) ? c2 - c1 + 1 : w;
+    for (let i = 0; i < fillR; i++) {
+      for (let j = 0; j < fillC; j++) {
+        const src = clip.raws[i % h][j % w];
+        const tr = r1 + i, tc = c1 + j;
+        const dr = tr - (clip.r1 + (i % h)), dc = tc - (clip.c1 + (j % w));
+        if (tr >= data.rows) data.rows = tr + 1;
+        if (tc >= data.cols) { data.cols = tc + 1; while (data.colWidths.length < data.cols) data.colWidths.push(SHEET_DEFAULT_COL_WIDTH); }
+        const key = sheetKey(tr, tc);
+        if (!src) { delete data.cells[key]; continue; }
+        const copy = { ...src };
+        if (sheetIsFormula(String(copy.v ?? ''))) {
+          copy.v = sheetShiftFormulaRefs(String(copy.v), (r, c, absR, absC) => ({ r: absR ? r : r + dr, c: absC ? c : c + dc }));
+        }
+        data.cells[key] = copy;
+      }
+    }
+    s.fr = r1 + fillR - 1; s.fc = c1 + fillC - 1; s.ar = r1; s.ac = c1;
+  } else {
+    const rows = sheetParseTsv(text);
+    if (!rows.length) { docsState.undo.pop(); return; }
+    if (rows.length === 1 && rows[0].length === 1) {
+      for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) setCellRaw(r, c, rows[0][0], false);
+    } else {
+      rows.forEach((line, i) => line.forEach((val, j) => setCellRaw(r1 + i, c1 + j, val, false)));
+      s.ar = r1; s.ac = c1; s.fr = r1 + rows.length - 1; s.fc = c1 + Math.max(...rows.map((l) => l.length)) - 1;
+    }
+  }
+  afterSheetChange();
+}
+
+// 印刷用に、入力がある範囲だけの表（行番号・列記号なし）を作る
+function buildSheetPrintTable() {
+  const host = document.getElementById('sheet-print-host');
+  if (!host) return;
+  const data = docsState.doc.data;
+  let maxR = -1, maxC = -1;
+  for (const [key, cell] of Object.entries(data.cells)) {
+    const [r, c] = key.split(':').map(Number);
+    if (r >= data.rows || c >= data.cols) continue;
+    if ((cell.v !== undefined && cell.v !== '') || cell.bg) { maxR = Math.max(maxR, r); maxC = Math.max(maxC, c); }
+  }
+  if (maxR < 0) { host.innerHTML = ''; return; }
+  const cols = data.colWidths.slice(0, maxC + 1).map((w) => `<col style="width:${w}px;">`).join('');
+  const rows = [];
+  for (let r = 0; r <= maxR; r++) {
+    const tds = [];
+    for (let c = 0; c <= maxC; c++) {
+      const key = sheetKey(r, c);
+      const cell = data.cells[key];
+      const disp = sheetDisplayText(key);
+      const align = cell && cell.a ? cell.a : (disp.isNum ? 'right' : 'left');
+      const st = [`text-align:${align}`];
+      if (cell && cell.bg) st.push(`background:${cell.bg}`);
+      tds.push(`<td class="${cell && cell.b ? 'bold' : ''}" style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
+    }
+    rows.push(`<tr>${tds.join('')}</tr>`);
+  }
+  host.innerHTML = `<table class="sheet-print-table"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+}
+
+function exportSheetToXlsx() {
+  const doc = docsState.doc;
+  const data = doc.data;
+  const ws = {};
+  let maxR = 0, maxC = 0;
+  for (const [key, cell] of Object.entries(data.cells)) {
+    if (cell.v === undefined || cell.v === '') continue;
+    const [r, c] = key.split(':').map(Number);
+    maxR = Math.max(maxR, r); maxC = Math.max(maxC, c);
+    const raw = String(cell.v);
+    const addr = XLSX.utils.encode_cell({ r, c });
+    if (sheetIsFormula(raw)) {
+      const res = docsState.values.get(key);
+      const v = res && !res.err ? res.v : '';
+      ws[addr] = typeof v === 'number' ? { t: 'n', v, f: raw.slice(1) } : { t: 's', v: String(v ?? ''), f: raw.slice(1) };
+    } else {
+      const n = sheetParseNumber(raw);
+      ws[addr] = (n !== null && !/^0\d/.test(raw.trim())) ? { t: 'n', v: n } : { t: 's', v: raw };
+    }
+  }
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: maxC } });
+  ws['!cols'] = data.colWidths.slice(0, maxC + 1).map((w) => ({ wpx: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  const safeName = (doc.title || '資料').replace(/[\\/:*?"<>|]/g, '_');
+  XLSX.writeFile(wb, `${safeName}.xlsx`);
+}
+
+function attachSheetEditorHandlers() {
+  const wrap = document.getElementById('sheet-wrap');
+  const editor = document.getElementById('sheet-cell-editor');
+  const fx = document.getElementById('sheet-formula-input');
+  const titleInput = document.getElementById('sheet-title-input');
+
+  document.getElementById('sheet-back-btn').addEventListener('click', async () => {
+    if (docsState.editing) commitCellEdit(0, 0);
+    await flushDocSave();
+    state.docId = null;
+    docsState.doc = null;
+    docsState.loaded = false;
+    renderView();
+  });
+
+  titleInput.addEventListener('input', () => {
+    docsState.doc.title = titleInput.value.trim() || '無題の資料';
+    const pt = document.querySelector('.sheet-print-title');
+    if (pt) pt.textContent = docsState.doc.title;
+    scheduleDocSave();
+  });
+  titleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); positionCellEditor(true); } });
+
+  document.querySelectorAll('.sheet-tool').forEach((btn) => {
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
+    btn.addEventListener('click', () => {
+      if (docsState.editing) commitCellEdit(0, 0);
+      runSheetTool(btn.dataset.tool);
+    });
+  });
+  document.getElementById('sheet-bg-select').addEventListener('change', (e) => {
+    const bg = e.target.value;
+    applyToSelectionCells((cell) => { if (bg) cell.bg = bg; else delete cell.bg; });
+    positionCellEditor(true);
+  });
+
+  // ---- マウス操作（セルの選択・範囲選択・列幅の変更） ----
+  wrap.addEventListener('mousedown', (e) => {
+    const resizer = e.target.closest('.sheet-col-resizer');
+    if (resizer) {
+      e.preventDefault();
+      const c = +resizer.dataset.c;
+      const startX = e.clientX;
+      const startW = docsState.doc.data.colWidths[c];
+      const colEl = document.querySelectorAll('#sheet-table colgroup col')[c + 1];
+      const onMove = (ev) => {
+        const w = Math.max(30, Math.min(800, startW + ev.clientX - startX));
+        docsState.doc.data.colWidths[c] = w;
+        if (colEl) colEl.style.width = `${w}px`;
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        positionCellEditor(true);
+        scheduleDocSave();
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      return;
+    }
+    if (e.target === editor && docsState.editing) return;
+    const s = docsState.sel;
+    const d = docsState.doc.data;
+    const td = e.target.closest('td.sc');
+    const colH = e.target.closest('th.sheet-col-h');
+    const rowH = e.target.closest('th.sheet-row-h');
+    const corner = e.target.closest('th.sheet-corner');
+    if (!td && !colH && !rowH && !corner) return;
+    e.preventDefault();
+    // 数式バーや資料名の欄に入力中なら、先に確定させてから選択を移す
+    if (document.activeElement && document.activeElement !== editor && document.activeElement !== document.body) document.activeElement.blur();
+    if (docsState.editing) commitCellEdit(0, 0);
+    if (td) {
+      const r = +td.dataset.r, c = +td.dataset.c;
+      if (e.shiftKey) { s.fr = r; s.fc = c; }
+      else { s.ar = s.fr = r; s.ac = s.fc = c; }
+      docsState.dragging = 'cell';
+    } else if (colH) {
+      const c = +colH.dataset.c;
+      if (e.shiftKey) { s.fc = c; } else { s.ac = s.fc = c; }
+      s.ar = 0; s.fr = d.rows - 1;
+      docsState.dragging = 'col';
+    } else if (rowH) {
+      const r = +rowH.dataset.r;
+      if (e.shiftKey) { s.fr = r; } else { s.ar = s.fr = r; }
+      s.ac = 0; s.fc = d.cols - 1;
+      docsState.dragging = 'row';
+    } else if (corner) {
+      s.ar = 0; s.ac = 0; s.fr = d.rows - 1; s.fc = d.cols - 1;
+    }
+    updateSheetSelection(false);
+    positionCellEditor(true);
+  });
+  wrap.addEventListener('mouseover', (e) => {
+    if (!docsState.dragging) return;
+    const s = docsState.sel;
+    if (docsState.dragging === 'cell') {
+      const td = e.target.closest('td.sc');
+      if (!td) return;
+      s.fr = +td.dataset.r; s.fc = +td.dataset.c;
+    } else if (docsState.dragging === 'col') {
+      const th = e.target.closest('th.sheet-col-h') || e.target.closest('td.sc');
+      if (!th) return;
+      s.fc = +th.dataset.c;
+    } else if (docsState.dragging === 'row') {
+      const th = e.target.closest('th.sheet-row-h') || e.target.closest('td.sc');
+      if (!th) return;
+      s.fr = +th.dataset.r;
+    }
+    updateSheetSelection(false);
+  });
+  if (!docsState.globalHandlersAttached) {
+    window.addEventListener('mouseup', () => { docsState.dragging = false; });
+    docsState.globalHandlersAttached = true;
+  }
+  wrap.addEventListener('dblclick', (e) => {
+    const td = e.target.closest('td.sc');
+    if (!td) return;
+    const cell = docsState.doc.data.cells[sheetKey(+td.dataset.r, +td.dataset.c)];
+    startCellEdit('edit', cell ? String(cell.v ?? '') : '');
+  });
+
+  // ---- キーボード操作 ----
+  editor.addEventListener('compositionstart', () => {
+    if (!docsState.editing) { docsState.editing = true; docsState.editMode = 'enter'; editor.classList.add('editing'); }
+  });
+  editor.addEventListener('input', () => {
+    if (!docsState.editing) { docsState.editing = true; docsState.editMode = 'enter'; editor.classList.add('editing'); }
+  });
+  editor.addEventListener('blur', () => {
+    // ほかの場所をクリックしたときは、入力中の内容を確定する
+    setTimeout(() => {
+      if (docsState.editing && document.activeElement !== editor) commitCellEdit(0, 0);
+    }, 0);
+  });
+  editor.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    const key = e.key;
+    if (docsState.editing) {
+      if (key === 'Enter') { e.preventDefault(); commitCellEdit(e.shiftKey ? -1 : 1, 0); return; }
+      if (key === 'Tab') { e.preventDefault(); commitCellEdit(0, e.shiftKey ? -1 : 1); return; }
+      if (key === 'Escape') { e.preventDefault(); cancelCellEdit(); return; }
+      if (docsState.editMode === 'enter') {
+        const arrows = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+        if (arrows[key]) { e.preventDefault(); commitCellEdit(...arrows[key]); }
+      }
+      return;
+    }
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl) {
+      const k = key.toLowerCase();
+      if (k === 'b') { e.preventDefault(); toggleBoldSelection(); positionCellEditor(true); }
+      else if (k === 'z') { e.preventDefault(); sheetUndo(); positionCellEditor(true); }
+      else if (k === 'a') { e.preventDefault(); const d = docsState.doc.data; Object.assign(docsState.sel, { ar: 0, ac: 0, fr: d.rows - 1, fc: d.cols - 1 }); updateSheetSelection(false); }
+      return; // コピー・切り取り・貼り付けは下のcopy/cut/pasteで扱う
+    }
+    const arrows = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    if (arrows[key]) { e.preventDefault(); moveSheetSelection(...arrows[key], e.shiftKey); return; }
+    if (key === 'Enter') { e.preventDefault(); moveSheetSelection(e.shiftKey ? -1 : 1, 0, false); return; }
+    if (key === 'Tab') { e.preventDefault(); moveSheetSelection(0, e.shiftKey ? -1 : 1, false); return; }
+    if (key === 'F2') {
+      e.preventDefault();
+      const s = docsState.sel;
+      const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
+      startCellEdit('edit', cell ? String(cell.v ?? '') : '');
+      return;
+    }
+    if (key === 'Delete' || key === 'Backspace') { e.preventDefault(); clearSelectionValues(); positionCellEditor(true); return; }
+    // それ以外の文字は、そのまま入力欄に入り（inputイベント）、入力が始まる
+  });
+  editor.addEventListener('copy', (e) => {
+    if (docsState.editing) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', sheetCopy(false));
+  });
+  editor.addEventListener('cut', (e) => {
+    if (docsState.editing) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', sheetCopy(true));
+    positionCellEditor(true);
+  });
+  editor.addEventListener('paste', (e) => {
+    if (docsState.editing) return;
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    if (text) { sheetPaste(text); positionCellEditor(true); }
+  });
+
+  // ---- 数式バー ----
+  fx.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    const s = docsState.sel;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      pushSheetUndo();
+      setCellRaw(s.ar, s.ac, fx.value, false);
+      afterSheetChange();
+      fx.blur();
+      moveSheetSelection(1, 0, false);
+      positionCellEditor(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      fx.blur();
+      updateSheetSelection();
+      positionCellEditor(true);
+    }
+  });
+  fx.addEventListener('change', () => {
+    const s = docsState.sel;
+    const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
+    const next = sheetIsFormula(fx.value) ? sheetNormalizeFormula(fx.value) : fx.value;
+    if ((cell ? String(cell.v ?? '') : '') !== next) {
+      pushSheetUndo();
+      setCellRaw(s.ar, s.ac, fx.value, false);
+      afterSheetChange();
+    }
+  });
 }
 
 // ==================== データ取得 ====================
@@ -1047,6 +2389,21 @@ function renderHelpView(container) {
         <ul>
           <li>名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、「神・責欄を使う」の切り替え、新しい区分の追加・削除ができます。</li>
           <li>並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑪ 資料作成</h2>
+        <p>エクセルのような表を作って保存できる画面です。</p>
+        <ul>
+          <li>「＋ 新しい表を作成」で新しい表を作ります。作った表は一覧に並び、「開く」で続きを編集できます。「複製」でコピー、「削除」で削除できます。</li>
+          <li>セルをクリックしてそのまま文字を打つと入力できます。今の内容を修正したいときは、ダブルクリックかF2キーを押します。Enterで下、Tabで右に移動します。上の「fx」欄でも入力・修正できます。</li>
+          <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を変えられます。</li>
+          <li>エクセルなどからコピーした表は、そのまま貼り付け(Ctrl+V)できます。Ctrl+Zで元に戻せます。</li>
+          <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
+          <li>変更は自動で保存されます(資料名の横に「✓ 保存しました」と出ます)。</li>
+          <li>「Excelで書き出し」で .xlsx ファイルとして保存でき、一覧の「Excelファイルを読み込む」で既存のエクセルファイルを取り込めます(シートが複数ある場合は、シートごとに別の資料になります)。</li>
+          <li>「印刷」を押すと、入力のある範囲だけが罫線付きで印刷されます。</li>
         </ul>
       </section>
 
