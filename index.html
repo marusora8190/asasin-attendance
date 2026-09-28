@@ -182,12 +182,12 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-size-input { width: 64px; height: 30px; border: 1px solid var(--color-line); border-radius: 6px; padding: 2px 6px; font-size: 13px; text-align: right; }
 .sheet-size-input:focus { outline: none; border-color: var(--color-accent); }
 .sheet-size-tip { position: fixed; z-index: 1000; display: none; background: var(--color-navy); color: white; font-size: 12px; padding: 3px 8px; border-radius: 4px; pointer-events: none; }
-.sheet-table td.sc { border: 1px solid #e3dfd4; padding: 2px 6px; font-size: 14px; font-weight: 500 !important; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: cell; }
+.sheet-table td.sc { border: 1px solid #e3dfd4; padding: 2px 6px; font-size: 11pt; font-weight: 500 !important; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: cell; }
 .sheet-table td.sc.bold { font-weight: 900 !important; }
 .sheet-table td.sc.err { color: var(--color-absent); font-size: 12px; }
 .sheet-table td.sc.sel { box-shadow: inset 0 0 0 9999px rgba(58,124,165,0.16); }
 .sheet-table td.sc.active { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-.sheet-cell-editor { position: absolute; z-index: 1; opacity: 0; pointer-events: none; border: 2px solid var(--color-accent); padding: 2px 5px; font-size: 14px; font-weight: 500 !important; background: white; box-sizing: border-box; caret-color: transparent; }
+.sheet-cell-editor { position: absolute; z-index: 1; opacity: 0; pointer-events: none; border: 2px solid var(--color-accent); padding: 2px 5px; font-size: 11pt; font-weight: 500 !important; background: white; box-sizing: border-box; caret-color: transparent; }
 .sheet-cell-editor.editing { opacity: 1; pointer-events: auto; z-index: 2; caret-color: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 .sheet-cell-editor:focus { outline: none; }
 .sheet-print-host { display: none; }
@@ -202,7 +202,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
   .sheet-page { padding: 0; }
   .sheet-print-host { display: block; }
   .sheet-print-table { border-collapse: collapse; table-layout: fixed; }
-  .sheet-print-table td { border: 1px solid #555; height: 6mm; padding: 2px 5px; font-size: 11px; font-weight: 500 !important; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet-print-table td { border: 1px solid #555; padding: 2px 5px; font-size: 11pt; font-weight: 500 !important; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .sheet-print-table td.bold { font-weight: 900 !important; }
 }
 
@@ -896,6 +896,9 @@ const SHEET_DEFAULT_ROWS = 30;
 const SHEET_DEFAULT_COLS = 10;
 const SHEET_DEFAULT_COL_WIDTH = 100;
 const SHEET_DEFAULT_ROW_HEIGHT = 26;
+const SHEET_DEFAULT_FONT_PT = 11; // 文字サイズ（エクセルと同じ「ポイント」）
+const SHEET_FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48];
+const SHEET_FONT_PT_MIN = 6, SHEET_FONT_PT_MAX = 72;
 const SHEET_COL_WIDTH_MIN = 20, SHEET_COL_WIDTH_MAX = 800;
 const SHEET_ROW_HEIGHT_MIN = 18, SHEET_ROW_HEIGHT_MAX = 300;
 const SHEET_BG_COLORS = [
@@ -947,6 +950,55 @@ function sheetBorderStyle(cell, onCss, offCss) {
   const b = sheetCellBorders(cell);
   return `border-top:${b.t ? onCss : offCss};border-right:${b.r ? onCss : offCss};border-bottom:${b.b ? onCss : offCss};border-left:${b.l ? onCss : offCss}`;
 }
+// ---- セルの結合 ----
+// data.merges = [{ r, c, rs, cs }]（左上のセルと、縦・横に何マス分か）
+function sheetMergeAt(data, r, c) {
+  for (const m of data.merges || []) {
+    if (r >= m.r && r < m.r + m.rs && c >= m.c && c < m.c + m.cs) return m;
+  }
+  return null;
+}
+// 範囲に結合セルが一部でもかかっていたら、その結合セル全体が入るよう範囲を広げる
+function sheetExpandRangeForMerges(data, rg) {
+  let { r1, r2, c1, c2 } = rg;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const m of data.merges || []) {
+      const mr2 = m.r + m.rs - 1, mc2 = m.c + m.cs - 1;
+      if (m.r > r2 || mr2 < r1 || m.c > c2 || mc2 < c1) continue;
+      if (m.r < r1) { r1 = m.r; changed = true; }
+      if (mr2 > r2) { r2 = mr2; changed = true; }
+      if (m.c < c1) { c1 = m.c; changed = true; }
+      if (mc2 > c2) { c2 = mc2; changed = true; }
+    }
+  }
+  return { r1, r2, c1, c2 };
+}
+// 表を描くときに、結合で隠れるセル（skip）と、結合の左上のセル（merge）を調べる表
+function sheetMergeLayout(data) {
+  const map = new Map();
+  for (const m of data.merges || []) {
+    for (let r = m.r; r < m.r + m.rs; r++) {
+      for (let c = m.c; c < m.c + m.cs; c++) map.set(sheetKey(r, c), (r === m.r && c === m.c) ? m : 'skip');
+    }
+  }
+  return map;
+}
+// 結合セルの罫線：上・左は左上のセル、下は左下のセル、右は右上のセルの設定を使う
+function sheetMergedBorderStyle(data, m, onCss, offCss) {
+  const t = sheetCellBorders(data.cells[sheetKey(m.r, m.c)]).t;
+  const l = sheetCellBorders(data.cells[sheetKey(m.r, m.c)]).l;
+  const b = sheetCellBorders(data.cells[sheetKey(m.r + m.rs - 1, m.c)]).b;
+  const r = sheetCellBorders(data.cells[sheetKey(m.r, m.c + m.cs - 1)]).r;
+  if (t && l && b && r) return '';
+  return `border-top:${t ? onCss : offCss};border-right:${r ? onCss : offCss};border-bottom:${b ? onCss : offCss};border-left:${l ? onCss : offCss}`;
+}
+
+function sheetCellFontPt(cell) { return Number(cell && cell.fs) || SHEET_DEFAULT_FONT_PT; }
+function sheetCellIsEmpty(cell) {
+  return (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx && !cell.fs;
+}
 function sheetRowHeight(data, r) { return Number(data.rowHeights && data.rowHeights[r]) || SHEET_DEFAULT_ROW_HEIGHT; }
 function sheetA1(r, c) { return `${sheetColName(c)}${r + 1}`; }
 function sheetParseA1(ref) {
@@ -966,6 +1018,7 @@ function normalizeSheetData(d) {
   data.colWidths.length = data.cols;
   if (!data.cells || typeof data.cells !== 'object') data.cells = {};
   if (!data.rowHeights || typeof data.rowHeights !== 'object' || Array.isArray(data.rowHeights)) data.rowHeights = {};
+  if (!Array.isArray(data.merges)) data.merges = [];
   return data;
 }
 
@@ -1465,6 +1518,7 @@ function sheetDataFromWorksheet(ws) {
   data.rows = Math.max(SHEET_DEFAULT_ROWS, range.e.r + 1 + 5);
   data.cols = Math.max(SHEET_DEFAULT_COLS, range.e.c + 1 + 2);
   data.colWidths = Array(data.cols).fill(SHEET_DEFAULT_COL_WIDTH);
+  data.merges = (ws['!merges'] || []).map((m) => ({ r: m.s.r, c: m.s.c, rs: m.e.r - m.s.r + 1, cs: m.e.c - m.s.c + 1 })).filter((m) => m.rs > 1 || m.cs > 1);
   (ws['!rows'] || []).forEach((row, i) => {
     const px = row && (row.hpx || (row.hpt ? Math.round(row.hpt * 4 / 3) : null));
     if (px && Math.round(px) !== SHEET_DEFAULT_ROW_HEIGHT) data.rowHeights[i] = Math.max(SHEET_ROW_HEIGHT_MIN, Math.min(SHEET_ROW_HEIGHT_MAX, Math.round(px)));
@@ -1492,7 +1546,17 @@ function sheetDataFromWorksheet(ws) {
 
 function sheetSelRange() {
   const s = docsState.sel;
-  return { r1: Math.min(s.ar, s.fr), r2: Math.max(s.ar, s.fr), c1: Math.min(s.ac, s.fc), c2: Math.max(s.ac, s.fc) };
+  const rg = { r1: Math.min(s.ar, s.fr), r2: Math.max(s.ar, s.fr), c1: Math.min(s.ac, s.fc), c2: Math.max(s.ac, s.fc) };
+  const data = docsState.doc && docsState.doc.data;
+  return data ? sheetExpandRangeForMerges(data, rg) : rg;
+}
+// 選んでいる範囲が「結合セル1つ（またはセル1つ）」だけかどうか
+function sheetSelIsSingle() {
+  const data = docsState.doc.data;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  if (r1 === r2 && c1 === c2) return true;
+  const m = sheetMergeAt(data, r1, c1);
+  return !!m && m.r === r1 && m.c === c1 && m.r + m.rs - 1 === r2 && m.c + m.cs - 1 === c2;
 }
 
 function renderDocEditorView(container) {
@@ -1506,14 +1570,24 @@ function renderDocEditorView(container) {
         <span id="sheet-save-status" class="sheet-save-status">✓ 保存済み</span>
       </div>
       <div class="sheet-toolbar no-print">
+        <label class="sheet-size-label" title="文字の大きさ（ポイント）。リストから選ぶか、数字を入れてEnter">文字サイズ
+          <input type="number" id="sheet-font-size-input" class="sheet-size-input" list="sheet-font-size-list" min="${SHEET_FONT_PT_MIN}" max="${SHEET_FONT_PT_MAX}" step="1" />
+          <datalist id="sheet-font-size-list">${SHEET_FONT_SIZES.map((n) => `<option value="${n}"></option>`).join('')}</datalist>
+        </label>
+        <button class="sheet-tool" data-tool="font-up" title="文字を大きく">A＋</button>
+        <button class="sheet-tool" data-tool="font-down" title="文字を小さく">A－</button>
+        <span class="sheet-tool-sep"></span>
         <button class="sheet-tool" data-tool="bold" title="太字 (Ctrl+B)"><b>B</b> 太字</button>
         <span class="sheet-tool-sep"></span>
         <button class="sheet-tool" data-tool="align-left" title="左揃え">左</button>
         <button class="sheet-tool" data-tool="align-center" title="中央揃え">中央</button>
         <button class="sheet-tool" data-tool="align-right" title="右揃え">右</button>
         <span class="sheet-tool-sep"></span>
+        <button class="sheet-tool" data-tool="merge" title="選んだ範囲を1つのセルにまとめる">セル結合</button>
+        <button class="sheet-tool" data-tool="unmerge" title="結合したセルを元に戻す">結合解除</button>
+        <span class="sheet-tool-sep"></span>
         <select id="sheet-bg-select" class="sheet-tool-select" title="背景色">${bgOptions}</select>
-        <select id="sheet-border-select" class="sheet-tool-select" title="選んでいる範囲の罫線を変更">
+        <select id="sheet-border-select" class="sheet-tool-select" style="width:110px;" title="選んでいる範囲の罫線を変更">
           <option value="">罫線…</option>
           <option value="all">格子（すべての罫線）</option>
           <option value="outer">外枠だけ</option>
@@ -1576,22 +1650,28 @@ function renderSheetGrid() {
     head.push(`<th class="sheet-col-h" data-c="${c}">${sheetColName(c)}<span class="sheet-col-resizer" data-c="${c}"></span></th>`);
   }
   const body = [];
+  const layout = sheetMergeLayout(data);
   for (let r = 0; r < data.rows; r++) {
     const tds = [];
     for (let c = 0; c < data.cols; c++) {
       const key = sheetKey(r, c);
+      const lay = layout.get(key);
+      if (lay === 'skip') continue;
       const cell = data.cells[key];
       const disp = sheetDisplayText(key);
       const styles = [];
       const align = cell && cell.a ? cell.a : (disp.isNum ? 'right' : (disp.isErr ? 'center' : 'left'));
       styles.push(`text-align:${align}`);
       if (cell && cell.bg) styles.push(`background:${cell.bg}`);
-      const bdCss = sheetBorderStyle(cell, '1px solid #bdb6a6', '1px dotted #ece8df');
+      const bdCss = lay ? sheetMergedBorderStyle(data, lay, '1px solid #bdb6a6', '1px dotted #ece8df') : sheetBorderStyle(cell, '1px solid #bdb6a6', '1px dotted #ece8df');
       if (bdCss) styles.push(bdCss);
       const cls = ['sc'];
+      if (lay) cls.push('merged');
+      if (cell && cell.fs) styles.push(`font-size:${cell.fs}pt`);
       if (cell && cell.b) cls.push('bold');
       if (disp.isErr) cls.push('err');
-      tds.push(`<td class="${cls.join(' ')}" data-r="${r}" data-c="${c}" style="${styles.join(';')}">${escapeHtml(disp.text)}</td>`);
+      const span = lay ? ` rowspan="${lay.rs}" colspan="${lay.cs}"` : '';
+      tds.push(`<td class="${cls.join(' ')}" data-r="${r}" data-c="${c}"${span} style="${styles.join(';')}">${escapeHtml(disp.text)}</td>`);
     }
     body.push(`<tr style="height:${sheetRowHeight(data, r)}px;"><th class="sheet-row-h" data-r="${r}">${r + 1}<span class="sheet-row-resizer" data-r="${r}"></span></th>${tds.join('')}</tr>`);
   }
@@ -1607,17 +1687,26 @@ function renderSheetGrid() {
 function updateSheetSelection(scroll = true) {
   const table = document.getElementById('sheet-table');
   if (!table) return;
-  const { r1, r2, c1, c2 } = sheetSelRange();
   const s = docsState.sel;
+  const data = docsState.doc.data;
+  // 選択中のセルが結合セルの中なら、その左上のセルを選択中として扱う
+  const am = sheetMergeAt(data, s.ar, s.ac);
+  if (am) {
+    const single = s.fr === s.ar && s.fc === s.ac;
+    s.ar = am.r; s.ac = am.c;
+    if (single) { s.fr = s.ar; s.fc = s.ac; }
+  }
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const single = sheetSelIsSingle();
   table.querySelectorAll('td.sc').forEach((td) => {
     const r = +td.dataset.r, c = +td.dataset.c;
-    td.classList.toggle('sel', r >= r1 && r <= r2 && c >= c1 && c <= c2 && !(r1 === r2 && c1 === c2));
+    td.classList.toggle('sel', r >= r1 && r <= r2 && c >= c1 && c <= c2 && !single);
     td.classList.toggle('active', r === s.ar && c === s.ac);
   });
   table.querySelectorAll('th.sheet-col-h').forEach((th) => { const c = +th.dataset.c; th.classList.toggle('hl', c >= c1 && c <= c2); });
   table.querySelectorAll('th.sheet-row-h').forEach((th) => { const r = +th.dataset.r; th.classList.toggle('hl', r >= r1 && r <= r2); });
   const nameBox = document.getElementById('sheet-namebox');
-  if (nameBox) nameBox.textContent = (r1 === r2 && c1 === c2) ? sheetA1(s.ar, s.ac) : `${sheetA1(r1, c1)}:${sheetA1(r2, c2)}`;
+  if (nameBox) nameBox.textContent = single ? sheetA1(s.ar, s.ac) : `${sheetA1(r1, c1)}:${sheetA1(r2, c2)}`;
   const fx = document.getElementById('sheet-formula-input');
   if (fx && document.activeElement !== fx) {
     const cell = docsState.doc.data.cells[sheetKey(s.ar, s.ac)];
@@ -1643,6 +1732,13 @@ function updateSheetSizeInputs() {
   const { r1, r2, c1, c2 } = sheetSelRange();
   const wIn = document.getElementById('sheet-col-width-input');
   const hIn = document.getElementById('sheet-row-height-input');
+  const fIn = document.getElementById('sheet-font-size-input');
+  if (fIn && document.activeElement !== fIn) {
+    const fsSet = new Set();
+    for (let r = r1; r <= r2 && fsSet.size < 2; r++) for (let c = c1; c <= c2 && fsSet.size < 2; c++) fsSet.add(sheetCellFontPt(data.cells[sheetKey(r, c)]));
+    fIn.value = fsSet.size === 1 ? [...fsSet][0] : '';
+    fIn.placeholder = fsSet.size === 1 ? '' : '混在';
+  }
   if (wIn && document.activeElement !== wIn) {
     const ws = new Set(); for (let c = c1; c <= c2; c++) ws.add(data.colWidths[c]);
     wIn.value = ws.size === 1 ? [...ws][0] : '';
@@ -1653,6 +1749,13 @@ function updateSheetSizeInputs() {
     hIn.value = hs.size === 1 ? [...hs][0] : '';
     hIn.placeholder = hs.size === 1 ? '' : '混在';
   }
+}
+
+function applySheetFontSize(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || value === '') { updateSheetSizeInputs(); return; }
+  const pt = Math.max(SHEET_FONT_PT_MIN, Math.min(SHEET_FONT_PT_MAX, n));
+  applyToSelectionCells((cell) => { if (pt === SHEET_DEFAULT_FONT_PT) delete cell.fs; else cell.fs = pt; });
 }
 
 function applySheetColWidth(value) {
@@ -1709,6 +1812,7 @@ function positionCellEditor(focus) {
   editor.style.left = `${table.offsetLeft + td.offsetLeft}px`;
   editor.style.width = `${Math.max(td.offsetWidth, 60)}px`;
   editor.style.height = `${td.offsetHeight}px`;
+  editor.style.fontSize = `${sheetCellFontPt(docsState.doc.data.cells[sheetKey(s.ar, s.ac)])}pt`;
   if (!docsState.editing) {
     editor.classList.remove('editing');
     editor.value = '';
@@ -1781,7 +1885,7 @@ function setCellRaw(r, c, value, withUndo) {
   if (v === '') {
     if (cur) {
       delete cur.v;
-      if (!cur.b && !cur.a && !cur.bg && !cur.bd && !cur.bx) delete data.cells[key];
+      if (sheetCellIsEmpty(cur)) delete data.cells[key];
     }
   } else {
     data.cells[key] = { ...(cur || {}), v };
@@ -1800,13 +1904,59 @@ function moveSheetSelection(dr, dc, extend) {
     s.fr = Math.max(0, Math.min(d.rows - 1, s.fr + dr));
     s.fc = Math.max(0, Math.min(d.cols - 1, s.fc + dc));
   } else {
+    // 結合セルから下・右に動くときは、結合セルの端から数える
+    const cm = sheetMergeAt(d, s.ar, s.ac);
+    let fromR = s.ar, fromC = s.ac;
+    if (cm) { if (dr > 0) fromR = cm.r + cm.rs - 1; if (dc > 0) fromC = cm.c + cm.cs - 1; }
     // 下に移動し続けて表の端に来たら、自動で行を増やす
-    if (s.ar + dr >= d.rows && dr > 0) { d.rows += 1; renderSheetGrid(); scheduleDocSave(); }
-    s.ar = Math.max(0, Math.min(d.rows - 1, s.ar + dr));
-    s.ac = Math.max(0, Math.min(d.cols - 1, s.ac + dc));
+    if (fromR + dr >= d.rows && dr > 0) { d.rows += 1; renderSheetGrid(); scheduleDocSave(); }
+    s.ar = Math.max(0, Math.min(d.rows - 1, fromR + dr));
+    s.ac = Math.max(0, Math.min(d.cols - 1, fromC + dc));
+    const nm = sheetMergeAt(d, s.ar, s.ac);
+    if (nm) { s.ar = nm.r; s.ac = nm.c; }
     s.fr = s.ar; s.fc = s.ac;
   }
   updateSheetSelection();
+}
+
+function mergeSheetSelection() {
+  const data = docsState.doc.data;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  if (r1 === r2 && c1 === c2) { alert('結合するセルを2つ以上、ドラッグで選んでください'); return; }
+  const others = [];
+  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+    if (r === r1 && c === c1) continue;
+    const cell = data.cells[sheetKey(r, c)];
+    if (cell && cell.v !== undefined && cell.v !== '') others.push(cell);
+  }
+  if (others.length && !confirm('結合すると、左上のセル以外の内容は消えます。結合してよろしいですか？')) return;
+  pushSheetUndo();
+  // 範囲内の既存の結合はいったん外す
+  data.merges = (data.merges || []).filter((m) => m.r > r2 || m.r + m.rs - 1 < r1 || m.c > c2 || m.c + m.cs - 1 < c1);
+  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) {
+    if (r === r1 && c === c1) continue;
+    const key = sheetKey(r, c);
+    const cell = data.cells[key];
+    if (cell) { delete cell.v; if (sheetCellIsEmpty(cell)) delete data.cells[key]; }
+  }
+  data.merges.push({ r: r1, c: c1, rs: r2 - r1 + 1, cs: c2 - c1 + 1 });
+  // 結合したセルは、最初は中央揃えにする（あとから左・右にも変えられます）
+  const key = sheetKey(r1, c1);
+  const top = { ...(data.cells[key] || {}) };
+  if (!top.a) top.a = 'center';
+  data.cells[key] = top;
+  Object.assign(docsState.sel, { ar: r1, ac: c1, fr: r1, fc: c1 });
+  afterSheetChange();
+}
+function unmergeSheetSelection() {
+  const data = docsState.doc.data;
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const before = (data.merges || []).length;
+  const kept = (data.merges || []).filter((m) => m.r > r2 || m.r + m.rs - 1 < r1 || m.c > c2 || m.c + m.cs - 1 < c1);
+  if (kept.length === before) { alert('選んでいる所に結合したセルはありません'); return; }
+  pushSheetUndo();
+  data.merges = kept;
+  afterSheetChange();
 }
 
 // 選んでいる範囲の罫線を変える
@@ -1826,7 +1976,7 @@ function applySheetBorders(mode) {
       else if (mode === 'top') bd = { t: r === r1 ? 1 : 0, r: 0, b: 0, l: 0 };
       if (bd) cell.bd = bd; else delete cell.bd;
       if (mode === 'none') delete cell.bx; else cell.bx = 1;
-      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx;
+      const empty = sheetCellIsEmpty(cell);
       if (empty) delete data.cells[key]; else data.cells[key] = cell;
     }
   }
@@ -1839,7 +1989,7 @@ function applySheetBorders(mode) {
       const bd = sheetCellBorders(cell);
       bd[side] = val;
       if (bd.t && bd.r && bd.b && bd.l) delete cell.bd; else cell.bd = bd;
-      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx;
+      const empty = sheetCellIsEmpty(cell);
       if (empty) delete data.cells[key]; else data.cells[key] = cell;
     };
     const edgeOn = { top: mode === 'outer' || mode === 'top', bottom: mode === 'outer' || mode === 'bottom', left: mode === 'outer', right: mode === 'outer' };
@@ -1864,7 +2014,7 @@ function applyToSelectionCells(fn) {
       const key = sheetKey(r, c);
       const cell = { ...(data.cells[key] || {}) };
       fn(cell);
-      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx;
+      const empty = sheetCellIsEmpty(cell);
       if (empty) delete data.cells[key]; else data.cells[key] = cell;
     }
   }
@@ -1908,6 +2058,24 @@ function sheetShiftStructure(kind, index, count) {
     newCells[sheetKey(rc.r, rc.c)] = copy;
   }
   data.cells = newCells;
+  // 結合セルも、行・列の挿入・削除に合わせて位置と大きさを直す
+  data.merges = (data.merges || []).map((m) => {
+    const start = isRow ? m.r : m.c;
+    const len = isRow ? m.rs : m.cs;
+    let ns, nl;
+    if (isInsert) {
+      if (index <= start) { ns = start + count; nl = len; }
+      else if (index < start + len) { ns = start; nl = len + count; }
+      else { ns = start; nl = len; }
+    } else {
+      const kept = [];
+      for (let i = start; i < start + len; i++) { const ni = mapIndex(i); if (ni !== null) kept.push(ni); }
+      if (!kept.length) return null;
+      ns = kept[0]; nl = kept.length;
+    }
+    const nm = isRow ? { r: ns, c: m.c, rs: nl, cs: m.cs } : { r: m.r, c: ns, rs: m.rs, cs: nl };
+    return (nm.rs > 1 || nm.cs > 1) ? nm : null;
+  }).filter(Boolean);
   if (isRow) {
     const newHeights = {};
     for (const [k, h] of Object.entries(data.rowHeights || {})) {
@@ -1930,6 +2098,15 @@ function runSheetTool(tool) {
   const s = docsState.sel;
   switch (tool) {
     case 'bold': toggleBoldSelection(); break;
+    case 'merge': mergeSheetSelection(); break;
+    case 'unmerge': unmergeSheetSelection(); break;
+    case 'font-up': case 'font-down': {
+      const cur = sheetCellFontPt(data.cells[sheetKey(s.ar, s.ac)]);
+      const list = SHEET_FONT_SIZES;
+      const next = tool === 'font-up' ? (list.find((n) => n > cur) ?? cur) : ([...list].reverse().find((n) => n < cur) ?? cur);
+      applySheetFontSize(next);
+      break;
+    }
     case 'align-left': applyToSelectionCells((cell) => { cell.a = 'left'; }); break;
     case 'align-center': applyToSelectionCells((cell) => { cell.a = 'center'; }); break;
     case 'align-right': applyToSelectionCells((cell) => { cell.a = 'right'; }); break;
@@ -2059,20 +2236,28 @@ function buildSheetPrintTable() {
     if ((cell.v !== undefined && cell.v !== '') || cell.bg || cell.bx) { maxR = Math.max(maxR, r); maxC = Math.max(maxC, c); }
   }
   if (maxR < 0) { host.innerHTML = ''; return; }
+  for (const m of data.merges || []) {
+    if (m.r <= maxR && m.c <= maxC) { maxR = Math.max(maxR, m.r + m.rs - 1); maxC = Math.max(maxC, m.c + m.cs - 1); }
+  }
+  const layout = sheetMergeLayout(data);
   const cols = data.colWidths.slice(0, maxC + 1).map((w) => `<col style="width:${w}px;">`).join('');
   const rows = [];
   for (let r = 0; r <= maxR; r++) {
     const tds = [];
     for (let c = 0; c <= maxC; c++) {
       const key = sheetKey(r, c);
+      const lay = layout.get(key);
+      if (lay === 'skip') continue;
       const cell = data.cells[key];
       const disp = sheetDisplayText(key);
       const align = cell && cell.a ? cell.a : (disp.isNum ? 'right' : 'left');
       const st = [`text-align:${align}`];
       if (cell && cell.bg) st.push(`background:${cell.bg}`);
-      const bdCss = sheetBorderStyle(cell, '1px solid #555', 'none');
+      if (cell && cell.fs) st.push(`font-size:${cell.fs}pt`);
+      const bdCss = lay ? sheetMergedBorderStyle(data, lay, '1px solid #555', 'none') : sheetBorderStyle(cell, '1px solid #555', 'none');
       if (bdCss) st.push(bdCss);
-      tds.push(`<td class="${cell && cell.b ? 'bold' : ''}" style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
+      const span = lay ? ` rowspan="${Math.min(lay.rs, maxR - r + 1)}" colspan="${Math.min(lay.cs, maxC - c + 1)}"` : '';
+      tds.push(`<td class="${cell && cell.b ? 'bold' : ''}"${span} style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
     }
     rows.push(`<tr style="height:${sheetRowHeight(data, r)}px;">${tds.join('')}</tr>`);
   }
@@ -2099,7 +2284,9 @@ function exportSheetToXlsx() {
       ws[addr] = (n !== null && !/^0\d/.test(raw.trim())) ? { t: 'n', v: n } : { t: 's', v: raw };
     }
   }
+  for (const m of data.merges || []) { maxR = Math.max(maxR, m.r + m.rs - 1); maxC = Math.max(maxC, m.c + m.cs - 1); }
   ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: maxR, c: maxC } });
+  if ((data.merges || []).length) ws['!merges'] = data.merges.map((m) => ({ s: { r: m.r, c: m.c }, e: { r: m.r + m.rs - 1, c: m.c + m.cs - 1 } }));
   ws['!cols'] = data.colWidths.slice(0, maxC + 1).map((w) => ({ wpx: w }));
   ws['!rows'] = Array.from({ length: maxR + 1 }, (_, r) => ({ hpx: sheetRowHeight(data, r) }));
   const wb = XLSX.utils.book_new();
@@ -2152,13 +2339,18 @@ function attachSheetEditorHandlers() {
   // ---- 列幅・行の高さ（数字で指定） ----
   const wIn = document.getElementById('sheet-col-width-input');
   const hIn = document.getElementById('sheet-row-height-input');
-  [[wIn, applySheetColWidth], [hIn, applySheetRowHeight]].forEach(([input, apply]) => {
+  const fIn = document.getElementById('sheet-font-size-input');
+  [[wIn, applySheetColWidth], [hIn, applySheetRowHeight], [fIn, applySheetFontSize]].forEach(([input, apply]) => {
     input.addEventListener('keydown', (e) => {
       if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
       else if (e.key === 'Escape') { e.preventDefault(); input.value = ''; updateSheetSizeInputs(); positionCellEditor(true); }
     });
     input.addEventListener('change', () => { apply(input.value); positionCellEditor(true); });
+    // リスト（候補）から選んだときは、すぐに反映する
+    input.addEventListener('input', (e) => {
+      if (e.inputType === 'insertReplacementText' || e.inputType === undefined) { apply(input.value); input.blur(); positionCellEditor(true); }
+    });
     input.addEventListener('blur', () => { setTimeout(() => updateSheetSizeInputs(), 0); });
   });
 
@@ -2633,6 +2825,8 @@ function renderHelpView(container) {
           <li>セルをクリックしてそのまま文字を打つと入力できます。今の内容を修正したいときは、ダブルクリックかF2キーを押します。Enterで下、Tabで右に移動します。上の「fx」欄でも入力・修正できます。</li>
           <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を、行番号の下端をドラッグすると行の高さを変えられます(ドラッグ中は数字が表示されます)。</li>
           <li>上のツールバーの「列幅」「行の高さ」の欄には、選んでいるセルの列幅・行の高さが数字(ピクセル)で表示されます。数字を入れてEnterを押すと、その大きさに変わります。範囲を選んでいれば、選んだ列・行をまとめて同じ大きさにできます(範囲内で大きさがバラバラのときは「混在」と表示されます)。標準は列幅100・行の高さ26です。</li>
+          <li><strong>文字サイズ</strong>:セルや範囲を選んで、ツールバーの「文字サイズ」欄に数字(ポイント、エクセルと同じ単位)を入れてEnterを押すか、候補から選びます。「A＋」「A－」で一段階ずつ大きく・小さくできます。標準は11です。文字を大きくすると、行の高さも自動で広がります。</li>
+          <li><strong>セル結合</strong>:結合したい範囲をドラッグで選んで「セル結合」を押すと、1つのセルにまとまります(最初は中央揃え)。元に戻すときは、結合したセルを選んで「結合解除」を押します。左上以外のセルに入力があった場合は、確認のあと左上の内容だけが残ります。結合したセルは、印刷やExcelへの書き出しでも結合されたままになります。</li>
           <li><strong>罫線</strong>:最初はすべてのセルに罫線があります。範囲を選んでツールバーの「罫線…」から「格子(すべての罫線)」「外枠だけ」「罫線なし」「下線だけ」「上線だけ」を選ぶと変えられます。画面では、罫線のある所は実線、無い所は薄い点線で表示されます(点線は印刷されません)。「罫線なし」にすると、選んだセルの周りの線はすべて消えます。隣の表の線まで消えてしまったときは、その表を選んで「格子」か「外枠だけ」を選び直してください。</li>
           <li>エクセルなどからコピーした表は、そのまま貼り付け(Ctrl+V)できます。Ctrl+Zで元に戻せます。</li>
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
