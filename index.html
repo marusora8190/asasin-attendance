@@ -204,6 +204,9 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-print-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; background: #faf8f3; border: 1px solid var(--color-line); border-top: none; font-size: 13px; }
 .sheet-check { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--color-ink); cursor: pointer; }
 .sheet-print-info { font-size: 12px; color: var(--color-ink-soft); }
+.sheet-area-input { width: 110px; height: 30px; border: 1px solid var(--color-line); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
+.sheet-area-input:focus { outline: none; border-color: var(--color-accent); }
+.sheet-tool:disabled { opacity: 0.4; cursor: default; }
 .sheet-print-overlay { position: absolute; pointer-events: none; z-index: 1; }
 .sheet-print-frame { border: 2px dashed #2f6fb0; box-sizing: border-box; }
 .sheet-print-overflow { background: repeating-linear-gradient(45deg, rgba(192,57,43,0.10) 0 8px, rgba(192,57,43,0.18) 8px 16px); border-left: 2px solid #c0392b; color: #c0392b; font-size: 11px; padding: 0; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
@@ -1820,6 +1823,12 @@ function renderDocEditorView(container) {
           <option value="landscape">横</option>
         </select>
         <label class="sheet-check"><input type="checkbox" id="sheet-fit-check" /> 幅を用紙に合わせる</label>
+        <span class="sheet-tool-sep"></span>
+        <span style="color:var(--color-navy);">印刷範囲</span>
+        <input type="text" id="sheet-area-input" class="sheet-area-input" placeholder="自動" title="例: A1:F40 と入力してEnter。空欄にすると自動" />
+        <button class="sheet-tool" id="sheet-area-from-sel" title="今選んでいる範囲を印刷範囲にする">選択範囲を印刷範囲にする</button>
+        <button class="sheet-tool" id="sheet-area-clear" title="印刷範囲の指定をやめて、自動に戻す">自動に戻す</button>
+        <span class="sheet-tool-sep"></span>
         <label class="sheet-check"><input type="checkbox" id="sheet-show-area-check" /> 印刷範囲を表示</label>
         <span id="sheet-print-info" class="sheet-print-info"></span>
       </div>
@@ -1843,6 +1852,7 @@ function renderDocEditorView(container) {
   document.getElementById('sheet-show-area-check').checked = docsState.showPrintArea !== false;
   const onPrintSetting = () => {
     doc.data.print = {
+      ...(doc.data.print || {}),
       paper: document.getElementById('sheet-paper-select').value,
       orient: document.getElementById('sheet-orient-select').value,
       fit: document.getElementById('sheet-fit-check').checked,
@@ -1852,6 +1862,44 @@ function renderDocEditorView(container) {
     positionCellEditor(true);
   };
   ['sheet-paper-select', 'sheet-orient-select', 'sheet-fit-check'].forEach((id) => document.getElementById(id).addEventListener('change', onPrintSetting));
+
+  // ---- 印刷範囲の指定 ----
+  const areaInput = document.getElementById('sheet-area-input');
+  const setArea = (area) => {
+    pushSheetUndo();
+    doc.data.print = { ...(doc.data.print || {}) };
+    if (area) doc.data.print.area = area; else delete doc.data.print.area;
+    refreshAreaInput();
+    drawSheetPrintOverlay();
+    scheduleDocSave();
+  };
+  const refreshAreaInput = () => {
+    const a = sheetManualPrintArea(doc.data);
+    areaInput.value = a ? `${sheetA1(a.r1, a.c1)}:${sheetA1(a.r2, a.c2)}` : '';
+    document.getElementById('sheet-area-clear').disabled = !a;
+  };
+  refreshAreaInput();
+  document.getElementById('sheet-area-from-sel').addEventListener('mousedown', (e) => e.preventDefault());
+  document.getElementById('sheet-area-clear').addEventListener('mousedown', (e) => e.preventDefault());
+  document.getElementById('sheet-area-from-sel').addEventListener('click', () => {
+    const { r1, r2, c1, c2 } = sheetSelRange();
+    if (r1 === r2 && c1 === c2) { alert('印刷したい範囲を、ドラッグで2つ以上のセルを選んでから押してください'); return; }
+    setArea({ r1, c1, r2, c2 });
+    positionCellEditor(true);
+  });
+  document.getElementById('sheet-area-clear').addEventListener('click', () => { setArea(null); positionCellEditor(true); });
+  areaInput.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') { e.preventDefault(); areaInput.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); refreshAreaInput(); areaInput.blur(); }
+  });
+  areaInput.addEventListener('change', () => {
+    const text = areaInput.value.trim();
+    if (!text) { setArea(null); return; }
+    const area = sheetParseRangeText(text);
+    if (!area) { alert('「A1:F40」のように、左上と右下のセルをコロン(:)でつないで入力してください'); refreshAreaInput(); return; }
+    setArea(area);
+  });
   document.getElementById('sheet-show-area-check').addEventListener('change', (e) => {
     docsState.showPrintArea = e.target.checked;
     drawSheetPrintOverlay();
@@ -2320,6 +2368,24 @@ function sheetShiftStructure(kind, index, count) {
     newCells[sheetKey(rc.r, rc.c)] = copy;
   }
   data.cells = newCells;
+  // 指定した印刷範囲も、行・列の挿入・削除に合わせて直す
+  if (data.print && data.print.area) {
+    const a = data.print.area;
+    const lo = isRow ? Math.min(a.r1, a.r2) : Math.min(a.c1, a.c2);
+    const hi = isRow ? Math.max(a.r1, a.r2) : Math.max(a.c1, a.c2);
+    let nlo, nhi;
+    if (isInsert) {
+      nlo = index <= lo ? lo + count : lo;
+      nhi = index <= hi ? hi + count : hi;
+    } else {
+      const kept = [];
+      for (let i = lo; i <= hi; i++) { const ni = mapIndex(i); if (ni !== null) kept.push(ni); }
+      if (kept.length) { nlo = kept[0]; nhi = kept[kept.length - 1]; }
+    }
+    if (nlo === undefined) delete data.print.area;
+    else if (isRow) { data.print.area = { ...a, r1: nlo, r2: nhi }; }
+    else { data.print.area = { ...a, c1: nlo, c2: nhi }; }
+  }
   // 結合セルも、行・列の挿入・削除に合わせて位置と大きさを直す
   data.merges = (data.merges || []).map((m) => {
     const start = isRow ? m.r : m.c;
@@ -2520,8 +2586,27 @@ function sheetPageContentPx(data) {
   if (ps.orient === 'landscape') [w, h] = [h, w];
   return { w: (w - SHEET_PRINT_MARGIN_MM * 2) * SHEET_PX_PER_MM, h: (h - SHEET_PRINT_MARGIN_MM * 2) * SHEET_PX_PER_MM, mmW: w, mmH: h };
 }
-// 印刷される範囲（A1から、入力のある一番右下のセルまで）
+// 印刷範囲を自分で指定しているとき（data.print.area = { r1, c1, r2, c2 }）
+function sheetManualPrintArea(data) {
+  const a = data.print && data.print.area;
+  if (!a || ![a.r1, a.c1, a.r2, a.c2].every(Number.isFinite)) return null;
+  const clampR = (v) => Math.max(0, Math.min(data.rows - 1, v));
+  const clampC = (v) => Math.max(0, Math.min(data.cols - 1, v));
+  const rg = { r1: clampR(Math.min(a.r1, a.r2)), r2: clampR(Math.max(a.r1, a.r2)), c1: clampC(Math.min(a.c1, a.c2)), c2: clampC(Math.max(a.c1, a.c2)) };
+  return sheetExpandRangeForMerges(data, rg);
+}
+// 「A1:F40」のような文字を範囲に変換する（全角やスペース、「〜」区切りでもOK）
+function sheetParseRangeText(text) {
+  const t = String(text || '').normalize('NFKC').toUpperCase().replace(/\s/g, '').replace(/[〜~\-－ー]/g, ':');
+  const m = /^\$?([A-Z]+)\$?(\d+):\$?([A-Z]+)\$?(\d+)$/.exec(t);
+  if (!m) return null;
+  return { r1: Number(m[2]) - 1, c1: sheetColIndex(m[1]), r2: Number(m[4]) - 1, c2: sheetColIndex(m[3]) };
+}
+
+// 印刷される範囲。指定がなければ、A1から入力のある一番右下のセルまで（自動）
 function sheetPrintRange(data) {
+  const manual = sheetManualPrintArea(data);
+  if (manual) return { minR: manual.r1, minC: manual.c1, maxR: manual.r2, maxC: manual.c2, manual: true };
   let maxR = -1, maxC = -1;
   for (const [key, cell] of Object.entries(data.cells)) {
     const [r, c] = key.split(':').map(Number);
@@ -2533,11 +2618,11 @@ function sheetPrintRange(data) {
   for (const m of data.merges || []) {
     if (m.r <= maxR && m.c <= maxC) { maxR = Math.max(maxR, m.r + m.rs - 1); maxC = Math.max(maxC, m.c + m.cs - 1); }
   }
-  return { maxR: Math.min(maxR, data.rows - 1), maxC: Math.min(maxC, data.cols - 1) };
+  return { minR: 0, minC: 0, maxR: Math.min(maxR, data.rows - 1), maxC: Math.min(maxC, data.cols - 1), manual: false };
 }
 function sheetPrintZoom(data, range) {
   if (!range || !sheetPrintSettings(data).fit) return 1;
-  const totalW = data.colWidths.slice(0, range.maxC + 1).reduce((a, w) => a + w, 0);
+  const totalW = data.colWidths.slice(range.minC, range.maxC + 1).reduce((a, w) => a + w, 0);
   const pageW = sheetPageContentPx(data).w;
   return totalW > pageW ? pageW / totalW : 1;
 }
@@ -2550,14 +2635,22 @@ function drawSheetPrintOverlay() {
   if (!wrap || !table) return;
   wrap.querySelectorAll('.sheet-print-overlay').forEach((el) => el.remove());
   const data = docsState.doc.data;
+  // 印刷範囲の欄の表示も最新にする（行・列の挿入・削除や、元に戻すで範囲が動いたとき用）
+  const areaInput = document.getElementById('sheet-area-input');
+  if (areaInput && document.activeElement !== areaInput) {
+    const a = sheetManualPrintArea(data);
+    areaInput.value = a ? `${sheetA1(a.r1, a.c1)}:${sheetA1(a.r2, a.c2)}` : '';
+    const clr = document.getElementById('sheet-area-clear');
+    if (clr) clr.disabled = !a;
+  }
   const range = sheetPrintRange(data);
   if (!range) { if (info) info.textContent = '印刷範囲：なし（まだ何も入力されていません）'; return; }
   const colTh = (c) => table.querySelector(`th.sheet-col-h[data-c="${c}"]`);
   const rowTh = (r) => table.querySelector(`th.sheet-row-h[data-r="${r}"]`);
   const baseX = table.offsetLeft, baseY = table.offsetTop;
-  const left = baseX + colTh(0).offsetLeft;
+  const left = baseX + colTh(range.minC).offsetLeft;
   const right = baseX + colTh(range.maxC).offsetLeft + colTh(range.maxC).offsetWidth;
-  const top = baseY + rowTh(0).offsetTop;
+  const top = baseY + rowTh(range.minR).offsetTop;
   const bottom = baseY + rowTh(range.maxR).offsetTop + rowTh(range.maxR).offsetHeight;
   const zoom = sheetPrintZoom(data, range);
   const page = sheetPageContentPx(data);
@@ -2583,7 +2676,7 @@ function drawSheetPrintOverlay() {
   // ページの区切り（行の途中では切れないので、行の境目で区切る）
   let pages = 1;
   let used = 0;
-  for (let r = 0; r <= range.maxR; r++) {
+  for (let r = range.minR; r <= range.maxR; r++) {
     const th = rowTh(r);
     const h = th.offsetHeight * zoom;
     if (used > 0 && used + h > page.h) {
@@ -2595,7 +2688,7 @@ function drawSheetPrintOverlay() {
   }
   if (info) {
     const ps = sheetPrintSettings(data);
-    const parts = [`印刷範囲：A1〜${sheetA1(range.maxR, range.maxC)}`, `${ps.paper}${ps.orient === 'landscape' ? '横' : '縦'}で${pages}ページ`];
+    const parts = [`印刷範囲：${sheetA1(range.minR, range.minC)}〜${sheetA1(range.maxR, range.maxC)}（${range.manual ? '指定' : '自動'}）`, `${ps.paper}${ps.orient === 'landscape' ? '横' : '縦'}で${pages}ページ`];
     if (zoom < 1) parts.push(`幅を合わせるため${Math.round(zoom * 100)}%に縮小`);
     info.innerHTML = escapeHtml(parts.join('／')) + (overflow ? '　<span style="color:var(--color-absent);">※用紙の幅からはみ出しています（赤い部分は印刷されません）。「横」にするか「幅を用紙に合わせる」にチェックしてください。</span>' : '');
   }
@@ -2623,13 +2716,13 @@ function buildSheetPrintTable() {
   const data = docsState.doc.data;
   const range = sheetPrintRange(data);
   if (!range) { host.innerHTML = ''; return; }
-  let { maxR, maxC } = range;
+  const { minR, minC, maxR, maxC } = range;
   const layout = sheetMergeLayout(data);
-  const cols = data.colWidths.slice(0, maxC + 1).map((w) => `<col style="width:${w}px;">`).join('');
+  const cols = data.colWidths.slice(minC, maxC + 1).map((w) => `<col style="width:${w}px;">`).join('');
   const rows = [];
-  for (let r = 0; r <= maxR; r++) {
+  for (let r = minR; r <= maxR; r++) {
     const tds = [];
-    for (let c = 0; c <= maxC; c++) {
+    for (let c = minC; c <= maxC; c++) {
       const key = sheetKey(r, c);
       const lay = layout.get(key);
       if (lay === 'skip') continue;
@@ -2652,7 +2745,7 @@ function buildSheetPrintTable() {
     }
     rows.push(`<tr style="height:${sheetRowHeight(data, r)}px;">${tds.join('')}</tr>`);
   }
-  const totalW = data.colWidths.slice(0, maxC + 1).reduce((a, w) => a + w, 0);
+  const totalW = data.colWidths.slice(minC, maxC + 1).reduce((a, w) => a + w, 0);
   const zoom = sheetPrintZoom(data, range);
   host.innerHTML = `<table class="sheet-print-table" style="width:${totalW}px;${zoom < 1 ? `zoom:${zoom};` : ''}"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
 }
@@ -3243,7 +3336,7 @@ function renderHelpView(container) {
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
           <li>変更は自動で保存されます(資料名の横に「✓ 保存しました(時刻)」と出ます)。すぐに保存したいときは、資料名の横の「保存」ボタンを押すか、Ctrl+S(Macは⌘+S)を押してください。</li>
           <li>「Excelで書き出し」で .xlsx ファイルとして保存でき、一覧の「Excelファイルを読み込む」で既存のエクセルファイルを取り込めます(シートが複数ある場合は、シートごとに別の資料になります)。</li>
-          <li><strong>印刷範囲の確認</strong>:表の上の「印刷設定」で、用紙(A4・B5・A3)と向き(縦・横)を選べます。画面では、印刷される範囲が青い点線の枠で囲まれ、2ページ以上になるときはページの区切りに「2ページ目」などの青い点線が出ます。用紙の幅に収まらない部分は赤い斜線で表示され、その部分は印刷されません。その場合は「横」にするか、「幅を用紙に合わせる」にチェックすると、幅がちょうど収まるように縮小して印刷されます。枠や線が邪魔なときは「印刷範囲を表示」のチェックを外すと消せます(印刷には影響しません)。ページの区切りの位置は目安です。</li>
+          <li><strong>印刷範囲の確認</strong>:表の上の「印刷設定」で、用紙(A4・B5・A3)と向き(縦・横)を選べます。画面では、印刷される範囲が青い点線の枠で囲まれ、2ページ以上になるときはページの区切りに「2ページ目」などの青い点線が出ます。用紙の幅に収まらない部分は赤い斜線で表示され、その部分は印刷されません。その場合は「横」にするか、「幅を用紙に合わせる」にチェックすると、幅がちょうど収まるように縮小して印刷されます。<strong>印刷範囲は変更できます</strong>:印刷したい範囲をドラッグで選んで「選択範囲を印刷範囲にする」を押すか、「印刷範囲」の欄に「A1:F40」のように入力してEnterを押します。「自動に戻す」を押すと、A1から入力のある所までを自動で印刷する状態に戻ります。枠や線が邪魔なときは「印刷範囲を表示」のチェックを外すと消せます(印刷には影響しません)。ページの区切りの位置は目安です。</li>
           <li>「印刷」を押すと、入力のある範囲だけが印刷されます(資料名の見出し・行番号・列の記号は印刷されません)。印刷画面の上下に日付やURLが出る場合は、印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外すと消せます。</li>
           <li>「行を挿入」「行を削除」「列を挿入」「列を削除」は、選んでいる行・列に対して行います。計算式の中のセル番地も自動で合わせて書き換わります。一番下の行でEnterを押すと、行が自動で1行増えます。</li>
           <li>1つの資料につきシートは1枚です。同じ資料を2人が同時に編集した場合は、後から保存した内容が残ります。</li>
