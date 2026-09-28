@@ -192,6 +192,13 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-cell-editor.editing { opacity: 1; pointer-events: auto; z-index: 2; caret-color: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 .sheet-cell-editor:focus { outline: none; }
 .sheet-print-host { display: none; }
+.sheet-print-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; background: #faf8f3; border: 1px solid var(--color-line); border-top: none; font-size: 13px; }
+.sheet-check { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--color-ink); cursor: pointer; }
+.sheet-print-info { font-size: 12px; color: var(--color-ink-soft); }
+.sheet-print-overlay { position: absolute; pointer-events: none; z-index: 1; }
+.sheet-print-frame { border: 2px dashed #2f6fb0; box-sizing: border-box; }
+.sheet-print-overflow { background: repeating-linear-gradient(45deg, rgba(192,57,43,0.10) 0 8px, rgba(192,57,43,0.18) 8px 16px); border-left: 2px solid #c0392b; color: #c0392b; font-size: 11px; padding: 0; box-sizing: border-box; white-space: nowrap; overflow: hidden; }
+.sheet-page-break { height: 0; border-top: 2px dashed #2f6fb0; color: #2f6fb0; font-size: 11px; line-height: 1.4; padding-left: 4px; white-space: nowrap; }
 .doc-list-table { width: 100%; max-width: 900px; border-collapse: collapse; background: white; border: 1px solid var(--color-line); border-radius: 8px; margin-top: 16px; }
 .doc-list-table th { font-size: 12px; color: var(--color-ink-soft); padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
 .doc-list-table td { padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
@@ -1650,6 +1657,19 @@ function renderDocEditorView(container) {
         <span class="sheet-fx">fx</span>
         <input type="text" id="sheet-formula-input" class="sheet-formula-input" placeholder="セルの内容（=SUM(A1:A5) のような計算式も使えます）" />
       </div>
+      <div class="sheet-print-bar no-print">
+        <span style="color:var(--color-navy);">印刷設定</span>
+        <select id="sheet-paper-select" class="sheet-tool-select">
+          ${Object.keys(SHEET_PAPERS).map((k) => `<option value="${k}">${k}</option>`).join('')}
+        </select>
+        <select id="sheet-orient-select" class="sheet-tool-select">
+          <option value="portrait">縦</option>
+          <option value="landscape">横</option>
+        </select>
+        <label class="sheet-check"><input type="checkbox" id="sheet-fit-check" /> 幅を用紙に合わせる</label>
+        <label class="sheet-check"><input type="checkbox" id="sheet-show-area-check" /> 印刷範囲を表示</label>
+        <span id="sheet-print-info" class="sheet-print-info"></span>
+      </div>
       <div id="sheet-print-host" class="sheet-print-host"></div>
       <div class="sheet-wrap no-print" id="sheet-wrap">
         <div id="sheet-grid-host"></div>
@@ -1662,6 +1682,28 @@ function renderDocEditorView(container) {
       </p>
     </div>
   `;
+
+  const ps = sheetPrintSettings(doc.data);
+  document.getElementById('sheet-paper-select').value = ps.paper;
+  document.getElementById('sheet-orient-select').value = ps.orient;
+  document.getElementById('sheet-fit-check').checked = ps.fit;
+  document.getElementById('sheet-show-area-check').checked = docsState.showPrintArea !== false;
+  const onPrintSetting = () => {
+    doc.data.print = {
+      paper: document.getElementById('sheet-paper-select').value,
+      orient: document.getElementById('sheet-orient-select').value,
+      fit: document.getElementById('sheet-fit-check').checked,
+    };
+    drawSheetPrintOverlay();
+    scheduleDocSave();
+    positionCellEditor(true);
+  };
+  ['sheet-paper-select', 'sheet-orient-select', 'sheet-fit-check'].forEach((id) => document.getElementById(id).addEventListener('change', onPrintSetting));
+  document.getElementById('sheet-show-area-check').addEventListener('change', (e) => {
+    docsState.showPrintArea = e.target.checked;
+    drawSheetPrintOverlay();
+    positionCellEditor(true);
+  });
 
   renderSheetGrid();
   attachSheetEditorHandlers();
@@ -1715,6 +1757,7 @@ function renderSheetGrid() {
       <tbody>${body.join('')}</tbody>
     </table>`;
   updateSheetSelection(false);
+  drawSheetPrintOverlay();
 }
 
 function updateSheetSelection(scroll = true) {
@@ -2174,7 +2217,7 @@ function runSheetTool(tool) {
       pushSheetUndo(); data.rows += 10; afterSheetChange(); break;
     case 'undo': sheetUndo(); break;
     case 'export': exportSheetToXlsx(); break;
-    case 'print': buildSheetPrintTable(); window.print(); break;
+    case 'print': printSheet(); break;
   }
   positionCellEditor(true);
 }
@@ -2270,10 +2313,23 @@ function sheetPaste(text) {
 }
 
 // 印刷用に、入力がある範囲だけの表（行番号・列記号なし）を作る
-function buildSheetPrintTable() {
-  const host = document.getElementById('sheet-print-host');
-  if (!host) return;
-  const data = docsState.doc.data;
+// ---- 印刷の設定（用紙・向き・幅合わせ）と印刷範囲 ----
+const SHEET_PAPERS = { A4: [210, 297], B5: [182, 257], A3: [297, 420] };
+const SHEET_PRINT_MARGIN_MM = 10;
+const SHEET_PX_PER_MM = 96 / 25.4;
+function sheetPrintSettings(data) {
+  const p = data.print || {};
+  return { paper: SHEET_PAPERS[p.paper] ? p.paper : 'A4', orient: p.orient === 'landscape' ? 'landscape' : 'portrait', fit: !!p.fit };
+}
+// 用紙の中で、実際に印刷できる幅・高さ（ピクセル）
+function sheetPageContentPx(data) {
+  const ps = sheetPrintSettings(data);
+  let [w, h] = SHEET_PAPERS[ps.paper];
+  if (ps.orient === 'landscape') [w, h] = [h, w];
+  return { w: (w - SHEET_PRINT_MARGIN_MM * 2) * SHEET_PX_PER_MM, h: (h - SHEET_PRINT_MARGIN_MM * 2) * SHEET_PX_PER_MM, mmW: w, mmH: h };
+}
+// 印刷される範囲（A1から、入力のある一番右下のセルまで）
+function sheetPrintRange(data) {
   let maxR = -1, maxC = -1;
   for (const [key, cell] of Object.entries(data.cells)) {
     const [r, c] = key.split(':').map(Number);
@@ -2281,10 +2337,101 @@ function buildSheetPrintTable() {
     // 空のセルでも、自分で罫線を引いた所（bx）は印刷範囲に含める
     if ((cell.v !== undefined && cell.v !== '') || cell.bg || cell.bx) { maxR = Math.max(maxR, r); maxC = Math.max(maxC, c); }
   }
-  if (maxR < 0) { host.innerHTML = ''; return; }
+  if (maxR < 0) return null;
   for (const m of data.merges || []) {
     if (m.r <= maxR && m.c <= maxC) { maxR = Math.max(maxR, m.r + m.rs - 1); maxC = Math.max(maxC, m.c + m.cs - 1); }
   }
+  return { maxR: Math.min(maxR, data.rows - 1), maxC: Math.min(maxC, data.cols - 1) };
+}
+function sheetPrintZoom(data, range) {
+  if (!range || !sheetPrintSettings(data).fit) return 1;
+  const totalW = data.colWidths.slice(0, range.maxC + 1).reduce((a, w) => a + w, 0);
+  const pageW = sheetPageContentPx(data).w;
+  return totalW > pageW ? pageW / totalW : 1;
+}
+
+// 画面上に、印刷範囲の枠と、ページの区切り線を表示する
+function drawSheetPrintOverlay() {
+  const wrap = document.getElementById('sheet-wrap');
+  const table = document.getElementById('sheet-table');
+  const info = document.getElementById('sheet-print-info');
+  if (!wrap || !table) return;
+  wrap.querySelectorAll('.sheet-print-overlay').forEach((el) => el.remove());
+  const data = docsState.doc.data;
+  const range = sheetPrintRange(data);
+  if (!range) { if (info) info.textContent = '印刷範囲：なし（まだ何も入力されていません）'; return; }
+  const colTh = (c) => table.querySelector(`th.sheet-col-h[data-c="${c}"]`);
+  const rowTh = (r) => table.querySelector(`th.sheet-row-h[data-r="${r}"]`);
+  const baseX = table.offsetLeft, baseY = table.offsetTop;
+  const left = baseX + colTh(0).offsetLeft;
+  const right = baseX + colTh(range.maxC).offsetLeft + colTh(range.maxC).offsetWidth;
+  const top = baseY + rowTh(0).offsetTop;
+  const bottom = baseY + rowTh(range.maxR).offsetTop + rowTh(range.maxR).offsetHeight;
+  const zoom = sheetPrintZoom(data, range);
+  const page = sheetPageContentPx(data);
+  const add = (cls, css, text) => {
+    const el = document.createElement('div');
+    el.className = `sheet-print-overlay ${cls}`;
+    Object.assign(el.style, css);
+    if (text) el.textContent = text;
+    wrap.appendChild(el);
+    return el;
+  };
+  const show = docsState.showPrintArea !== false;
+  if (show) add('sheet-print-frame', { left: `${left}px`, top: `${top}px`, width: `${right - left}px`, height: `${bottom - top}px` });
+
+  // 用紙の幅からはみ出す所（はみ出した部分は印刷されない）
+  const widthPx = (right - left) * zoom;
+  const overflow = widthPx > page.w + 1;
+  if (show && overflow) {
+    const x = left + page.w / zoom;
+    add('sheet-print-overflow', { left: `${x}px`, top: `${top}px`, width: `${right - x}px`, height: `${bottom - top}px` }, 'はみ出し（印刷されません）');
+  }
+
+  // ページの区切り（行の途中では切れないので、行の境目で区切る）
+  let pages = 1;
+  let used = 0;
+  for (let r = 0; r <= range.maxR; r++) {
+    const th = rowTh(r);
+    const h = th.offsetHeight * zoom;
+    if (used > 0 && used + h > page.h) {
+      pages++;
+      used = 0;
+      if (show) add('sheet-page-break', { left: `${left}px`, top: `${baseY + th.offsetTop - 1}px`, width: `${right - left}px` }, `${pages}ページ目`);
+    }
+    used += h;
+  }
+  if (info) {
+    const ps = sheetPrintSettings(data);
+    const parts = [`印刷範囲：A1〜${sheetA1(range.maxR, range.maxC)}`, `${ps.paper}${ps.orient === 'landscape' ? '横' : '縦'}で${pages}ページ`];
+    if (zoom < 1) parts.push(`幅を合わせるため${Math.round(zoom * 100)}%に縮小`);
+    info.innerHTML = escapeHtml(parts.join('／')) + (overflow ? '　<span style="color:var(--color-absent);">※用紙の幅からはみ出しています（赤い部分は印刷されません）。「横」にするか「幅を用紙に合わせる」にチェックしてください。</span>' : '');
+  }
+}
+
+function printSheet() {
+  buildSheetPrintTable();
+  const data = docsState.doc.data;
+  const page = sheetPageContentPx(data);
+  const prevStyle = document.getElementById('dynamic-page-style');
+  const prev = prevStyle ? prevStyle.textContent : null;
+  setPrintPageSize(`size: ${page.mmW}mm ${page.mmH}mm; margin: ${SHEET_PRINT_MARGIN_MM}mm;`);
+  const restore = () => {
+    window.removeEventListener('afterprint', restore);
+    const el = document.getElementById('dynamic-page-style');
+    if (el) el.textContent = prev ?? '';
+  };
+  window.addEventListener('afterprint', restore);
+  window.print();
+}
+
+function buildSheetPrintTable() {
+  const host = document.getElementById('sheet-print-host');
+  if (!host) return;
+  const data = docsState.doc.data;
+  const range = sheetPrintRange(data);
+  if (!range) { host.innerHTML = ''; return; }
+  let { maxR, maxC } = range;
   const layout = sheetMergeLayout(data);
   const cols = data.colWidths.slice(0, maxC + 1).map((w) => `<col style="width:${w}px;">`).join('');
   const rows = [];
@@ -2312,7 +2459,8 @@ function buildSheetPrintTable() {
     rows.push(`<tr style="height:${sheetRowHeight(data, r)}px;">${tds.join('')}</tr>`);
   }
   const totalW = data.colWidths.slice(0, maxC + 1).reduce((a, w) => a + w, 0);
-  host.innerHTML = `<table class="sheet-print-table" style="width:${totalW}px;"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+  const zoom = sheetPrintZoom(data, range);
+  host.innerHTML = `<table class="sheet-print-table" style="width:${totalW}px;${zoom < 1 ? `zoom:${zoom};` : ''}"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
 }
 
 function exportSheetToXlsx() {
@@ -2439,6 +2587,7 @@ function attachSheetEditorHandlers() {
         if (!moved) { docsState.undo.pop(); return; }
         positionCellEditor(true);
         updateSheetSizeInputs();
+        drawSheetPrintOverlay();
         scheduleDocSave();
       };
       showSheetSizeTip(`列幅: ${startW}`, e.clientX, e.clientY);
@@ -2478,6 +2627,7 @@ function attachSheetEditorHandlers() {
         if (!moved) { docsState.undo.pop(); return; }
         positionCellEditor(true);
         updateSheetSizeInputs();
+        drawSheetPrintOverlay();
         scheduleDocSave();
       };
       showSheetSizeTip(`行の高さ: ${startH}`, e.clientX, e.clientY);
@@ -2874,6 +3024,7 @@ function renderHelpView(container) {
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
           <li>変更は自動で保存されます(資料名の横に「✓ 保存しました」と出ます)。</li>
           <li>「Excelで書き出し」で .xlsx ファイルとして保存でき、一覧の「Excelファイルを読み込む」で既存のエクセルファイルを取り込めます(シートが複数ある場合は、シートごとに別の資料になります)。</li>
+          <li><strong>印刷範囲の確認</strong>:表の上の「印刷設定」で、用紙(A4・B5・A3)と向き(縦・横)を選べます。画面では、印刷される範囲が青い点線の枠で囲まれ、2ページ以上になるときはページの区切りに「2ページ目」などの青い点線が出ます。用紙の幅に収まらない部分は赤い斜線で表示され、その部分は印刷されません。その場合は「横」にするか、「幅を用紙に合わせる」にチェックすると、幅がちょうど収まるように縮小して印刷されます。枠や線が邪魔なときは「印刷範囲を表示」のチェックを外すと消せます(印刷には影響しません)。ページの区切りの位置は目安です。</li>
           <li>「印刷」を押すと、入力のある範囲だけが印刷されます(資料名の見出し・行番号・列の記号は印刷されません)。印刷画面の上下に日付やURLが出る場合は、印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外すと消せます。</li>
           <li>「行を挿入」「行を削除」「列を挿入」「列を削除」は、選んでいる行・列に対して行います。計算式の中のセル番地も自動で合わせて書き換わります。一番下の行でEnterを押すと、行が自動で1行増えます。</li>
           <li>1つの資料につきシートは1枚です。同じ資料を2人が同時に編集した場合は、後から保存した内容が残ります。</li>
