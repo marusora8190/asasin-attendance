@@ -169,7 +169,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-formula-input { flex: 1; border: 1px solid var(--color-line); border-radius: 6px; padding: 6px 10px; font-size: 14px; }
 .sheet-formula-input:focus { outline: none; border-color: var(--color-accent); }
 .sheet-wrap { position: relative; overflow: auto; max-height: calc(100vh - 250px); min-height: 300px; background: white; border: 1px solid var(--color-line); border-top: none; border-radius: 0 0 8px 8px; }
-.sheet-table { border-collapse: collapse; table-layout: fixed; width: max-content; user-select: none; -webkit-user-select: none; }
+.sheet-table { border-collapse: collapse; table-layout: fixed; user-select: none; -webkit-user-select: none; }
 .sheet-table th { position: sticky; background: #efece4; color: var(--color-ink-soft); font-size: 12px; font-weight: 500 !important; border: 1px solid var(--color-line); z-index: 3; }
 .sheet-table thead th { top: 0; height: 26px; }
 .sheet-table th.sheet-row-h { left: 0; text-align: center; z-index: 2; overflow: visible; }
@@ -184,6 +184,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-size-tip { position: fixed; z-index: 1000; display: none; background: var(--color-navy); color: white; font-size: 12px; padding: 3px 8px; border-radius: 4px; pointer-events: none; }
 .sheet-table td.sc { border: 1px solid #e3dfd4; padding: 2px 6px; font-size: 11pt; font-weight: 500 !important; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: cell; }
 .sheet-table td.sc.bold { font-weight: 900 !important; }
+.sheet-table td.sc.spill { overflow: visible; text-overflow: clip; }
 .sheet-table td.sc.err { color: var(--color-absent); font-size: 12px; }
 .sheet-table td.sc.sel { box-shadow: inset 0 0 0 9999px rgba(58,124,165,0.16); }
 .sheet-table td.sc.active { outline: 2px solid var(--color-accent); outline-offset: -2px; }
@@ -204,6 +205,7 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
   .sheet-print-table { border-collapse: collapse; table-layout: fixed; }
   .sheet-print-table td { border: 1px solid #555; padding: 2px 5px; font-size: 11pt; font-weight: 500 !important; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .sheet-print-table td.bold { font-weight: 900 !important; }
+  .sheet-print-table td.spill { overflow: visible; }
 }
 
 /* ---- 出欠入力グリッド ---- */
@@ -995,6 +997,15 @@ function sheetMergedBorderStyle(data, m, onCss, offCss) {
   return `border-top:${t ? onCss : offCss};border-right:${r ? onCss : offCss};border-bottom:${b ? onCss : offCss};border-left:${l ? onCss : offCss}`;
 }
 
+// エクセルと同じように、左揃えの文字は右隣が空いていれば、はみ出して表示する
+function sheetCanSpill(data, layout, r, c, lay, align, disp, maxC) {
+  if (lay || !disp.text || disp.isErr || align !== 'left') return false;
+  if (c + 1 > maxC) return false;
+  const nk = sheetKey(r, c + 1);
+  if (layout.get(nk)) return false;
+  return !sheetDisplayText(nk).text;
+}
+
 function sheetCellFontPt(cell) { return Number(cell && cell.fs) || SHEET_DEFAULT_FONT_PT; }
 function sheetCellIsEmpty(cell) {
   return (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx && !cell.fs;
@@ -1667,6 +1678,7 @@ function renderSheetGrid() {
       if (bdCss) styles.push(bdCss);
       const cls = ['sc'];
       if (lay) cls.push('merged');
+      if (sheetCanSpill(data, layout, r, c, lay, align, disp, data.cols - 1)) cls.push('spill');
       if (cell && cell.fs) styles.push(`font-size:${cell.fs}pt`);
       if (cell && cell.b) cls.push('bold');
       if (disp.isErr) cls.push('err');
@@ -1676,7 +1688,7 @@ function renderSheetGrid() {
     body.push(`<tr style="height:${sheetRowHeight(data, r)}px;"><th class="sheet-row-h" data-r="${r}">${r + 1}<span class="sheet-row-resizer" data-r="${r}"></span></th>${tds.join('')}</tr>`);
   }
   host.innerHTML = `
-    <table class="sheet-table" id="sheet-table">
+    <table class="sheet-table" id="sheet-table" style="width:${44 + data.colWidths.slice(0, data.cols).reduce((a, w) => a + w, 0)}px;">
       <colgroup><col style="width:44px;">${cols.join('')}</colgroup>
       <thead><tr><th class="sheet-corner" title="すべて選択"></th>${head.join('')}</tr></thead>
       <tbody>${body.join('')}</tbody>
@@ -2257,11 +2269,15 @@ function buildSheetPrintTable() {
       const bdCss = lay ? sheetMergedBorderStyle(data, lay, '1px solid #555', 'none') : sheetBorderStyle(cell, '1px solid #555', 'none');
       if (bdCss) st.push(bdCss);
       const span = lay ? ` rowspan="${Math.min(lay.rs, maxR - r + 1)}" colspan="${Math.min(lay.cs, maxC - c + 1)}"` : '';
-      tds.push(`<td class="${cell && cell.b ? 'bold' : ''}"${span} style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
+      const pcls = [];
+      if (cell && cell.b) pcls.push('bold');
+      if (sheetCanSpill(data, layout, r, c, lay, align, disp, maxC)) pcls.push('spill');
+      tds.push(`<td class="${pcls.join(' ')}"${span} style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
     }
     rows.push(`<tr style="height:${sheetRowHeight(data, r)}px;">${tds.join('')}</tr>`);
   }
-  host.innerHTML = `<table class="sheet-print-table"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+  const totalW = data.colWidths.slice(0, maxC + 1).reduce((a, w) => a + w, 0);
+  host.innerHTML = `<table class="sheet-print-table" style="width:${totalW}px;"><colgroup>${cols}</colgroup><tbody>${rows.join('')}</tbody></table>`;
 }
 
 function exportSheetToXlsx() {
@@ -2376,6 +2392,8 @@ function attachSheetEditorHandlers() {
         moved = true;
         const w = Math.max(SHEET_COL_WIDTH_MIN, Math.min(SHEET_COL_WIDTH_MAX, Math.round(startW + ev.clientX - startX)));
         targets.forEach((tc) => { data.colWidths[tc] = w; if (colEls[tc + 1]) colEls[tc + 1].style.width = `${w}px`; });
+        const tbl = document.getElementById('sheet-table');
+        if (tbl) tbl.style.width = `${44 + data.colWidths.slice(0, data.cols).reduce((a, x) => a + x, 0)}px`;
         if (wIn) wIn.value = w;
         showSheetSizeTip(`列幅: ${w}`, ev.clientX, ev.clientY);
       };
