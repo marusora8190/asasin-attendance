@@ -110,6 +110,14 @@ nav.app-nav {
   width: 200px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: space-between;
 }
 nav.app-nav .inner { display: flex; flex-direction: column; height: 100%; }
+nav.app-nav .nav-toggle-btn {
+  display: block; width: 100%; padding: 10px 20px; background: none; border: none; border-bottom: 1px solid var(--color-line);
+  text-align: left; font-size: 12px; color: var(--color-ink-soft);
+}
+nav.app-nav .nav-toggle-btn:hover { color: var(--color-navy); background: var(--color-paper); }
+.app-shell.nav-collapsed nav.app-nav { width: 34px; }
+.app-shell.nav-collapsed nav.app-nav .inner { display: none; }
+.app-shell.nav-collapsed nav.app-nav .nav-toggle-btn { padding: 14px 0; font-size: 18px; border-bottom: none; flex: 1; display: flex; justify-content: center; align-items: flex-start; }
 nav.app-nav .tabs { display: flex; flex-direction: column; padding: 8px 0; }
 nav.app-nav .tab {
   padding: 12px 20px; font-size: 14px; background: none; border: none; text-align: left;
@@ -726,6 +734,30 @@ function renderLogin() {
   });
 }
 
+// ==================== サイドバーの表示・非表示 ====================
+const SIDEBAR_COLLAPSED_KEY = 'asagami_sidebar_collapsed';
+function isSidebarCollapsed() {
+  try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'; } catch (e) { return false; }
+}
+function setupSidebarToggle() {
+  const btn = document.getElementById('nav-toggle-btn');
+  const shell = document.querySelector('.app-shell');
+  if (!btn || !shell) return;
+  const refresh = () => {
+    const collapsed = shell.classList.contains('nav-collapsed');
+    btn.textContent = collapsed ? '»' : '« メニューを隠す';
+    btn.title = collapsed ? 'メニューを表示する' : 'メニューを隠して、画面を広く使う';
+  };
+  btn.addEventListener('click', () => {
+    shell.classList.toggle('nav-collapsed');
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, shell.classList.contains('nav-collapsed') ? '1' : '0'); } catch (e) { /* 保存できなくても切り替えは行う */ }
+    refresh();
+    // 資料作成の画面では、入力欄と印刷範囲の表示位置を合わせ直す
+    if (state.view === 'docs' && docsState.doc) { positionCellEditor(false); drawSheetPrintOverlay(); }
+  });
+  refresh();
+}
+
 // ==================== 全体シェル（ナビ＋各画面） ====================
 async function renderMainShell() {
   restoreViewStateAfterUpdate();
@@ -744,8 +776,9 @@ async function renderMainShell() {
   }
 
   app.innerHTML = `
-    <div class="app-shell">
+    <div class="app-shell${isSidebarCollapsed() ? ' nav-collapsed' : ''}">
       <nav class="app-nav no-print">
+        <button class="nav-toggle-btn" id="nav-toggle-btn" type="button"></button>
         <div class="inner">
           <div class="tabs">
             <button class="tab" data-view="grid">出欠入力</button>
@@ -769,6 +802,8 @@ async function renderMainShell() {
       <div id="view-container"><div class="loading">読み込み中…</div></div>
     </div>
   `;
+
+  setupSidebarToggle();
 
   document.querySelectorAll('.tab').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -3053,6 +3088,7 @@ function renderHelpView(container) {
       <section class="help-section">
         <h2>年度・記録・ログインについて</h2>
         <ul>
+          <li>左のメニューの一番上にある「« メニューを隠す」を押すと、メニューが細くたたまれて画面を広く使えます。たたんだ後は、左端の「»」を押すと元に戻ります。この状態は次に開いたときも覚えています。</li>
           <li>左下の「Update」ボタンを押すと、最新版を読み込み直します。<strong>押す前に開いていた画面(開いていた資料も含む)にそのまま戻ります。</strong>資料作成で入力中の内容も、読み込み直す前に保存されます。</li>
           <li>出欠データは年度ごとに分かれて保存されます。年度が変わっても、過去の年度のデータは消えず、「年度」のプルダウンでいつでも見返せます。</li>
           <li>年度が終わる(3月末を過ぎる)と、自動的にその年度の記録が「記録」にコピーされます。</li>
