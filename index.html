@@ -938,6 +938,17 @@ function sheetColIndex(name) {
   return n - 1;
 }
 function sheetKey(r, c) { return `${r}:${c}`; }
+// 罫線：cell.bd = { t, r, b, l }（1=線あり / 0=線なし）。bd が無いセルは四方とも線あり（最初の状態）
+function sheetCellBorders(cell) {
+  const bd = cell && cell.bd;
+  if (!bd) return { t: 1, r: 1, b: 1, l: 1 };
+  return { t: bd.t ? 1 : 0, r: bd.r ? 1 : 0, b: bd.b ? 1 : 0, l: bd.l ? 1 : 0 };
+}
+function sheetBorderStyle(cell, onCss, offCss) {
+  if (!cell || !cell.bd) return '';
+  const b = sheetCellBorders(cell);
+  return `border-top:${b.t ? onCss : offCss};border-right:${b.r ? onCss : offCss};border-bottom:${b.b ? onCss : offCss};border-left:${b.l ? onCss : offCss}`;
+}
 function sheetRowHeight(data, r) { return Number(data.rowHeights && data.rowHeights[r]) || SHEET_DEFAULT_ROW_HEIGHT; }
 function sheetA1(r, c) { return `${sheetColName(c)}${r + 1}`; }
 function sheetParseA1(ref) {
@@ -1504,6 +1515,14 @@ function renderDocEditorView(container) {
         <button class="sheet-tool" data-tool="align-right" title="右揃え">右</button>
         <span class="sheet-tool-sep"></span>
         <select id="sheet-bg-select" class="sheet-tool-select" title="背景色">${bgOptions}</select>
+        <select id="sheet-border-select" class="sheet-tool-select" title="選んでいる範囲の罫線を変更">
+          <option value="">罫線…</option>
+          <option value="all">格子（すべての罫線）</option>
+          <option value="outer">外枠だけ</option>
+          <option value="none">罫線なし</option>
+          <option value="bottom">下線だけ</option>
+          <option value="top">上線だけ</option>
+        </select>
         <span class="sheet-tool-sep"></span>
         <button class="sheet-tool" data-tool="row-insert" title="選択している行の上に1行挿入">行を挿入</button>
         <button class="sheet-tool" data-tool="row-delete" title="選択している行を削除">行を削除</button>
@@ -1570,6 +1589,8 @@ function renderSheetGrid() {
       const align = cell && cell.a ? cell.a : (disp.isNum ? 'right' : (disp.isErr ? 'center' : 'left'));
       styles.push(`text-align:${align}`);
       if (cell && cell.bg) styles.push(`background:${cell.bg}`);
+      const bdCss = sheetBorderStyle(cell, '1px solid #bdb6a6', '1px dotted #ece8df');
+      if (bdCss) styles.push(bdCss);
       const cls = ['sc'];
       if (cell && cell.b) cls.push('bold');
       if (disp.isErr) cls.push('err');
@@ -1763,7 +1784,7 @@ function setCellRaw(r, c, value, withUndo) {
   if (v === '') {
     if (cur) {
       delete cur.v;
-      if (!cur.b && !cur.a && !cur.bg) delete data.cells[key];
+      if (!cur.b && !cur.a && !cur.bg && !cur.bd && !cur.bx) delete data.cells[key];
     }
   } else {
     data.cells[key] = { ...(cur || {}), v };
@@ -1791,6 +1812,52 @@ function moveSheetSelection(dr, dc, extend) {
   updateSheetSelection();
 }
 
+// 選んでいる範囲の罫線を変える
+function applySheetBorders(mode) {
+  const { r1, r2, c1, c2 } = sheetSelRange();
+  const data = docsState.doc.data;
+  pushSheetUndo();
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      const key = sheetKey(r, c);
+      const cell = { ...(data.cells[key] || {}) };
+      let bd;
+      if (mode === 'all') bd = null;
+      else if (mode === 'none') bd = { t: 0, r: 0, b: 0, l: 0 };
+      else if (mode === 'outer') bd = { t: r === r1 ? 1 : 0, b: r === r2 ? 1 : 0, l: c === c1 ? 1 : 0, r: c === c2 ? 1 : 0 };
+      else if (mode === 'bottom') bd = { t: 0, r: 0, b: r === r2 ? 1 : 0, l: 0 };
+      else if (mode === 'top') bd = { t: r === r1 ? 1 : 0, r: 0, b: 0, l: 0 };
+      if (bd) cell.bd = bd; else delete cell.bd;
+      if (mode === 'none') delete cell.bx; else cell.bx = 1;
+      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx;
+      if (empty) delete data.cells[key]; else data.cells[key] = cell;
+    }
+  }
+  // 範囲の外側と接している線：隣のセルの線も消さないと残ってしまうので、合わせて調整する
+  if (mode !== 'all') {
+    const setSide = (r, c, side, val) => {
+      if (r < 0 || c < 0 || r >= data.rows || c >= data.cols) return;
+      const key = sheetKey(r, c);
+      const cell = { ...(data.cells[key] || {}) };
+      const bd = sheetCellBorders(cell);
+      bd[side] = val;
+      if (bd.t && bd.r && bd.b && bd.l) delete cell.bd; else cell.bd = bd;
+      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx;
+      if (empty) delete data.cells[key]; else data.cells[key] = cell;
+    };
+    const edgeOn = { top: mode === 'outer' || mode === 'top', bottom: mode === 'outer' || mode === 'bottom', left: mode === 'outer', right: mode === 'outer' };
+    for (let c = c1; c <= c2; c++) {
+      if (!edgeOn.top) setSide(r1 - 1, c, 'b', 0);
+      if (!edgeOn.bottom) setSide(r2 + 1, c, 't', 0);
+    }
+    for (let r = r1; r <= r2; r++) {
+      if (!edgeOn.left) setSide(r, c1 - 1, 'r', 0);
+      if (!edgeOn.right) setSide(r, c2 + 1, 'l', 0);
+    }
+  }
+  afterSheetChange();
+}
+
 function applyToSelectionCells(fn) {
   const { r1, r2, c1, c2 } = sheetSelRange();
   const data = docsState.doc.data;
@@ -1800,7 +1867,7 @@ function applyToSelectionCells(fn) {
       const key = sheetKey(r, c);
       const cell = { ...(data.cells[key] || {}) };
       fn(cell);
-      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg;
+      const empty = (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx;
       if (empty) delete data.cells[key]; else data.cells[key] = cell;
     }
   }
@@ -1991,7 +2058,8 @@ function buildSheetPrintTable() {
   for (const [key, cell] of Object.entries(data.cells)) {
     const [r, c] = key.split(':').map(Number);
     if (r >= data.rows || c >= data.cols) continue;
-    if ((cell.v !== undefined && cell.v !== '') || cell.bg) { maxR = Math.max(maxR, r); maxC = Math.max(maxC, c); }
+    // 空のセルでも、自分で罫線を引いた所（bx）は印刷範囲に含める
+    if ((cell.v !== undefined && cell.v !== '') || cell.bg || cell.bx) { maxR = Math.max(maxR, r); maxC = Math.max(maxC, c); }
   }
   if (maxR < 0) { host.innerHTML = ''; return; }
   const cols = data.colWidths.slice(0, maxC + 1).map((w) => `<col style="width:${w}px;">`).join('');
@@ -2005,6 +2073,8 @@ function buildSheetPrintTable() {
       const align = cell && cell.a ? cell.a : (disp.isNum ? 'right' : 'left');
       const st = [`text-align:${align}`];
       if (cell && cell.bg) st.push(`background:${cell.bg}`);
+      const bdCss = sheetBorderStyle(cell, '1px solid #555', 'none');
+      if (bdCss) st.push(bdCss);
       tds.push(`<td class="${cell && cell.b ? 'bold' : ''}" style="${st.join(';')}">${escapeHtml(disp.text)}</td>`);
     }
     rows.push(`<tr style="height:${sheetRowHeight(data, r)}px;">${tds.join('')}</tr>`);
@@ -2070,6 +2140,13 @@ function attachSheetEditorHandlers() {
       if (docsState.editing) commitCellEdit(0, 0);
       runSheetTool(btn.dataset.tool);
     });
+  });
+  document.getElementById('sheet-border-select').addEventListener('change', (e) => {
+    const mode = e.target.value;
+    e.target.value = '';
+    if (!mode) return;
+    applySheetBorders(mode);
+    positionCellEditor(true);
   });
   document.getElementById('sheet-bg-select').addEventListener('change', (e) => {
     const bg = e.target.value;
@@ -2561,6 +2638,7 @@ function renderHelpView(container) {
           <li>セルをクリックしてそのまま文字を打つと入力できます。今の内容を修正したいときは、ダブルクリックかF2キーを押します。Enterで下、Tabで右に移動します。上の「fx」欄でも入力・修正できます。</li>
           <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を、行番号の下端をドラッグすると行の高さを変えられます(ドラッグ中は数字が表示されます)。</li>
           <li>上のツールバーの「列幅」「行の高さ」の欄には、選んでいるセルの列幅・行の高さが数字(ピクセル)で表示されます。数字を入れてEnterを押すと、その大きさに変わります。範囲を選んでいれば、選んだ列・行をまとめて同じ大きさにできます(範囲内で大きさがバラバラのときは「混在」と表示されます)。標準は列幅100・行の高さ26です。</li>
+          <li><strong>罫線</strong>:最初はすべてのセルに罫線があります。範囲を選んでツールバーの「罫線…」から「格子(すべての罫線)」「外枠だけ」「罫線なし」「下線だけ」「上線だけ」を選ぶと変えられます。画面では、罫線のある所は実線、無い所は薄い点線で表示されます(点線は印刷されません)。「罫線なし」にすると、選んだセルの周りの線はすべて消えます。隣の表の線まで消えてしまったときは、その表を選んで「格子」か「外枠だけ」を選び直してください。</li>
           <li>エクセルなどからコピーした表は、そのまま貼り付け(Ctrl+V)できます。Ctrl+Zで元に戻せます。</li>
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
           <li>変更は自動で保存されます(資料名の横に「✓ 保存しました」と出ます)。</li>
