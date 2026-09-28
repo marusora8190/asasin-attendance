@@ -743,15 +743,15 @@ async function renderMainShell() {
           <div class="tabs">
             <button class="tab" data-view="grid">出欠入力</button>
             <button class="tab" data-view="report">神殿掃除報告書</button>
-            <button class="tab" data-view="report-geppai">月例参拝報告書</button>
             <button class="tab" data-view="roster">神殿掃除当番表</button>
-            <button class="tab" data-view="archive">記録</button>
-            <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
+            <button class="tab" data-view="report-geppai">月例参拝報告書</button>
             <button class="tab" data-view="master">マスター</button>
+            <button class="tab" data-view="categories-page">表示区分</button>
             <button class="tab" data-view="category-members-page">区分名簿</button>
             <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
-            <button class="tab" data-view="categories-page">表示区分</button>
             <button class="tab" data-view="docs">資料作成</button>
+            <button class="tab" data-view="archive">記録</button>
+            <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
             <button class="tab" data-view="help">使い方</button>
           </div>
           <div class="sidebar-footer" id="sidebar-footer">
@@ -1006,9 +1006,23 @@ function sheetCanSpill(data, layout, r, c, lay, align, disp, maxC) {
   return !sheetDisplayText(nk).text;
 }
 
+// インデント（1段 = 全角1文字分）と、上下の位置
+const SHEET_INDENT_MAX = 10;
+function sheetIndentVaStyles(cell, align, basePad) {
+  const out = [];
+  if (cell && cell.va) out.push(`vertical-align:${cell.va}`);
+  const ind = Number(cell && cell.ind) || 0;
+  if (ind > 0) {
+    const pad = `calc(${basePad}px + ${ind}em)`;
+    if (align === 'right') out.push(`padding-right:${pad}`);
+    else if (align !== 'center') out.push(`padding-left:${pad}`);
+  }
+  return out;
+}
+
 function sheetCellFontPt(cell) { return Number(cell && cell.fs) || SHEET_DEFAULT_FONT_PT; }
 function sheetCellIsEmpty(cell) {
-  return (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx && !cell.fs;
+  return (cell.v === undefined || cell.v === '') && !cell.b && !cell.a && !cell.bg && !cell.bd && !cell.bx && !cell.fs && !cell.ind && !cell.va;
 }
 function sheetRowHeight(data, r) { return Number(data.rowHeights && data.rowHeights[r]) || SHEET_DEFAULT_ROW_HEIGHT; }
 function sheetA1(r, c) { return `${sheetColName(c)}${r + 1}`; }
@@ -1593,6 +1607,12 @@ function renderDocEditorView(container) {
         <button class="sheet-tool" data-tool="align-left" title="左揃え">左</button>
         <button class="sheet-tool" data-tool="align-center" title="中央揃え">中央</button>
         <button class="sheet-tool" data-tool="align-right" title="右揃え">右</button>
+        <button class="sheet-tool" data-tool="indent-down" title="インデント（字下げ）を1段減らす">⇤ インデント</button>
+        <button class="sheet-tool" data-tool="indent-up" title="インデント（字下げ）を1段増やす">インデント ⇥</button>
+        <span class="sheet-tool-sep"></span>
+        <button class="sheet-tool" data-tool="valign-top" title="上揃え">上</button>
+        <button class="sheet-tool" data-tool="valign-middle" title="上下中央揃え">上下中央</button>
+        <button class="sheet-tool" data-tool="valign-bottom" title="下揃え">下</button>
         <span class="sheet-tool-sep"></span>
         <button class="sheet-tool" data-tool="merge" title="選んだ範囲を1つのセルにまとめる">セル結合</button>
         <button class="sheet-tool" data-tool="unmerge" title="結合したセルを元に戻す">結合解除</button>
@@ -1680,6 +1700,7 @@ function renderSheetGrid() {
       if (lay) cls.push('merged');
       if (sheetCanSpill(data, layout, r, c, lay, align, disp, data.cols - 1)) cls.push('spill');
       if (cell && cell.fs) styles.push(`font-size:${cell.fs}pt`);
+      styles.push(...sheetIndentVaStyles(cell, align, 6));
       if (cell && cell.b) cls.push('bold');
       if (disp.isErr) cls.push('err');
       const span = lay ? ` rowspan="${lay.rs}" colspan="${lay.cs}"` : '';
@@ -2111,6 +2132,19 @@ function runSheetTool(tool) {
   switch (tool) {
     case 'bold': toggleBoldSelection(); break;
     case 'merge': mergeSheetSelection(); break;
+    case 'indent-up': case 'indent-down': {
+      const d = tool === 'indent-up' ? 1 : -1;
+      applyToSelectionCells((cell) => {
+        const n = Math.max(0, Math.min(SHEET_INDENT_MAX, (Number(cell.ind) || 0) + d));
+        if (n) cell.ind = n; else delete cell.ind;
+        // インデントは左揃えのときに効くので、中央揃えのセルは左揃えにする
+        if (n && cell.a === 'center') cell.a = 'left';
+      });
+      break;
+    }
+    case 'valign-top': applyToSelectionCells((cell) => { cell.va = 'top'; }); break;
+    case 'valign-middle': applyToSelectionCells((cell) => { delete cell.va; }); break;
+    case 'valign-bottom': applyToSelectionCells((cell) => { cell.va = 'bottom'; }); break;
     case 'unmerge': unmergeSheetSelection(); break;
     case 'font-up': case 'font-down': {
       const cur = sheetCellFontPt(data.cells[sheetKey(s.ar, s.ac)]);
@@ -2266,6 +2300,7 @@ function buildSheetPrintTable() {
       const st = [`text-align:${align}`];
       if (cell && cell.bg) st.push(`background:${cell.bg}`);
       if (cell && cell.fs) st.push(`font-size:${cell.fs}pt`);
+      st.push(...sheetIndentVaStyles(cell, align, 5));
       const bdCss = lay ? sheetMergedBorderStyle(data, lay, '1px solid #555', 'none') : sheetBorderStyle(cell, '1px solid #555', 'none');
       if (bdCss) st.push(bdCss);
       const span = lay ? ` rowspan="${Math.min(lay.rs, maxR - r + 1)}" colspan="${Math.min(lay.cs, maxC - c + 1)}"` : '';
@@ -2753,18 +2788,17 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>③ 朝の神殿掃除提出／月例参拝（月次報告書）</h2>
-        <p>1ヶ月分の出欠を、提出用のB5用紙1枚のレイアウトで印刷するための画面です。</p>
+        <h2>③ 神殿掃除報告書</h2>
+        <p>朝の神殿掃除の1ヶ月分の出欠を、提出用のB5用紙1枚のレイアウトで印刷するための画面です。</p>
         <ul>
           <li>「年度」「対象月」「部署名(表題)」を設定してから、「印刷 / PDFで保存」を押してください。</li>
           <li>「左：人数」で、氏名一覧を左右どちらに何名ずつ振り分けるか調整できます(「自動(半分ずつ)」で元に戻せます)。</li>
           <li>人数が多い月は、文字サイズはそのまま、行の余白だけ自動的に少し詰めて1枚に収まるよう調整されます。</li>
-          <li>月例参拝の報告書は、営繕課を除いた部署順(庶務係→現場第一班→…→空調衛生係)で、各部署の主任が一番上に来るように並び、「立場」欄の代わりに「部署」欄が表示されます。</li>
         </ul>
       </section>
 
       <section class="help-section">
-        <h2>④ 朝の神殿掃除当番表</h2>
+        <h2>④ 神殿掃除当番表</h2>
         <p>1日目・2日目・3日目ごとに、部署の当番割り当てと出欠を印刷するための当番表です。</p>
         <ul>
           <li>「対象月」で出欠結果を反映する月を選べます。「テンプレ」を選ぶと、○×を一切表示しない空欄の状態で印刷できます(配布用の当番表として使えます)。</li>
@@ -2775,26 +2809,15 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>⑤ 記録</h2>
-        <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
+        <h2>⑤ 月例参拝報告書</h2>
+        <p>月例参拝の1ヶ月分の出欠を、提出用のB5用紙1枚のレイアウトで印刷するための画面です。「年度」「対象月」の選び方、人数の振り分け、印刷の仕方は神殿掃除報告書と同じです。</p>
         <ul>
-          <li>年度・区分を選んで、部署ごとの出欠一覧を確認できます。</li>
-          <li>保管された記録は、保管されてから<strong>3年を過ぎると自動的に完全に削除</strong>されます。</li>
+          <li>月例参拝の報告書は、営繕課を除いた部署順(庶務係→現場第一班→…→空調衛生係)で、各部署の主任が一番上に来るように並び、「立場」欄の代わりに「部署」欄が表示されます。</li>
         </ul>
       </section>
 
       <section class="help-section">
-        <h2>⑥ 慰労拝受記録</h2>
-        <p>慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。</p>
-        <ul>
-          <li>過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。</li>
-          <li>時刻は「0812」のように入力すると自動で「8:12」に変換されます。入力中にEnterキーを押すと、右隣のセルにカーソルが移動します。</li>
-          <li>一番左の年号の列は、横にスクロールしても常に見える位置に固定されています。</li>
-        </ul>
-      </section>
-
-      <section class="help-section">
-        <h2>⑦ マスター</h2>
+        <h2>⑥ マスター</h2>
         <p>部署・立場など、システム全体で使う基本情報を管理する画面です。</p>
         <ul>
           <li><strong>部署を編集</strong>：部署名の追加・変更・削除と、部署ごとの既定の当番日(1〜3日目)を設定します。</li>
@@ -2802,6 +2825,16 @@ function renderHelpView(container) {
           <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
           <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
           <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑦ 表示区分</h2>
+        <p>出欠入力・現場入力で使う区分そのものを管理します。</p>
+        <ul>
+          <li>名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、「神・責欄を使う」の切り替え、新しい区分の追加・削除ができます。</li>
+          <li>並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
+          <li>「スマホのリストに表示」をオフにした区分は、現場入力(スマホ)のプルダウンから消え、選べなくなります。</li>
         </ul>
       </section>
 
@@ -2826,17 +2859,7 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>⑩ 表示区分</h2>
-        <p>出欠入力・現場入力で使う区分そのものを管理します。</p>
-        <ul>
-          <li>名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、「神・責欄を使う」の切り替え、新しい区分の追加・削除ができます。</li>
-          <li>並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
-          <li>「スマホのリストに表示」をオフにした区分は、現場入力(スマホ)のプルダウンから消え、選べなくなります。</li>
-        </ul>
-      </section>
-
-      <section class="help-section">
-        <h2>⑪ 資料作成</h2>
+        <h2>⑩ 資料作成</h2>
         <p>エクセルのような表を作って保存できる画面です。</p>
         <ul>
           <li>「＋ 新しい表を作成」で新しい表を作ります。作った表は一覧に並び、「開く」で続きを編集できます。「複製」でコピー、「削除」で削除できます。</li>
@@ -2844,6 +2867,7 @@ function renderHelpView(container) {
           <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を、行番号の下端をドラッグすると行の高さを変えられます(ドラッグ中は数字が表示されます)。</li>
           <li>上のツールバーの「列幅」「行の高さ」の欄には、選んでいるセルの列幅・行の高さが数字(ピクセル)で表示されます。数字を入れてEnterを押すと、その大きさに変わります。範囲を選んでいれば、選んだ列・行をまとめて同じ大きさにできます(範囲内で大きさがバラバラのときは「混在」と表示されます)。標準は列幅100・行の高さ26です。</li>
           <li><strong>文字サイズ</strong>:セルや範囲を選んで、ツールバーの「文字サイズ」欄に数字(ポイント、エクセルと同じ単位)を入れてEnterを押すか、候補から選びます。「A＋」「A－」で一段階ずつ大きく・小さくできます。標準は11です。文字を大きくすると、行の高さも自動で広がります。</li>
+          <li><strong>インデント・上下の位置</strong>:「インデント ⇥」を押すたびに、文字が全角1文字分ずつ右に下がります(最大10段)。「⇤ インデント」で1段ずつ戻せます。右揃えのセルでは右側が空きます。「上」「上下中央」「下」で、行の高さの中での文字の位置を変えられます(最初は上下中央です)。</li>
           <li><strong>セル結合</strong>:結合したい範囲をドラッグで選んで「セル結合」を押すと、1つのセルにまとまります(最初は中央揃え)。元に戻すときは、結合したセルを選んで「結合解除」を押します。左上以外のセルに入力があった場合は、確認のあと左上の内容だけが残ります。結合したセルは、印刷やExcelへの書き出しでも結合されたままになります。</li>
           <li><strong>罫線</strong>:最初はすべてのセルに罫線があります。範囲を選んでツールバーの「罫線…」から「格子(すべての罫線)」「外枠だけ」「罫線なし」「下線だけ」「上線だけ」を選ぶと変えられます。画面では、罫線のある所は実線、無い所は薄い点線で表示されます(点線は印刷されません)。「罫線なし」にすると、選んだセルの周りの線はすべて消えます。隣の表の線まで消えてしまったときは、その表を選んで「格子」か「外枠だけ」を選び直してください。</li>
           <li>エクセルなどからコピーした表は、そのまま貼り付け(Ctrl+V)できます。Ctrl+Zで元に戻せます。</li>
@@ -2853,6 +2877,25 @@ function renderHelpView(container) {
           <li>「印刷」を押すと、入力のある範囲だけが印刷されます(資料名の見出し・行番号・列の記号は印刷されません)。印刷画面の上下に日付やURLが出る場合は、印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外すと消せます。</li>
           <li>「行を挿入」「行を削除」「列を挿入」「列を削除」は、選んでいる行・列に対して行います。計算式の中のセル番地も自動で合わせて書き換わります。一番下の行でEnterを押すと、行が自動で1行増えます。</li>
           <li>1つの資料につきシートは1枚です。同じ資料を2人が同時に編集した場合は、後から保存した内容が残ります。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑪ 記録</h2>
+        <p>年度が終わると、その年度の出欠記録が自動的にここへコピー・保管されます(閲覧専用)。</p>
+        <ul>
+          <li>年度・区分を選んで、部署ごとの出欠一覧を確認できます。</li>
+          <li>保管された記録は、保管されてから<strong>3年を過ぎると自動的に完全に削除</strong>されます。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑫ 慰労拝受記録</h2>
+        <p>慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。</p>
+        <ul>
+          <li>過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。</li>
+          <li>時刻は「0812」のように入力すると自動で「8:12」に変換されます。入力中にEnterキーを押すと、右隣のセルにカーソルが移動します。</li>
+          <li>一番左の年号の列は、横にスクロールしても常に見える位置に固定されています。</li>
         </ul>
       </section>
 
