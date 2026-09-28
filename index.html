@@ -190,7 +190,6 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .sheet-cell-editor { position: absolute; z-index: 1; opacity: 0; pointer-events: none; border: 2px solid var(--color-accent); padding: 2px 5px; font-size: 14px; font-weight: 500 !important; background: white; box-sizing: border-box; caret-color: transparent; }
 .sheet-cell-editor.editing { opacity: 1; pointer-events: auto; z-index: 2; caret-color: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 .sheet-cell-editor:focus { outline: none; }
-.sheet-print-title { display: none; }
 .sheet-print-host { display: none; }
 .doc-list-table { width: 100%; max-width: 900px; border-collapse: collapse; background: white; border: 1px solid var(--color-line); border-radius: 8px; margin-top: 16px; }
 .doc-list-table th { font-size: 12px; color: var(--color-ink-soft); padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
@@ -201,7 +200,6 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .doc-title-link:hover { text-decoration: underline; }
 @media print {
   .sheet-page { padding: 0; }
-  .sheet-print-title { display: block; font-size: 16px; margin: 0 0 8px; }
   .sheet-print-host { display: block; }
   .sheet-print-table { border-collapse: collapse; table-layout: fixed; }
   .sheet-print-table td { border: 1px solid #555; height: 6mm; padding: 2px 5px; font-size: 11px; font-weight: 500 !important; white-space: nowrap; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1547,7 +1545,6 @@ function renderDocEditorView(container) {
         <span class="sheet-fx">fx</span>
         <input type="text" id="sheet-formula-input" class="sheet-formula-input" placeholder="セルの内容（=SUM(A1:A5) のような計算式も使えます）" />
       </div>
-      <h2 class="sheet-print-title">${escapeHtml(doc.title)}</h2>
       <div id="sheet-print-host" class="sheet-print-host"></div>
       <div class="sheet-wrap no-print" id="sheet-wrap">
         <div id="sheet-grid-host"></div>
@@ -2128,8 +2125,6 @@ function attachSheetEditorHandlers() {
 
   titleInput.addEventListener('input', () => {
     docsState.doc.title = titleInput.value.trim() || '無題の資料';
-    const pt = document.querySelector('.sheet-print-title');
-    if (pt) pt.textContent = docsState.doc.title;
     scheduleDocSave();
   });
   titleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); positionCellEditor(true); } });
@@ -2643,7 +2638,7 @@ function renderHelpView(container) {
           <li>「=」から始めると計算式になります。例: =A1+B1、=SUM(B2:B20)、=AVERAGE(B2:B20)、=COUNTIF(C2:C30,"○")、=IF(B2>=80,"合格","")。使える関数: SUM・AVERAGE・MIN・MAX・COUNT・COUNTA・COUNTIF・SUMIF・ROUND・IF など。</li>
           <li>変更は自動で保存されます(資料名の横に「✓ 保存しました」と出ます)。</li>
           <li>「Excelで書き出し」で .xlsx ファイルとして保存でき、一覧の「Excelファイルを読み込む」で既存のエクセルファイルを取り込めます(シートが複数ある場合は、シートごとに別の資料になります)。</li>
-          <li>「印刷」を押すと、入力のある範囲だけが資料名の見出し・罫線付きで印刷されます(行番号・列の記号は印刷されません)。</li>
+          <li>「印刷」を押すと、入力のある範囲だけが印刷されます(資料名の見出し・行番号・列の記号は印刷されません)。印刷画面の上下に日付やURLが出る場合は、印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外すと消せます。</li>
           <li>「行を挿入」「行を削除」「列を挿入」「列を削除」は、選んでいる行・列に対して行います。計算式の中のセル番地も自動で合わせて書き換わります。一番下の行でEnterを押すと、行が自動で1行増えます。</li>
           <li>1つの資料につきシートは1枚です。同じ資料を2人が同時に編集した場合は、後から保存した内容が残ります。</li>
         </ul>
