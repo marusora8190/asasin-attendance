@@ -212,9 +212,14 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .doc-list-table th { font-size: 12px; color: var(--color-ink-soft); padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
 .doc-list-table td { padding: 10px 14px; border-bottom: 1px solid var(--color-line); }
 .doc-list-table tr:last-child td { border-bottom: none; }
+.doc-list-table tr[data-doc-id].dragging { opacity: 0.4; }
+.doc-list-table tr[data-doc-id].drag-over-top td { box-shadow: inset 0 2px 0 0 var(--color-navy); }
+.doc-list-table tr[data-doc-id].drag-over-bottom td { box-shadow: inset 0 -2px 0 0 var(--color-navy); }
 .doc-list-table .btn-light { height: 32px; padding: 4px 12px; font-size: 13px; }
 .doc-title-link { background: none; border: none; padding: 0; font-size: 15px; color: var(--color-navy); text-align: left; }
 .doc-title-link:hover { text-decoration: underline; }
+.doc-rename-input { width: 100%; max-width: 420px; font-size: 15px; padding: 6px 10px; border: 1px solid var(--color-accent); border-radius: 6px; }
+.doc-rename-input:focus { outline: none; }
 @media print {
   .sheet-page { padding: 0; }
   .sheet-print-host { display: block; }
@@ -1400,13 +1405,18 @@ function sheetShiftFormulaRefs(formula, mapRC) {
 
 // ---- データベース ----
 async function loadDocsList() {
-  const { data, error } = await sb.from(T_DOCUMENTS).select('id,title,updated_at').order('updated_at', { ascending: false });
+  const { data, error } = await sb.from(T_DOCUMENTS).select('id,title,updated_at,sort_order')
+    .order('sort_order', { ascending: true, nullsFirst: true })
+    .order('updated_at', { ascending: false });
   if (error) { console.error(error); alert('資料の一覧を読み込めませんでした: ' + error.message); return; }
   docsState.list = data ?? [];
   docsState.loaded = true;
 }
 async function createDoc(title, data) {
-  const { data: row, error } = await sb.from(T_DOCUMENTS).insert({ title, data }).select().single();
+  // 新しい資料は一覧の一番上に来るようにする
+  const orders = docsState.list.map((d) => Number(d.sort_order)).filter((n) => Number.isFinite(n));
+  const sortOrder = orders.length ? Math.min(...orders) - 1 : 1;
+  const { data: row, error } = await sb.from(T_DOCUMENTS).insert({ title, data, sort_order: sortOrder }).select().single();
   if (error) { alert('資料を作成できませんでした: ' + error.message); return null; }
   return row;
 }
@@ -1495,11 +1505,13 @@ async function renderDocsListView(container) {
     if (state.view !== 'docs' || state.docId) return;
   }
   const rows = docsState.list.map((d) => `
-    <tr>
-      <td><button class="doc-title-link" data-act="open" data-id="${d.id}">${escapeHtml(d.title || '無題の資料')}</button></td>
+    <tr data-doc-id="${d.id}">
+      <td style="width:36px;padding:0 4px;"><span class="drag-handle" title="ドラッグで並び替え">⠿</span></td>
+      <td class="doc-title-cell" data-id="${d.id}"><button class="doc-title-link" data-act="open" data-id="${d.id}">${escapeHtml(d.title || '無題の資料')}</button></td>
       <td style="color:var(--color-ink-soft);font-size:13px;white-space:nowrap;">${formatDocDate(d.updated_at)}</td>
       <td style="white-space:nowrap;text-align:right;">
         <button class="btn-light" data-act="open" data-id="${d.id}">開く</button>
+        <button class="btn-light" data-act="rename" data-id="${d.id}">名前を変更</button>
         <button class="btn-light" data-act="dup" data-id="${d.id}">複製</button>
         <button class="btn-light" data-act="del" data-id="${d.id}" style="color:var(--color-absent);">削除</button>
       </td>
@@ -1523,8 +1535,8 @@ async function renderDocsListView(container) {
       </div>
       <p class="hint-text">エクセルのような表を作って保存できます。作った表はこの一覧に並び、いつでも開いて続きを編集できます(自動で保存されます)。</p>
       ${docsState.list.length ? `
-        <table class="doc-list-table">
-          <thead><tr><th style="text-align:left;">資料名</th><th style="text-align:left;">最終更新</th><th></th></tr></thead>
+        <table class="doc-list-table" id="doc-list-table">
+          <thead><tr><th></th><th style="text-align:left;">資料名</th><th style="text-align:left;">最終更新</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>` : `<p style="color:var(--color-ink-soft);margin-top:24px;">まだ資料がありません。「＋ 新しい表を作成」から作ってください。</p>`}
     </div>
@@ -1561,11 +1573,14 @@ async function renderDocsListView(container) {
     }
   });
 
+  setupDocListDragAndDrop();
+
   container.querySelectorAll('[data-act]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
       const item = docsState.list.find((d) => d.id === id);
       if (btn.dataset.act === 'open') { openDoc(id); return; }
+      if (btn.dataset.act === 'rename') { startDocRename(id); return; }
       if (btn.dataset.act === 'dup') {
         const { data: src, error } = await sb.from(T_DOCUMENTS).select('*').eq('id', id).maybeSingle();
         if (error || !src) { alert('複製できませんでした'); return; }
@@ -1582,6 +1597,101 @@ async function renderDocsListView(container) {
       }
     });
   });
+}
+
+// 一覧の並び順を、左の「⠿」を掴んでドラッグで変える（出欠入力と同じ操作）
+function setupDocListDragAndDrop() {
+  const table = document.getElementById('doc-list-table');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  const rowsOf = () => tbody.querySelectorAll('tr[data-doc-id]');
+  const clearMarks = () => rowsOf().forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging'));
+  tbody.querySelectorAll('.drag-handle').forEach((handle) => {
+    handle.addEventListener('mousedown', () => {
+      const tr = handle.closest('tr[data-doc-id]');
+      if (tr) tr.draggable = true;
+    });
+  });
+  const resetDraggable = () => rowsOf().forEach((tr) => { tr.draggable = false; });
+  tbody.addEventListener('mouseup', resetDraggable);
+  let draggedId = null;
+  tbody.addEventListener('dragstart', (e) => {
+    const tr = e.target.closest('tr[data-doc-id]');
+    if (!tr) return;
+    draggedId = tr.dataset.docId;
+    tr.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', draggedId); } catch (err) { /* 無視 */ }
+  });
+  tbody.addEventListener('dragover', (e) => {
+    const tr = e.target.closest('tr[data-doc-id]');
+    if (!tr || draggedId === null) return;
+    e.preventDefault();
+    rowsOf().forEach((r) => r.classList.remove('drag-over-top', 'drag-over-bottom'));
+    const rect = tr.getBoundingClientRect();
+    tr.classList.add((e.clientY - rect.top) > rect.height / 2 ? 'drag-over-bottom' : 'drag-over-top');
+  });
+  tbody.addEventListener('drop', (e) => {
+    const tr = e.target.closest('tr[data-doc-id]');
+    clearMarks();
+    if (!tr || draggedId === null) return;
+    e.preventDefault();
+    const rect = tr.getBoundingClientRect();
+    const after = (e.clientY - rect.top) > rect.height / 2;
+    const moved = draggedId;
+    draggedId = null;
+    reorderDocs(moved, tr.dataset.docId, after);
+  });
+  tbody.addEventListener('dragend', () => { clearMarks(); draggedId = null; resetDraggable(); });
+}
+
+async function reorderDocs(draggedId, targetId, insertAfter) {
+  if (draggedId === targetId) return;
+  const list = [...docsState.list];
+  const from = list.findIndex((d) => d.id === draggedId);
+  if (from === -1) return;
+  const [moved] = list.splice(from, 1);
+  let to = list.findIndex((d) => d.id === targetId);
+  if (to === -1) return;
+  list.splice(insertAfter ? to + 1 : to, 0, moved);
+  list.forEach((d, i) => { d.sort_order = i + 1; });
+  docsState.list = list;
+  renderView();
+  const results = await Promise.all(list.map((d) => sb.from(T_DOCUMENTS).update({ sort_order: d.sort_order }).eq('id', d.id)));
+  const failed = results.find((r) => r.error);
+  if (failed) alert('並び順を保存できませんでした: ' + failed.error.message);
+}
+
+// 一覧で資料名をその場で書き換える（Enterで確定、Escで取り消し）
+function startDocRename(id) {
+  const td = document.querySelector(`.doc-title-cell[data-id="${id}"]`);
+  const item = docsState.list.find((d) => d.id === id);
+  if (!td || !item || td.querySelector('input')) return;
+  const original = item.title || '無題の資料';
+  td.innerHTML = `<input type="text" class="doc-rename-input" value="${escapeHtml(original)}" />`;
+  const input = td.querySelector('input');
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const title = input.value.trim() || '無題の資料';
+    if (save && title !== original) {
+      input.disabled = true;
+      const { error } = await sb.from(T_DOCUMENTS).update({ title }).eq('id', id);
+      if (error) { alert('名前を変更できませんでした: ' + error.message); }
+      else item.title = title;
+    }
+    td.innerHTML = `<button class="doc-title-link" data-id="${id}">${escapeHtml(item.title || '無題の資料')}</button>`;
+    td.querySelector('button').addEventListener('click', () => openDoc(id));
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
 }
 
 function sheetDataFromWorksheet(ws) {
@@ -3120,7 +3230,7 @@ function renderHelpView(container) {
         <h2>⑩ 資料作成</h2>
         <p>エクセルのような表を作って保存できる画面です。</p>
         <ul>
-          <li>「＋ 新しい表を作成」で新しい表を作ります。作った表は一覧に並び、「開く」で続きを編集できます。「複製」でコピー、「削除」で削除できます。</li>
+          <li>「＋ 新しい表を作成」で新しい表を作ります。作った表は一覧に並び、「開く」で続きを編集できます。「名前を変更」を押すと、その場で資料名を書き換えられます(Enterで確定、Escで取り消し)。「複製」でコピー、「削除」で削除できます。左の「⠿」を掴んでドラッグすると、一覧の並び順を変えられます(新しく作った資料は一番上に入ります)。資料を開いた画面でも、上の資料名の欄をクリックすれば書き換えられます。</li>
           <li>セルをクリックしてそのまま文字を打つと入力できます。今の内容を修正したいときは、ダブルクリックかF2キーを押します。Enterで下、Tabで右に移動します。上の「fx」欄でも入力・修正できます。</li>
           <li>ドラッグやShift+クリックで範囲を選び、太字・揃え・背景色をまとめて設定できます。行番号・列の記号(A、B…)をクリックすると行・列ごと選べます。列の記号の右端をドラッグすると列の幅を、行番号の下端をドラッグすると行の高さを変えられます(ドラッグ中は数字が表示されます)。</li>
           <li>上のツールバーの「列幅」「行の高さ」の欄には、選んでいるセルの列幅・行の高さが数字(ピクセル)で表示されます。数字を入れてEnterを押すと、その大きさに変わります。範囲を選んでいれば、選んだ列・行をまとめて同じ大きさにできます(範囲内で大きさがバラバラのときは「混在」と表示されます)。標準は列幅100・行の高さ26です。</li>
