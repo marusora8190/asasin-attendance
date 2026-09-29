@@ -693,8 +693,15 @@ const app = document.getElementById('app');
 // ==================== 起動処理 ====================
 const UNLOCK_KEY = 'asagami_unlocked';
 
+// ⑥専用の共通ログインアカウント（Supabase Auth）。利用者はパスワードだけ入力する。
+// データベース側では、このアカウントでログインしている人だけが asagami_ のテーブルに触れる設定にしている。
+const LOGIN_EMAIL = 'asagami@marusora-apps.example.com';
+
 async function init() {
-  state.unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1';
+  // ログイン状態が切れたとき（パスワード変更・ログアウトなど）はログイン画面に戻す
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') renderLogin();
+  });
   renderRoot();
 }
 
@@ -702,9 +709,11 @@ function isFieldOnlyMode() {
   return new URLSearchParams(window.location.search).get('field') === '1';
 }
 
-function renderRoot() {
-  // 合言葉ログインは廃止し、常に直接アプリを開く
-  renderMainShell();
+async function renderRoot() {
+  // 一度ログインした端末では、ログイン状態が保存されているので、そのままアプリを開く
+  const { data } = await sb.auth.getSession();
+  if (data && data.session) renderMainShell();
+  else renderLogin();
 }
 
 // ==================== ログイン画面 ====================
@@ -714,8 +723,9 @@ function renderLogin() {
       <form class="login-card" id="login-form">
         <p class="eyebrow">出欠管理システム</p>
         <h1 class="font-display">営繕課出欠記録</h1>
-        <label for="login-password">合言葉</label>
-        <input id="login-password" type="password" autofocus placeholder="合言葉を入力" />
+        <label for="login-password">パスワード</label>
+        <input id="login-password" type="password" autofocus placeholder="パスワードを入力" autocomplete="current-password" />
+        <p style="font-size:12px;opacity:.7;margin:4px 0 0;">この端末で一度ログインすると、次回からは入力不要です。</p>
         <p class="login-error" id="login-error" style="display:none;"></p>
         <button type="submit" class="btn-primary" id="login-submit">ログイン</button>
       </form>
@@ -735,11 +745,11 @@ function renderLogin() {
     submitBtn.disabled = true;
     submitBtn.textContent = '確認中…';
     try {
-      const { data, error } = await sb.rpc(RPC_VERIFY_PASSWORD, { input_password: password });
-      if (error) throw new Error('接続に失敗しました。しばらくしてからもう一度お試しください。');
-      if (!data) throw new Error('合言葉が違います。');
-      sessionStorage.setItem(UNLOCK_KEY, '1');
-      state.unlocked = true;
+      const { error } = await sb.auth.signInWithPassword({ email: LOGIN_EMAIL, password });
+      if (error) {
+        if (/invalid/i.test(error.message)) throw new Error('パスワードが違います。');
+        throw new Error('接続に失敗しました。しばらくしてからもう一度お試しください。');
+      }
       renderRoot();
     } catch (err) {
       errorEl.textContent = err.message;
