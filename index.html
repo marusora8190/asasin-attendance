@@ -816,6 +816,8 @@ async function renderMainShell() {
 
   document.querySelectorAll('.tab').forEach((btn) => {
     btn.addEventListener('click', () => {
+      // ほかの端末（スマホの現場入力など）で入力された内容も反映されるよう、年ごとの出欠は開くたびに読み直す
+      state.yearlyAttendanceLoadedCategory = null;
       state.view = btn.dataset.view;
       updateNavActive();
       renderView();
@@ -4205,6 +4207,16 @@ function formatTimeInputValue(raw) {
   return panel;
 }
 
+// 出欠の保存に失敗したときに知らせる（黙って失敗しないように）
+function alertIfAttendanceError(res) {
+  if (res && res.error) {
+    console.error(res.error);
+    alert('出欠を保存できませんでした。通信状態を確認して、もう一度入力してください。\n（' + res.error.message + '）');
+    return true;
+  }
+  return false;
+}
+
 function yearlyAttKey(memberId, category, fiscalYearId, checkpoint) {
   return `${memberId}-${category}-${fiscalYearId}-${checkpoint}`;
 }
@@ -4243,14 +4255,16 @@ async function toggleYearlyCell(memberId, fiscalYearId, checkpoint, btnEl) {
   if (next === '○') btnEl.classList.add('present');
   if (next === '×') btnEl.classList.add('absent');
 
+  let res;
   if (next === null) {
-    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
+    res = await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
   } else {
-    await sb.from(T_ATTENDANCE).upsert(
+    res = await sb.from(T_ATTENDANCE).upsert(
       { member_id: memberId, fiscal_year_id: fiscalYearId, category, month_seq: checkpoint, status: next },
       { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
     );
   }
+  if (alertIfAttendanceError(res)) { state.yearlyAttendanceLoadedCategory = null; }
   renderView();
 }
 
@@ -4305,7 +4319,8 @@ async function bulkMarkYear(fiscalYearId, checkpoint, mode) {
 
   if (mode === 'clear') {
     for (const m of state.members) state.yearlyAttendance.delete(yearlyAttKey(m.id, category, fiscalYearId, checkpoint));
-    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
+    const res = await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYearId, category, month_seq: checkpoint });
+    if (alertIfAttendanceError(res)) state.yearlyAttendanceLoadedCategory = null;
     renderView();
     return;
   }
@@ -4320,7 +4335,8 @@ async function bulkMarkYear(fiscalYearId, checkpoint, mode) {
     }
   }
   if (updates.length === 0) { renderView(); return; }
-  await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+  const res = await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+  if (alertIfAttendanceError(res)) state.yearlyAttendanceLoadedCategory = null;
   renderView();
 }
 
@@ -4466,7 +4482,7 @@ async function bulkMarkMonth(monthCtx, mode) {
     for (const m of state.members) {
       state.attendance.delete(attKey(m.id, state.category, monthSeqValue));
     }
-    await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYear.id, category: state.category, month_seq: monthSeqValue });
+    alertIfAttendanceError(await sb.from(T_ATTENDANCE).delete().match({ fiscal_year_id: fiscalYear.id, category: state.category, month_seq: monthSeqValue }));
     renderView();
     return;
   }
@@ -4486,7 +4502,7 @@ async function bulkMarkMonth(monthCtx, mode) {
 
   if (updates.length === 0) { renderView(); return; }
 
-  await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+  alertIfAttendanceError(await sb.from(T_ATTENDANCE).upsert(updates, { onConflict: 'member_id,fiscal_year_id,category,month_seq' }));
   renderView();
 }
 
@@ -5080,6 +5096,8 @@ async function saveFieldGroup(members, seq) {
   const msgEl = document.getElementById('field-save-msg');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
 
+  let saveError = null;
+  if (!state.fiscalYearId) saveError = { message: '年度が選ばれていません' };
   if (state.fiscalYearId) {
     const upserts = [];
     const deleteIds = [];
@@ -5089,17 +5107,26 @@ async function saveFieldGroup(members, seq) {
       else upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status });
     }
     if (upserts.length > 0) {
-      await sb.from(T_ATTENDANCE).upsert(upserts, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+      const res = await sb.from(T_ATTENDANCE).upsert(upserts, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
+      if (res.error) saveError = res.error;
     }
-    if (deleteIds.length > 0) {
-      await sb.from(T_ATTENDANCE).delete()
+    if (deleteIds.length > 0 && !saveError) {
+      const res = await sb.from(T_ATTENDANCE).delete()
         .match({ fiscal_year_id: state.fiscalYearId, category, month_seq: seq })
         .in('member_id', deleteIds);
+      if (res.error) saveError = res.error;
     }
   }
 
   if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'この内容で保存'; }
-  if (msgEl) msgEl.textContent = '✓ 保存しました';
+  if (saveError) {
+    console.error(saveError);
+    if (msgEl) { msgEl.textContent = '✕ 保存できませんでした。もう一度「この内容で保存」を押してください（' + saveError.message + '）'; msgEl.style.color = 'var(--color-absent)'; }
+    return;
+  }
+  if (msgEl) { msgEl.textContent = '✓ 保存しました'; msgEl.style.color = ''; }
+  // PC側の出欠入力でも最新の内容を読み直すようにする
+  state.yearlyAttendanceLoadedCategory = null;
 
   state.fieldSavedGroups.add(fieldSavedGroupKey(category, state.fieldDeptFilter, state.fiscalYearId, seq));
   const deptBtn = document.querySelector(`.field-dept-btn[data-dept-key="${state.fieldDeptFilter}"]`);
@@ -5129,14 +5156,16 @@ async function toggleCell(memberId, seq, btnEl) {
   tds[tds.length - 2].textContent = s.rate != null ? Math.round(s.rate * 100) + '%' : '—';
 
   if (!state.fiscalYearId) return;
+  let res;
   if (next === null) {
-    await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq });
+    res = await sb.from(T_ATTENDANCE).delete().match({ member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq });
   } else {
-    await sb.from(T_ATTENDANCE).upsert(
+    res = await sb.from(T_ATTENDANCE).upsert(
       { member_id: memberId, fiscal_year_id: state.fiscalYearId, category: state.category, month_seq: seq, status: next },
       { onConflict: 'member_id,fiscal_year_id,category,month_seq' }
     );
   }
+  alertIfAttendanceError(res);
 }
 
 async function updateMemberField(memberId, field, value) {
