@@ -3369,7 +3369,7 @@ async function loadFiscalYearsAndMembers() {
   const { data: posData } = await sb.from(T_POSITIONS).select('*').order('sort_order', { ascending: true });
   state.positions = posData ?? [];
 
-  const { data: catMemberData } = await sb.from(T_CATEGORY_MEMBERS).select('*');
+  const { data: catMemberData } = await fetchAllPaged(() => sb.from(T_CATEGORY_MEMBERS).select('*').order('member_id').order('category'));
   state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
 
   const { data: catData } = await sb.from(T_CATEGORIES).select('*').order('sort_order', { ascending: true });
@@ -3435,8 +3435,8 @@ function getCategoryMemberEntries(category) {
 async function loadAttendanceForFiscalYear() {
   state.attendance = new Map();
   if (!state.fiscalYearId) return;
-  const { data, error } = await sb
-    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId);
+  const { data, error } = await fetchAllPaged(() => sb
+    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId).order('id'));
   if (error) { console.error(error); return; }
   for (const row of (data ?? [])) {
     state.attendance.set(attKey(row.member_id, row.category, row.month_seq), row.status);
@@ -5431,6 +5431,22 @@ async function updateMemberField(memberId, field, value) {
   const m = state.members.find(m => m.id === memberId);
   if (m) m[field] = value;
   await sb.from(T_MEMBERS).update({ [field]: value }).eq('id', memberId);
+}
+
+// Supabase は1回の読み込みで最大1000件までしか返さないため、
+// 件数が増えるテーブルは1000件ずつ区切って最後まで読み込む。
+// buildQuery は並び順（order）まで付けたクエリを毎回新しく作って返す関数。
+// 戻り値は従来の書き方に合わせて { data, error } の形にする。
+async function fetchAllPaged(buildQuery) {
+  const PAGE = 1000;
+  const rows = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  return { data: rows, error: null };
 }
 
 async function fetchAllRows(table, selectStr) {
