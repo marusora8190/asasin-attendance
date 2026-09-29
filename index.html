@@ -221,6 +221,12 @@ nav.app-nav .logout { font-size: 12px; color: var(--color-ink-soft); text-decora
 .doc-list-table .btn-light { height: 32px; padding: 4px 12px; font-size: 13px; }
 .doc-title-link { background: none; border: none; padding: 0; font-size: 15px; color: var(--color-navy); text-align: left; }
 .doc-title-link:hover { text-decoration: underline; }
+.ref-file-meta { font-size: 12px; color: var(--color-ink-soft); margin-top: 2px; }
+.ref-add-box { max-width: 900px; background: white; border: 1px dashed var(--color-line); border-radius: 8px; padding: 14px 16px; margin-top: 8px; }
+.ref-add-box h3 { font-size: 14px; margin: 0 0 10px; color: var(--color-navy); }
+.ref-edit-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ref-edit-row select { height: 36px; }
+.ref-edit-row input[type=text] { flex: 1; min-width: 220px; height: 36px; padding: 4px 10px; border: 1px solid var(--color-line); border-radius: 6px; font-size: 14px; }
 .doc-rename-input { width: 100%; max-width: 420px; font-size: 15px; padding: 6px 10px; border: 1px solid var(--color-accent); border-radius: 6px; }
 .doc-rename-input:focus { outline: none; }
 @media print {
@@ -800,6 +806,7 @@ async function renderMainShell() {
             <button class="tab" data-view="category-members-page">区分名簿</button>
             <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
             <button class="tab" data-view="docs">資料作成</button>
+            <button class="tab" data-view="references">参考資料</button>
             <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
             <button class="tab" data-view="help">使い方</button>
           </div>
@@ -933,6 +940,7 @@ function renderView() {
   // 資料作成の画面から離れるときは、未保存の変更をすぐ保存する
   if (state.view !== 'docs' && typeof docsState !== 'undefined' && docsState.dirty) flushDocSave();
   if (state.view === 'docs') renderDocsView(container);
+  else if (state.view === 'references') renderRefsView(container);
   else if (state.view === 'grid') renderGridView(container);
   else if (state.view === 'field') renderFieldView(container);
   else if (state.view === 'report') renderReportView(container, 'asagami');
@@ -944,6 +952,240 @@ function renderView() {
   else if (state.view === 'nioigake-roles-page') renderNioigakeRolesPageView(container);
   else if (state.view === 'categories-page') renderCategoriesPageView(container);
   else if (state.view === 'help') renderHelpView(container);
+}
+
+// ==================== 参考資料（ファイルに「年・月・名前」を付けて保管） ====================
+const T_REFERENCES = 'asagami_references';
+const REF_MAX_BYTES = 8 * 1024 * 1024; // 1ファイル8MBまで
+
+const refsState = { list: [], loaded: false, yearFilter: 'all', editingId: null };
+
+function currentReikiYear() { return new Date().getFullYear() - 1837; }
+function refDisplayName(r) {
+  const parts = [];
+  if (r.reiki_year) parts.push(`立教${r.reiki_year}年`);
+  if (r.month) parts.push(`${r.month}月`);
+  const head = parts.join('');
+  return head ? `${head}　${r.title}` : r.title;
+}
+function refFormatSize(n) {
+  if (!n) return '';
+  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))}KB`;
+  return `${(n / 1024 / 1024).toFixed(1)}MB`;
+}
+function refYearOptions(selected, includeBlank) {
+  const now = currentReikiYear();
+  const years = new Set([now - 3, now - 2, now - 1, now, now + 1]);
+  refsState.list.forEach((r) => { if (r.reiki_year) years.add(r.reiki_year); });
+  if (selected) years.add(selected);
+  const opts = [...years].sort((a, b) => b - a).map((y) => `<option value="${y}" ${y === selected ? 'selected' : ''}>立教${y}年（${y + 1837}年）</option>`);
+  if (includeBlank) opts.push(`<option value="" ${!selected ? 'selected' : ''}>年なし</option>`);
+  return opts.join('');
+}
+function refMonthOptions(selected) {
+  const opts = [`<option value="" ${!selected ? 'selected' : ''}>月なし</option>`];
+  for (let m = 1; m <= 12; m++) opts.push(`<option value="${m}" ${m === selected ? 'selected' : ''}>${m}月</option>`);
+  return opts.join('');
+}
+
+async function loadRefsList() {
+  const { data, error } = await sb.from(T_REFERENCES)
+    .select('id,reiki_year,month,title,file_name,mime_type,file_size,sort_order,updated_at')
+    .order('reiki_year', { ascending: false, nullsFirst: false })
+    .order('month', { ascending: false, nullsFirst: false })
+    .order('sort_order', { ascending: true })
+    .order('id', { ascending: false });
+  if (error) { alert('参考資料の一覧を読み込めませんでした: ' + error.message); return; }
+  refsState.list = data ?? [];
+  refsState.loaded = true;
+}
+
+async function fetchRefBlob(id) {
+  const { data, error } = await sb.from(T_REFERENCES).select('data_base64,mime_type,file_name').eq('id', id).maybeSingle();
+  if (error || !data || !data.data_base64) { alert('ファイルを読み込めませんでした' + (error ? ': ' + error.message : '')); return null; }
+  const bin = atob(data.data_base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return { blob: new Blob([bytes], { type: data.mime_type || 'application/octet-stream' }), fileName: data.file_name || 'file' };
+}
+
+async function renderRefsView(container) {
+  if (!refsState.loaded) {
+    container.innerHTML = `<div class="loading">読み込み中…</div>`;
+    await loadRefsList();
+    if (state.view !== 'references') return;
+  }
+  const years = [...new Set(refsState.list.map((r) => r.reiki_year).filter(Boolean))].sort((a, b) => b - a);
+  if (refsState.yearFilter !== 'all' && refsState.yearFilter !== 'none' && !years.includes(refsState.yearFilter)) refsState.yearFilter = 'all';
+  const filterTabs = [
+    `<button class="tab-pill ${refsState.yearFilter === 'all' ? 'active' : ''}" data-ref-year="all">すべて</button>`,
+    ...years.map((y) => `<button class="tab-pill ${refsState.yearFilter === y ? 'active' : ''}" data-ref-year="${y}">立教${y}年</button>`),
+  ];
+  if (refsState.list.some((r) => !r.reiki_year)) filterTabs.push(`<button class="tab-pill ${refsState.yearFilter === 'none' ? 'active' : ''}" data-ref-year="none">年なし</button>`);
+  const shown = refsState.list.filter((r) => refsState.yearFilter === 'all' || (refsState.yearFilter === 'none' ? !r.reiki_year : r.reiki_year === refsState.yearFilter));
+
+  const rows = shown.map((r) => {
+    if (refsState.editingId === r.id) {
+      return `
+      <tr data-ref-id="${r.id}">
+        <td colspan="3">
+          <div class="ref-edit-row">
+            <select class="ref-edit-year">${refYearOptions(r.reiki_year, true)}</select>
+            <select class="ref-edit-month">${refMonthOptions(r.month)}</select>
+            <input type="text" class="ref-edit-title" value="${escapeHtml(r.title)}" placeholder="名前（例: にをいがけデー参加要項）" />
+            <button class="btn-dark" data-ref-act="save-edit" data-id="${r.id}">決定</button>
+            <button class="btn-light" data-ref-act="cancel-edit" data-id="${r.id}">やめる</button>
+          </div>
+        </td>
+      </tr>`;
+    }
+    return `
+      <tr data-ref-id="${r.id}">
+        <td>
+          <button class="doc-title-link" data-ref-act="open" data-id="${r.id}">${escapeHtml(refDisplayName(r))}</button>
+          <div class="ref-file-meta">${escapeHtml(r.file_name || '')}${r.file_size ? `（${refFormatSize(r.file_size)}）` : ''}</div>
+        </td>
+        <td style="color:var(--color-ink-soft);font-size:13px;white-space:nowrap;">${formatDocDate(r.updated_at)}</td>
+        <td style="white-space:nowrap;text-align:right;">
+          <button class="btn-light" data-ref-act="open" data-id="${r.id}">開く</button>
+          <button class="btn-light" data-ref-act="download" data-id="${r.id}">ダウンロード</button>
+          <button class="btn-light" data-ref-act="edit" data-id="${r.id}">名前を変更</button>
+          <button class="btn-light" data-ref-act="del" data-id="${r.id}" style="color:var(--color-absent);">削除</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const nowY = currentReikiYear();
+  const nowM = new Date().getMonth() + 1;
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header">
+        <div>
+          <p class="eyebrow">出欠管理システム</p>
+          <h1 class="font-display">参考資料</h1>
+        </div>
+      </div>
+      <p class="hint-text">PDF・写真・エクセルなどのファイルに、「立教○年○月　名前」を付けて保管できます。</p>
+
+      <div class="ref-add-box">
+        <h3>＋ 新しい参考資料を追加</h3>
+        <div class="ref-edit-row">
+          <select id="ref-new-year">${refYearOptions(nowY, true)}</select>
+          <select id="ref-new-month">${refMonthOptions(nowM)}</select>
+          <input type="text" id="ref-new-title" placeholder="名前（例: にをいがけデー参加要項）" />
+        </div>
+        <div class="ref-edit-row" style="margin-top:8px;">
+          <input type="file" id="ref-new-file" />
+          <button class="btn-dark" id="ref-add-btn">追加</button>
+          <span id="ref-add-status" style="font-size:13px;color:var(--color-ink-soft);"></span>
+        </div>
+        <p class="hint-text" style="margin:6px 0 0;">名前を空欄のままにすると、ファイル名がそのまま名前になります。1つのファイルは8MBまでです。</p>
+      </div>
+
+      <div class="category-tabs" style="margin-top:20px;">${filterTabs.join('')}</div>
+      ${shown.length ? `
+        <table class="doc-list-table">
+          <thead><tr><th style="text-align:left;">名前</th><th style="text-align:left;">更新</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>` : `<p style="color:var(--color-ink-soft);margin-top:20px;">まだ参考資料がありません。上の「追加」から登録してください。</p>`}
+    </div>
+  `;
+
+  container.querySelectorAll('[data-ref-year]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.refYear;
+      refsState.yearFilter = (v === 'all' || v === 'none') ? v : Number(v);
+      renderView();
+    });
+  });
+
+  document.getElementById('ref-add-btn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('ref-add-status');
+    const file = document.getElementById('ref-new-file').files[0];
+    const yearVal = document.getElementById('ref-new-year').value;
+    const monthVal = document.getElementById('ref-new-month').value;
+    let title = document.getElementById('ref-new-title').value.trim();
+    if (!file) { statusEl.textContent = '⚠ ファイルを選んでください'; return; }
+    if (file.size > REF_MAX_BYTES) { statusEl.textContent = `⚠ ファイルが大きすぎます（${refFormatSize(file.size)}）。8MBまでにしてください`; return; }
+    if (!title) title = file.name.replace(/\.[^.]+$/, '');
+    statusEl.textContent = '追加中…';
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const { data, error } = await sb.from(T_REFERENCES).insert({
+      reiki_year: yearVal ? Number(yearVal) : null,
+      month: monthVal ? Number(monthVal) : null,
+      title,
+      file_name: file.name,
+      mime_type: file.type || 'application/octet-stream',
+      file_size: file.size,
+      data_base64: base64,
+    }).select('id,reiki_year,month,title,file_name,mime_type,file_size,sort_order,updated_at').single();
+    if (error) { statusEl.textContent = '⚠ 追加できませんでした: ' + error.message; return; }
+    refsState.loaded = false;
+    refsState.yearFilter = data.reiki_year || 'all';
+    renderView();
+  });
+
+  container.querySelectorAll('[data-ref-act]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = Number(btn.dataset.id);
+      const item = refsState.list.find((r) => r.id === id);
+      const act = btn.dataset.refAct;
+      if (act === 'open' || act === 'download') {
+        const win = act === 'open' ? window.open('', '_blank') : null;
+        const got = await fetchRefBlob(id);
+        if (!got) { if (win) win.close(); return; }
+        const url = URL.createObjectURL(got.blob);
+        if (act === 'open') {
+          const viewable = /^(application\/pdf|image\/|text\/)/.test(got.blob.type);
+          if (win && viewable) { win.location.href = url; }
+          else {
+            if (win) win.close();
+            const a = document.createElement('a'); a.href = url; a.download = got.fileName; document.body.appendChild(a); a.click(); a.remove();
+          }
+        } else {
+          const a = document.createElement('a'); a.href = url; a.download = got.fileName; document.body.appendChild(a); a.click(); a.remove();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+      }
+      if (act === 'edit') { refsState.editingId = id; renderView(); return; }
+      if (act === 'cancel-edit') { refsState.editingId = null; renderView(); return; }
+      if (act === 'save-edit') {
+        const tr = btn.closest('tr');
+        const yearVal = tr.querySelector('.ref-edit-year').value;
+        const monthVal = tr.querySelector('.ref-edit-month').value;
+        const title = tr.querySelector('.ref-edit-title').value.trim() || (item ? item.title : '無題');
+        const patch = { reiki_year: yearVal ? Number(yearVal) : null, month: monthVal ? Number(monthVal) : null, title, updated_at: new Date().toISOString() };
+        const { error } = await sb.from(T_REFERENCES).update(patch).eq('id', id);
+        if (error) { alert('変更できませんでした: ' + error.message); return; }
+        refsState.editingId = null;
+        refsState.loaded = false;
+        renderView();
+        return;
+      }
+      if (act === 'del') {
+        if (!confirm(`「${item ? refDisplayName(item) : 'この資料'}」を削除します。元に戻せません。よろしいですか？`)) return;
+        const { error } = await sb.from(T_REFERENCES).delete().eq('id', id);
+        if (error) { alert('削除できませんでした: ' + error.message); return; }
+        refsState.loaded = false;
+        renderView();
+      }
+    });
+  });
+  const editTitle = container.querySelector('.ref-edit-title');
+  if (editTitle) {
+    editTitle.focus();
+    editTitle.addEventListener('keydown', (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (e.key === 'Enter') container.querySelector('[data-ref-act="save-edit"]').click();
+      if (e.key === 'Escape') container.querySelector('[data-ref-act="cancel-edit"]').click();
+    });
+  }
 }
 
 // ==================== 資料作成（エクセルのような表） ====================
@@ -3347,7 +3589,18 @@ function renderHelpView(container) {
       </section>
 
       <section class="help-section">
-        <h2>⑪ 慰労拝受記録</h2>
+        <h2>⑪ 参考資料</h2>
+        <p>PDF・写真・エクセル・ワードなどのファイルに、「立教○年○月　名前」を付けて保管しておく画面です。</p>
+        <ul>
+          <li>「＋ 新しい参考資料を追加」で、年(立教○年)・月・名前を選んで入力し、ファイルを選んで「追加」を押します。年や月は「年なし」「月なし」も選べます。名前を空欄にすると、ファイル名がそのまま名前になります。1つのファイルは8MBまでです。</li>
+          <li>一覧は、年・月の新しい順に並びます。上のタブで「立教○年」ごとに絞り込めます。</li>
+          <li>「開く」でファイルを表示します(PDF・写真は新しいタブで開き、エクセルなどはダウンロードされます)。「ダウンロード」でパソコンに保存できます。</li>
+          <li>「名前を変更」で、年・月・名前を後から直せます。「削除」で削除できます(元に戻せません)。</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h2>⑫ 慰労拝受記録</h2>
         <p>慰労拝受(中元・歳暮)の出欠確認時間・廊下整列時間・部終了時間・常傭拝受時間・日付・備考を、年度ごとに記録する表です。</p>
         <ul>
           <li>過去5年分だけ保存され、新しい年度になると自動的に一番古い年が消え、最新の年が一番上に追加されます。</li>
