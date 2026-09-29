@@ -294,6 +294,7 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   font-size: 14px; user-select: none; touch-action: none;
 }
 .drag-handle:active { cursor: grabbing; }
+.roster-print-note { font-size: 13px; color: var(--color-absent); white-space: nowrap; }
 tr[data-row-member].dragging { opacity: 0.4; }
 tr[data-row-member].drag-over-top { box-shadow: inset 0 2px 0 0 var(--color-navy); }
 tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-navy); }
@@ -5667,7 +5668,10 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
           </label>
         </div>
         <div class="field"><label>&nbsp;</label><button class="btn-light" id="roster-reset-layout-btn">配置をリセット</button></div>
-        <button class="btn-dark" id="roster-print-btn" style="margin-left:auto;">印刷 / PDFで保存</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+          <span class="roster-print-note">用紙はB5横、余白は最小で印刷してください</span>
+          <button class="btn-dark" id="roster-print-btn">印刷 / PDFで保存</button>
+        </div>
       </div>
       <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
         班の枠をクリックしたまま掴むと、位置をずらして配置できます(自動的に保存されます)。
