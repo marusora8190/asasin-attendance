@@ -3245,7 +3245,7 @@ function renderHelpView(container) {
           <li>「朝の神殿掃除」を選んでいるときは、「年」「月」の横に「21日」「22日」「23日」(表示名はマスターの当番表画面で変更可)のプルダウンが出ます。選ぶと、その日が当番の人だけに絞り込まれます。班タブの「日全体」はその日の当番の人だけ、「課全体」は日にちに関わらず全員を、それぞれ部署順・主任優先で表示します。</li>
           <li>にをいがけデーを選んでいるときは、「日全体」「課全体」で<strong>「総」(その日全体の責任者)の人が一番先頭</strong>に表示されます。</li>
           <li>「事前調査」で×だった人は、「会場外」「会場内」を確認するとき、名前が赤く表示されて見分けられます。</li>
-          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。名前の右側には「組責」「神責」「神名」「運転」のバッジが、該当する人にだけ表示されます。</li>
+          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。「この内容で保存」を押すと、<strong>タップした人は出席(○)、タップしていない人は欠席(×)</strong>として保存され、PCの出欠入力にもそのまま反映されます(画面に表示されている人だけが対象です)。名前の右側には「組責」「神責」「神名」「運転」のバッジが、該当する人にだけ表示されます。</li>
           <li>「全員出席」でその場に表示されている全員を出席にできます。入力が終わったら「この内容で保存」を押してください。保存した班のタブには✓が付き、内容を変えると✓は消えます。</li>
           <li>右上の「Update」ボタンで、キャッシュを無視して最新版を読み込み直せます。押しても出欠入力には戻らず、<strong>選んでいた区分・班・月などもそのまま</strong>で現場入力の画面に戻ってきます。</li>
         </ul>
@@ -4971,7 +4971,7 @@ function renderFieldView(container) {
         ${showDutyDayFilter ? `<select id="field-duty-day-select">${dutyDayOptions}</select>` : ''}
       </div>
       <div class="field-dept-tabs no-print">${deptTabs}</div>
-      <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。</p>
+      <p class="hint-text no-print" style="margin-top:8px;">名前をタップすると色がつき、出席として記録されます。もう一度タップすると取り消せます。班ごとに入力が終わったら「この内容で保存」を押してください(保存済みの班にはタブに✓が付きます)。<strong>保存すると、タップしていない人は「欠席(×)」になります。</strong></p>
       <div class="field-chip-grid">${chipsHtml}</div>
       <div class="field-action-row no-print">
         <button class="field-all-present-btn" id="field-all-present-btn">全員出席</button>
@@ -5063,6 +5063,10 @@ function renderFieldView(container) {
     if (msgEl) msgEl.textContent = '';
   });
   document.getElementById('field-save-btn').addEventListener('click', () => {
+    const presentCount = orderedMembers.filter((m) => state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) === '○').length;
+    if (orderedMembers.length > 0 && presentCount === 0) {
+      if (!confirm('出席の人が1人もいません。この班の全員を「欠席(×)」として保存しますか？')) return;
+    }
     saveFieldGroup(orderedMembers, monthSeq);
   });
 }
@@ -5101,10 +5105,12 @@ async function saveFieldGroup(members, seq) {
   if (state.fiscalYearId) {
     const upserts = [];
     const deleteIds = [];
+    // スマホではタッチした人＝出席(○)、タッチしていない人＝欠席(×)として保存する
     for (const m of members) {
-      const status = state.attendance.get(attKey(m.id, category, seq)) ?? null;
-      if (status === null) deleteIds.push(m.id);
-      else upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status });
+      const present = state.attendance.get(attKey(m.id, category, seq)) === '○';
+      const status = present ? '○' : '×';
+      state.attendance.set(attKey(m.id, category, seq), status);
+      upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status });
     }
     if (upserts.length > 0) {
       const res = await sb.from(T_ATTENDANCE).upsert(upserts, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
