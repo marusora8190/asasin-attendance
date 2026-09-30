@@ -300,6 +300,10 @@ table.att-table tbody tr:hover { background: #fbfaf6; }
   font-size: 14px; user-select: none; touch-action: none;
 }
 .drag-handle:active { cursor: grabbing; }
+.roles-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.roles-toolbar select { height: 36px; margin-left: 6px; }
+.roles-toolbar button:disabled { opacity: 0.4; cursor: default; }
+.roles-status { font-size: 13px; }
 .roster-print-note { font-size: 13px; color: var(--color-absent); white-space: nowrap; }
 tr[data-row-member].dragging { opacity: 0.4; }
 tr[data-row-member].drag-over-top { box-shadow: inset 0 2px 0 0 var(--color-navy); }
@@ -671,6 +675,7 @@ const state = {
   fieldDutyDayFilter: null, // 朝の神殿掃除の現場入力での当番日絞り込み（1/2/3またはnull=全員）
   fieldDeptFilter: 'eizen-shomu',
   docId: null, // 資料作成で開いている資料
+  nioigakeRolesYear: new Date().getFullYear() - 1837, // にをいがけデー役割で選んでいる年（立教）
   fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
   fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
 };
@@ -693,15 +698,8 @@ const app = document.getElementById('app');
 // ==================== 起動処理 ====================
 const UNLOCK_KEY = 'asagami_unlocked';
 
-// ⑥専用の共通ログインアカウント（Supabase Auth）。利用者はパスワードだけ入力する。
-// データベース側では、このアカウントでログインしている人だけが asagami_ のテーブルに触れる設定にしている。
-const LOGIN_EMAIL = 'asagami@marusora-apps.example.com';
-
 async function init() {
-  // ログイン状態が切れたとき（パスワード変更・ログアウトなど）はログイン画面に戻す
-  sb.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT') renderLogin();
-  });
+  state.unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1';
   renderRoot();
 }
 
@@ -709,11 +707,9 @@ function isFieldOnlyMode() {
   return new URLSearchParams(window.location.search).get('field') === '1';
 }
 
-async function renderRoot() {
-  // 一度ログインした端末では、ログイン状態が保存されているので、そのままアプリを開く
-  const { data } = await sb.auth.getSession();
-  if (data && data.session) renderMainShell();
-  else renderLogin();
+function renderRoot() {
+  // 合言葉ログインは廃止し、常に直接アプリを開く
+  renderMainShell();
 }
 
 // ==================== ログイン画面 ====================
@@ -723,9 +719,8 @@ function renderLogin() {
       <form class="login-card" id="login-form">
         <p class="eyebrow">出欠管理システム</p>
         <h1 class="font-display">営繕課出欠記録</h1>
-        <label for="login-password">パスワード</label>
-        <input id="login-password" type="password" autofocus placeholder="パスワードを入力" autocomplete="current-password" />
-        <p style="font-size:12px;opacity:.7;margin:4px 0 0;">この端末で一度ログインすると、次回からは入力不要です。</p>
+        <label for="login-password">合言葉</label>
+        <input id="login-password" type="password" autofocus placeholder="合言葉を入力" />
         <p class="login-error" id="login-error" style="display:none;"></p>
         <button type="submit" class="btn-primary" id="login-submit">ログイン</button>
       </form>
@@ -745,11 +740,11 @@ function renderLogin() {
     submitBtn.disabled = true;
     submitBtn.textContent = '確認中…';
     try {
-      const { error } = await sb.auth.signInWithPassword({ email: LOGIN_EMAIL, password });
-      if (error) {
-        if (/invalid/i.test(error.message)) throw new Error('パスワードが違います。');
-        throw new Error('接続に失敗しました。しばらくしてからもう一度お試しください。');
-      }
+      const { data, error } = await sb.rpc(RPC_VERIFY_PASSWORD, { input_password: password });
+      if (error) throw new Error('接続に失敗しました。しばらくしてからもう一度お試しください。');
+      if (!data) throw new Error('合言葉が違います。');
+      sessionStorage.setItem(UNLOCK_KEY, '1');
+      state.unlocked = true;
       renderRoot();
     } catch (err) {
       errorEl.textContent = err.message;
@@ -3379,7 +3374,7 @@ async function loadFiscalYearsAndMembers() {
   const { data: posData } = await sb.from(T_POSITIONS).select('*').order('sort_order', { ascending: true });
   state.positions = posData ?? [];
 
-  const { data: catMemberData } = await fetchAllPaged(() => sb.from(T_CATEGORY_MEMBERS).select('*').order('member_id').order('category'));
+  const { data: catMemberData } = await sb.from(T_CATEGORY_MEMBERS).select('*');
   state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
 
   const { data: catData } = await sb.from(T_CATEGORIES).select('*').order('sort_order', { ascending: true });
@@ -3445,8 +3440,8 @@ function getCategoryMemberEntries(category) {
 async function loadAttendanceForFiscalYear() {
   state.attendance = new Map();
   if (!state.fiscalYearId) return;
-  const { data, error } = await fetchAllPaged(() => sb
-    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId).order('id'));
+  const { data, error } = await sb
+    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId);
   if (error) { console.error(error); return; }
   for (const row of (data ?? [])) {
     state.attendance.set(attKey(row.member_id, row.category, row.month_seq), row.status);
@@ -3567,7 +3562,11 @@ function renderHelpView(container) {
         <h2>⑨ にをいがけデー役割</h2>
         <p>「区分名簿」で参加日を選んだ人だけが、参加日ごとに横並びで表示されます。</p>
         <ul>
+          <li>上の「年」で、立教の年号(今年・去年・2年前・3年前)を選べます。年が新しくなると、一番古い年は選べなくなり、新しい年が「今年」になります。役割は年ごとに別々に保存されます。</li>
           <li>「神」(神名流し)・「責」(神名流しリーダー)・「総」(その日全体の責任者、1人だけ)・「運」(マイクロ運転手)をチェックできます。</li>
+          <li>チェックが終わったら<strong>「各役割のチェック済み」</strong>を押すと保存され、チェックの付いていない所が薄くなって、変更できない状態になります。<strong>押すまでは保存されない</strong>ので注意してください。</li>
+          <li>もう一度変更したいときは<strong>「解除」</strong>を押すと、チェックを付け直せるようになります。直したら、また「各役割のチェック済み」を押してください。</li>
+          <li>「今年」の役割を保存すると、出欠入力の「役割」欄や、現場入力(スマホ)のバッジにも反映されます。</li>
           <li>「総」にチェックした人は、出欠入力と現場入力(スマホ)の「日全体」「課全体」で、名簿の一番先頭に表示されます。</li>
           <li>ここに表示されるのは、「表示区分」タブで「神・責欄を使う」がオンになっている区分だけです。</li>
           <li>各見出しには参加人数が自動で表示されます。</li>
@@ -4018,138 +4017,220 @@ function buildCategoryMembersPanel(options) {
   return panel;
 }
 
+// ==================== にをいがけデーの役割（年ごと） ====================
+const T_NIOIGAKE_ROLES = 'asagami_nioigake_roles';
+const T_NIOIGAKE_ROLE_LOCKS = 'asagami_nioigake_role_locks';
+const ROLE_FLAGS = ['is_special', 'is_special_leader', 'is_day_leader', 'is_transport'];
+
+// 選べる年：今年・去年・2年前・3年前（立教の年号。年が変わると一番古い年は自動で消える）
+function nioigakeRoleYearChoices() {
+  const now = currentReikiYear();
+  return [
+    { year: now, label: `立教${now}年（今年）` },
+    { year: now - 1, label: `立教${now - 1}年（去年）` },
+    { year: now - 2, label: `立教${now - 2}年（2年前）` },
+    { year: now - 3, label: `立教${now - 3}年（3年前）` },
+  ];
+}
+
 function buildNioigakeRolesPanel() {
   const panel = document.createElement('div');
   panel.className = 'master-panel';
   panel.style.maxWidth = '900px';
+  const choices = nioigakeRoleYearChoices();
+  if (!choices.some((c) => c.year === state.nioigakeRolesYear)) state.nioigakeRolesYear = choices[0].year;
   panel.innerHTML = `
     <h2>にをいがけデーの役割区分</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
-      「区分の名簿を管理」で参加日を選んだ人だけがここに表示されます。
-      「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)を表します。
+      「区分名簿」で参加日を選んだ人だけがここに表示されます。
+      「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)、「運」はマイクロ運転手を表します。
     </p>
-    <button class="btn-light" id="roles-highlight-toggle-btn" style="margin-bottom:10px;">各役割のチェック済み</button>
-    <div id="nioigake-roles-body" style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;"></div>
+    <div class="roles-toolbar">
+      <label style="font-size:13px;color:var(--color-navy);">年
+        <select id="roles-year-select">${choices.map((c) => `<option value="${c.year}" ${c.year === state.nioigakeRolesYear ? 'selected' : ''}>${c.label}</option>`).join('')}</select>
+      </label>
+      <button class="btn-dark" id="roles-lock-btn">各役割のチェック済み</button>
+      <button class="btn-light" id="roles-unlock-btn">解除</button>
+      <span id="roles-status" class="roles-status"></span>
+    </div>
+    <div id="nioigake-roles-body" style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;"><div class="loading">読み込み中…</div></div>
   `;
 
-  panel.querySelector('#roles-highlight-toggle-btn').addEventListener('click', () => {
-    state.nioigakeRolesHighlightOnly = !state.nioigakeRolesHighlightOnly;
+  const rs = { year: state.nioigakeRolesYear, draft: new Map(), locked: false, dirty: false, extraCats: [] };
+  const draftKey = (category, memberId) => `${category}::${memberId}`;
+  const getFlags = (category, memberId) => rs.draft.get(draftKey(category, memberId)) || { is_special: false, is_special_leader: false, is_day_leader: false, is_transport: false };
+  const setStatus = (text, color) => {
+    const el = panel.querySelector('#roles-status');
+    if (el) { el.textContent = text; el.style.color = color || 'var(--color-ink-soft)'; }
+  };
+
+  async function loadYear(year) {
+    rs.year = year;
+    rs.draft = new Map();
+    rs.dirty = false;
+    panel.querySelector('#nioigake-roles-body').innerHTML = '<div class="loading">読み込み中…</div>';
+    const [rolesRes, lockRes] = await Promise.all([
+      sb.from(T_NIOIGAKE_ROLES).select('*').eq('reiki_year', year),
+      sb.from(T_NIOIGAKE_ROLE_LOCKS).select('*').eq('reiki_year', year).maybeSingle(),
+    ]);
+    if (rolesRes.error) { setStatus('読み込めませんでした: ' + rolesRes.error.message, 'var(--color-absent)'); return; }
+    (rolesRes.data || []).forEach((r) => {
+      rs.draft.set(draftKey(r.category, r.member_id), { is_special: !!r.is_special, is_special_leader: !!r.is_special_leader, is_day_leader: !!r.is_day_leader, is_transport: !!r.is_transport });
+    });
+    rs.locked = !!(lockRes.data && lockRes.data.locked);
+    // その年に役割が付いていた区分で、今は「神・責欄を使う」になっていない区分も表示する
+    const cats = new Set((rolesRes.data || []).map((r) => r.category));
+    rs.extraCats = [...cats].filter((c) => !SPECIAL_ROLE_CATEGORIES.includes(c) && CATEGORY_LABEL[c]);
     renderRoles();
-  });
+  }
+
+  function categoriesToShow() { return [...SPECIAL_ROLE_CATEGORIES, ...rs.extraCats]; }
+  function membersFor(category) {
+    const list = [...getOrderedMembersForCategory(category)];
+    // 今の名簿にはいないが、その年に役割が付いていた人も表示する
+    for (const key of rs.draft.keys()) {
+      const [cat, idStr] = key.split('::');
+      if (cat !== category) continue;
+      const id = Number(idStr);
+      if (!list.some((m) => m.id === id)) {
+        const m = state.members.find((mm) => mm.id === id);
+        if (m) list.push(m);
+      }
+    }
+    return list;
+  }
+
+  function updateButtons() {
+    const lockBtn = panel.querySelector('#roles-lock-btn');
+    const unlockBtn = panel.querySelector('#roles-unlock-btn');
+    lockBtn.disabled = rs.locked;
+    unlockBtn.disabled = !rs.locked;
+    if (rs.locked) setStatus('✓ チェック済み（保存されています）。変更するときは「解除」を押してください', 'var(--color-present)');
+    else if (rs.dirty) setStatus('未保存の変更があります。終わったら「各役割のチェック済み」を押してください', 'var(--color-absent)');
+    else setStatus('入力できます。終わったら「各役割のチェック済み」を押すと保存されます');
+  }
 
   function renderRoles() {
-    const highlightOnly = state.nioigakeRolesHighlightOnly;
-    const toggleBtn = panel.querySelector('#roles-highlight-toggle-btn');
-    toggleBtn.classList.toggle('active-toggle', highlightOnly);
+    const locked = rs.locked;
     const bodyEl = panel.querySelector('#nioigake-roles-body');
-    bodyEl.innerHTML = SPECIAL_ROLE_CATEGORIES.map((category, index) => {
-      const members = getOrderedMembersForCategory(category);
+    const cats = categoriesToShow();
+    if (!cats.length) {
+      bodyEl.innerHTML = `<p class="hint-text">「表示区分」で「神・責欄を使う」がオンになっている区分がありません。</p>`;
+      updateButtons();
+      return;
+    }
+    bodyEl.innerHTML = cats.map((category, index) => {
+      const members = membersFor(category);
       const rows = members.map((m) => {
-        const cm = state.categoryMembers.get(`${category}::${m.id}`);
-        const isSpecial = cm ? !!cm.is_special : false;
-        const isLeader = cm ? !!cm.is_special_leader : false;
-        const isDayLeader = cm ? !!cm.is_day_leader : false;
-        const isTransport = cm ? !!cm.is_transport : false;
-        const fade = (checked) => (highlightOnly && !checked) ? 'opacity:0.15;' : '';
+        const f = getFlags(category, m.id);
+        const dis = locked ? 'disabled' : '';
+        const fade = (checked) => (locked && !checked) ? 'opacity:0.15;' : '';
         return `<li data-id="${m.id}" style="justify-content:space-between;border-bottom:1px solid var(--color-line);padding:6px 0;">
           <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}</span>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(isSpecial)}">
-            <input type="checkbox" class="role-special-checkbox" data-id="${m.id}" data-category="${category}" ${isSpecial ? 'checked' : ''} />神
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(f.is_special)}">
+            <input type="checkbox" class="role-cb" data-flag="is_special" data-id="${m.id}" data-category="${category}" ${f.is_special ? 'checked' : ''} ${dis} />神
           </label>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${isSpecial ? fade(isLeader) : 'opacity:0.3;'}">
-            <input type="checkbox" class="role-leader-checkbox" data-id="${m.id}" data-category="${category}" ${isLeader ? 'checked' : ''} ${isSpecial ? '' : 'disabled'} />責
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${f.is_special ? fade(f.is_special_leader) : 'opacity:0.3;'}">
+            <input type="checkbox" class="role-cb" data-flag="is_special_leader" data-id="${m.id}" data-category="${category}" ${f.is_special_leader ? 'checked' : ''} ${(f.is_special && !locked) ? '' : 'disabled'} />責
           </label>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(isDayLeader)}">
-            <input type="checkbox" class="role-day-leader-checkbox" data-id="${m.id}" data-category="${category}" ${isDayLeader ? 'checked' : ''} />総
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(f.is_day_leader)}">
+            <input type="checkbox" class="role-cb" data-flag="is_day_leader" data-id="${m.id}" data-category="${category}" ${f.is_day_leader ? 'checked' : ''} ${dis} />総
           </label>
-          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(isTransport)}">
-            <input type="checkbox" class="role-transport-checkbox" data-id="${m.id}" data-category="${category}" ${isTransport ? 'checked' : ''} />運
+          <label style="display:flex;align-items:center;gap:2px;font-size:12px;${fade(f.is_transport)}">
+            <input type="checkbox" class="role-cb" data-flag="is_transport" data-id="${m.id}" data-category="${category}" ${f.is_transport ? 'checked' : ''} ${dis} />運
           </label>
         </li>`;
       }).join('') || `<li style="color:var(--color-ink-soft);border-bottom:1px solid var(--color-line);padding:6px 0;">まだ誰も参加日が選ばれていません</li>`;
-
       return `
         <div style="min-width:260px;flex:1;${index > 0 ? 'border-left:1px solid var(--color-line);padding-left:20px;' : ''}">
-          <h3 style="margin:0 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category])}　　<span style="color:var(--color-ink-soft);font-weight:500;">${members.length}名</span></h3>
+          <h3 style="margin:0 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category] || category)}　　<span style="color:var(--color-ink-soft);font-weight:500;">${members.length}名</span></h3>
           <ul class="modal-list" data-category="${category}">${rows}</ul>
         </div>
       `;
     }).join('');
 
-    bodyEl.querySelectorAll('.role-special-checkbox').forEach((cb) => {
-      cb.addEventListener('change', async () => {
+    bodyEl.querySelectorAll('.role-cb').forEach((cb) => {
+      cb.addEventListener('change', () => {
         const memberId = Number(cb.dataset.id);
         const category = cb.dataset.category;
-        const key = `${category}::${memberId}`;
-        const m = state.members.find((mm) => mm.id === memberId);
-        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
-        const updated = { ...existing, member_id: memberId, category, is_special: cb.checked };
-        if (!cb.checked) updated.is_special_leader = false;
-        state.categoryMembers.set(key, updated);
-        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-        renderRoles();
-      });
-    });
-
-    bodyEl.querySelectorAll('.role-leader-checkbox').forEach((cb) => {
-      cb.addEventListener('change', async () => {
-        const memberId = Number(cb.dataset.id);
-        const category = cb.dataset.category;
-        const key = `${category}::${memberId}`;
-        const m = state.members.find((mm) => mm.id === memberId);
-        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true, is_special: true };
-        const updated = { ...existing, member_id: memberId, category, is_special_leader: cb.checked };
-        state.categoryMembers.set(key, updated);
-        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-        renderRoles();
-      });
-    });
-
-    bodyEl.querySelectorAll('.role-day-leader-checkbox').forEach((cb) => {
-      cb.addEventListener('change', async () => {
-        const memberId = Number(cb.dataset.id);
-        const category = cb.dataset.category;
-        const wasChecked = cb.checked;
-
-        if (wasChecked) {
-          // その日全体の責任者は1人だけにする（同じ日の他の人のチェックを外す）
-          const updates = [];
-          for (const [key, cm] of state.categoryMembers.entries()) {
-            if (cm.category === category && cm.is_day_leader && cm.member_id !== memberId) {
-              const cleared = { ...cm, is_day_leader: false };
-              state.categoryMembers.set(key, cleared);
-              updates.push(cleared);
-            }
+        const flag = cb.dataset.flag;
+        const f = { ...getFlags(category, memberId), [flag]: cb.checked };
+        if (flag === 'is_special' && !cb.checked) f.is_special_leader = false;
+        if (flag === 'is_day_leader' && cb.checked) {
+          // その日全体の責任者は1人だけにする
+          for (const [key, other] of rs.draft.entries()) {
+            if (key.startsWith(`${category}::`) && key !== draftKey(category, memberId) && other.is_day_leader) rs.draft.set(key, { ...other, is_day_leader: false });
           }
-          if (updates.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(updates, { onConflict: 'member_id,category' });
         }
-
-        const key = `${category}::${memberId}`;
-        const m = state.members.find((mm) => mm.id === memberId);
-        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
-        const updated = { ...existing, member_id: memberId, category, is_day_leader: wasChecked };
-        state.categoryMembers.set(key, updated);
-        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+        rs.draft.set(draftKey(category, memberId), f);
+        rs.dirty = true;
         renderRoles();
       });
     });
-
-    bodyEl.querySelectorAll('.role-transport-checkbox').forEach((cb) => {
-      cb.addEventListener('change', async () => {
-        const memberId = Number(cb.dataset.id);
-        const category = cb.dataset.category;
-        const key = `${category}::${memberId}`;
-        const m = state.members.find((mm) => mm.id === memberId);
-        const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999), is_active: true };
-        const updated = { ...existing, member_id: memberId, category, is_transport: cb.checked };
-        state.categoryMembers.set(key, updated);
-        await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-        renderRoles();
-      });
-    });
+    updateButtons();
   }
 
-  renderRoles();
+  // 「各役割のチェック済み」：その年の役割を保存して、チェック済み（編集できない状態）にする
+  panel.querySelector('#roles-lock-btn').addEventListener('click', async () => {
+    const btn = panel.querySelector('#roles-lock-btn');
+    btn.disabled = true;
+    setStatus('保存中…');
+    const year = rs.year;
+    const cats = categoriesToShow();
+    const rows = [];
+    for (const [key, f] of rs.draft.entries()) {
+      const [category, idStr] = key.split('::');
+      if (!cats.includes(category)) continue;
+      if (ROLE_FLAGS.some((k) => f[k])) rows.push({ reiki_year: year, category, member_id: Number(idStr), ...f, updated_at: new Date().toISOString() });
+    }
+    let res = await sb.from(T_NIOIGAKE_ROLES).delete().eq('reiki_year', year).in('category', cats);
+    if (!res.error && rows.length) res = await sb.from(T_NIOIGAKE_ROLES).insert(rows);
+    if (!res.error) res = await sb.from(T_NIOIGAKE_ROLE_LOCKS).upsert({ reiki_year: year, locked: true, updated_at: new Date().toISOString() }, { onConflict: 'reiki_year' });
+    // 今年の分は、出欠入力・現場入力の「役割」表示にも反映する
+    if (!res.error && year === currentReikiYear()) {
+      const updates = [];
+      for (const category of SPECIAL_ROLE_CATEGORIES) {
+        for (const m of getOrderedMembersForCategory(category)) {
+          const key = `${category}::${m.id}`;
+          const existing = state.categoryMembers.get(key);
+          if (!existing) continue;
+          const f = getFlags(category, m.id);
+          const updated = { ...existing, member_id: m.id, category, ...f };
+          state.categoryMembers.set(key, updated);
+          updates.push(updated);
+        }
+      }
+      if (updates.length) res = await sb.from(T_CATEGORY_MEMBERS).upsert(updates, { onConflict: 'member_id,category' });
+    }
+    if (res.error) {
+      btn.disabled = false;
+      setStatus('保存できませんでした: ' + res.error.message, 'var(--color-absent)');
+      return;
+    }
+    rs.locked = true;
+    rs.dirty = false;
+    renderRoles();
+  });
+
+  // 「解除」：チェック済みを外して、もう一度編集できるようにする
+  panel.querySelector('#roles-unlock-btn').addEventListener('click', async () => {
+    const res = await sb.from(T_NIOIGAKE_ROLE_LOCKS).upsert({ reiki_year: rs.year, locked: false, updated_at: new Date().toISOString() }, { onConflict: 'reiki_year' });
+    if (res.error) { setStatus('解除できませんでした: ' + res.error.message, 'var(--color-absent)'); return; }
+    rs.locked = false;
+    renderRoles();
+  });
+
+  panel.querySelector('#roles-year-select').addEventListener('change', (e) => {
+    const next = Number(e.target.value);
+    if (rs.dirty && !confirm('保存していない変更があります。年を切り替えると、変更は消えます。よろしいですか？')) {
+      e.target.value = String(rs.year);
+      return;
+    }
+    state.nioigakeRolesYear = next;
+    loadYear(next);
+  });
+
+  loadYear(state.nioigakeRolesYear);
   return panel;
 }
 
@@ -5441,22 +5522,6 @@ async function updateMemberField(memberId, field, value) {
   const m = state.members.find(m => m.id === memberId);
   if (m) m[field] = value;
   await sb.from(T_MEMBERS).update({ [field]: value }).eq('id', memberId);
-}
-
-// Supabase は1回の読み込みで最大1000件までしか返さないため、
-// 件数が増えるテーブルは1000件ずつ区切って最後まで読み込む。
-// buildQuery は並び順（order）まで付けたクエリを毎回新しく作って返す関数。
-// 戻り値は従来の書き方に合わせて { data, error } の形にする。
-async function fetchAllPaged(buildQuery) {
-  const PAGE = 1000;
-  const rows = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await buildQuery().range(from, from + PAGE - 1);
-    if (error) return { data: null, error };
-    rows.push(...(data ?? []));
-    if (!data || data.length < PAGE) break;
-  }
-  return { data: rows, error: null };
 }
 
 async function fetchAllRows(table, selectStr) {
