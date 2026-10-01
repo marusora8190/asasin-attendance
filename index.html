@@ -3374,7 +3374,7 @@ async function loadFiscalYearsAndMembers() {
   const { data: posData } = await sb.from(T_POSITIONS).select('*').order('sort_order', { ascending: true });
   state.positions = posData ?? [];
 
-  const { data: catMemberData } = await sb.from(T_CATEGORY_MEMBERS).select('*');
+  const { data: catMemberData } = await fetchAllPaged(() => sb.from(T_CATEGORY_MEMBERS).select('*').order('member_id').order('category'));
   state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
 
   const { data: catData } = await sb.from(T_CATEGORIES).select('*').order('sort_order', { ascending: true });
@@ -3437,11 +3437,26 @@ function getCategoryMemberEntries(category) {
     .sort((a, b) => a._catSortOrder - b._catSortOrder);
 }
 
+// 1000件対策：Supabaseは1回に最大1000件しか返さないため、1000件ずつ区切って最後まで読む。
+// makeQuery は毎回新しいクエリを作る関数（並び順を固定するため order を付けておく）。
+// 戻り値は従来の書き方に合わせて { data, error } の形にする。
+async function fetchAllPaged(makeQuery) {
+  const PAGE = 1000;
+  const rows = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await makeQuery().range(from, from + PAGE - 1);
+    if (error) return { data: rows.length ? rows : null, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  return { data: rows, error: null };
+}
+
 async function loadAttendanceForFiscalYear() {
   state.attendance = new Map();
   if (!state.fiscalYearId) return;
-  const { data, error } = await sb
-    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId);
+  const { data, error } = await fetchAllPaged(() => sb
+    .from(T_ATTENDANCE).select('*').eq('fiscal_year_id', state.fiscalYearId).order('id'));
   if (error) { console.error(error); return; }
   for (const row of (data ?? [])) {
     state.attendance.set(attKey(row.member_id, row.category, row.month_seq), row.status);
@@ -4566,10 +4581,11 @@ function yearlyAttKey(memberId, category, fiscalYearId, checkpoint) {
 }
 
 async function loadYearlyAttendance(category) {
-  const { data } = await sb.from(T_ATTENDANCE)
+  const { data } = await fetchAllPaged(() => sb.from(T_ATTENDANCE)
     .select('member_id,fiscal_year_id,month_seq,status')
     .eq('category', category)
-    .in('month_seq', YEARLY_CHECKPOINTS.map((cp) => cp.seq));
+    .in('month_seq', YEARLY_CHECKPOINTS.map((cp) => cp.seq))
+    .order('id'));
   state.yearlyAttendance = new Map((data ?? []).map((r) => [yearlyAttKey(r.member_id, category, r.fiscal_year_id, r.month_seq), r.status]));
   state.yearlyAttendanceLoadedCategory = category;
 }
