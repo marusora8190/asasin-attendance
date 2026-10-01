@@ -3517,7 +3517,7 @@ function renderHelpView(container) {
           <li>「朝の神殿掃除」を選んでいるときは、「年」「月」の横に「21日」「22日」「23日」(表示名はマスターの当番表画面で変更可)のプルダウンが出ます。選ぶと、その日が当番の人だけに絞り込まれます。班タブの「日全体」はその日の当番の人だけ、「課全体」は日にちに関わらず全員を、それぞれ部署順・主任優先で表示します。</li>
           <li>にをいがけデーを選んでいるときは、「日全体」「課全体」で<strong>「総」(その日全体の責任者)の人が一番先頭</strong>に表示されます。</li>
           <li>「事前調査」で×だった人は、「会場外」「会場内」を確認するとき、名前が赤く表示されて見分けられます。</li>
-          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。「この内容で保存」を押すと、<strong>タップした人は出席(○)、タップしていない人は欠席(×)</strong>として保存され、PCの出欠入力にもそのまま反映されます(画面に表示されている人だけが対象です)。名前の右側には「組責」「神責」「神名」「運転」のバッジが、該当する人にだけ表示されます。</li>
+          <li>名前をタップすると枠が塗りつぶされて「出席」になります。もう一度タップすると取り消せます。「この内容で保存」を押すと、<strong>タップした人だけが出席(○)として保存</strong>され、タップしていない人は空欄のままです(×にはなりません。ただし「事前調査」だけは、タップしていない人が欠席(×)として保存されます)。保存した内容はPCの出欠入力にもそのまま反映されます(画面に表示されている人だけが対象です)。名前の右側には「組責」「神責」「神名」「運転」のバッジが、該当する人にだけ表示されます。</li>
           <li>「全員出席」でその場に表示されている全員を出席にできます。入力が終わったら「この内容で保存」を押してください。保存した班のタブには✓が付き、内容を変えると✓は消えます。</li>
           <li>右上の「Update」ボタンで、キャッシュを無視して最新版を読み込み直せます。押しても出欠入力には戻らず、<strong>選んでいた区分・班・月などもそのまま</strong>で現場入力の画面に戻ってきます。</li>
         </ul>
@@ -5435,7 +5435,12 @@ function renderFieldView(container) {
   document.getElementById('field-save-btn').addEventListener('click', () => {
     const presentCount = orderedMembers.filter((m) => state.attendance.get(attKey(m.id, state.fieldCategory, monthSeq)) === '○').length;
     if (orderedMembers.length > 0 && presentCount === 0) {
-      if (!confirm('出席の人が1人もいません。この班の全員を「欠席(×)」として保存しますか？')) return;
+      const preSurvey = YEARLY_CATEGORIES.includes(state.fieldCategory)
+        && !NO_CHECKPOINT_YEARLY_CATEGORIES.includes(state.fieldCategory) && monthSeq === 1;
+      const msg = preSurvey
+        ? '出席の人が1人もいません。この班の全員を「欠席(×)」として保存しますか？'
+        : '出席の人が1人もいません。このまま保存しますか？（以前に保存した○があれば取り消されます）';
+      if (!confirm(msg)) return;
     }
     saveFieldGroup(orderedMembers, monthSeq);
   });
@@ -5475,20 +5480,33 @@ async function saveFieldGroup(members, seq) {
   if (state.fiscalYearId) {
     const upserts = [];
     const deleteIds = [];
-    // スマホではタッチした人＝出席(○)、タッチしていない人＝欠席(×)として保存する
+    // 「事前調査」だけは、タッチしていない人を欠席(×)として保存する
+    // （×の人を「会場外」「会場内」のチェック時に赤く表示するため）。
+    const isPreSurvey = YEARLY_CATEGORIES.includes(category)
+      && !NO_CHECKPOINT_YEARLY_CATEGORIES.includes(category) && seq === 1;
+    // それ以外は、タッチした人＝出席(○)だけを保存し、タッチしていない人は×にしない（空欄のまま）。
+    // タッチを取り消した人は、以前に保存した○を取り消す。PCで入力済みの×はそのまま残す。
     for (const m of members) {
-      const present = state.attendance.get(attKey(m.id, category, seq)) === '○';
-      const status = present ? '○' : '×';
-      state.attendance.set(attKey(m.id, category, seq), status);
-      upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status });
+      const key = attKey(m.id, category, seq);
+      const present = state.attendance.get(key) === '○';
+      if (present) {
+        upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status: '○' });
+      } else if (isPreSurvey) {
+        state.attendance.set(key, '×');
+        upserts.push({ member_id: m.id, fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status: '×' });
+      } else {
+        deleteIds.push(m.id);
+        if (state.attendance.get(key) !== '×') state.attendance.delete(key);
+      }
     }
     if (upserts.length > 0) {
       const res = await sb.from(T_ATTENDANCE).upsert(upserts, { onConflict: 'member_id,fiscal_year_id,category,month_seq' });
       if (res.error) saveError = res.error;
     }
     if (deleteIds.length > 0 && !saveError) {
+      // 消すのは○だけ（PCで入力した×は消さない）
       const res = await sb.from(T_ATTENDANCE).delete()
-        .match({ fiscal_year_id: state.fiscalYearId, category, month_seq: seq })
+        .match({ fiscal_year_id: state.fiscalYearId, category, month_seq: seq, status: '○' })
         .in('member_id', deleteIds);
       if (res.error) saveError = res.error;
     }
