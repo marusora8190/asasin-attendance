@@ -554,6 +554,7 @@ const T_CONFIG = 'asagami_config';
 const T_RECORDS = 'asagami_records';
 const T_CEREMONY_TIMES = 'asagami_ceremony_times';
 const T_CHECKPOINT_TIMES = 'asagami_checkpoint_times';
+const T_NIOIGAKE_DATES = 'asagami_nioigake_dates'; // にをいがけデー：年（立教）ごとの各区分の実際の日付
 const RPC_VERIFY_PASSWORD = 'asagami_verify_password';
 
 const MONTH_SEQUENCE = [4,5,6,7,8,9,10,11,12,1,2,3];
@@ -676,6 +677,7 @@ const state = {
   fieldDeptFilter: 'eizen-shomu',
   docId: null, // 資料作成で開いている資料
   nioigakeRolesYear: new Date().getFullYear() - 1837, // にをいがけデー役割で選んでいる年（立教）
+  nioigakeDates: new Map(), // にをいがけデーの日付（`${立教年}::${区分}` → 'YYYY-MM-DD'）
   fieldSavedGroups: new Set(), // 保存済みの「区分×年度×月(or年)×班」の組み合わせ
   fieldSavedGroups: new Set(), // 保存済みの班（`${category}-${deptKey}`）
 };
@@ -3394,6 +3396,9 @@ async function loadFiscalYearsAndMembers() {
   const { data: checkpointTimeData } = await sb.from(T_CHECKPOINT_TIMES).select('*');
   state.checkpointTimes = new Map((checkpointTimeData ?? []).map((r) => [`${r.category}::${r.fiscal_year_id}::${r.checkpoint}`, r.time_value]));
 
+  const { data: nioigakeDateData } = await fetchAllPaged(() => sb.from(T_NIOIGAKE_DATES).select('*').order('reiki_year').order('category'));
+  state.nioigakeDates = new Map((nioigakeDateData ?? []).map((r) => [`${r.reiki_year}::${r.category}`, r.event_date]));
+
   const { data: configData } = await sb.from(T_CONFIG).select('day1_label,day2_label,day3_label').eq('id', true).maybeSingle();
   if (configData) {
     state.rosterDay1 = configData.day1_label ?? state.rosterDay1;
@@ -3433,6 +3438,15 @@ function applyCategoriesFromState() {
 function shortenCategoryLabelForDay(label) {
   const match = label.match(/[（(]([^）)]+)[）)]/);
   return match ? match[1] : label;
+}
+
+// にをいがけデーの、指定した年（立教）の日付を「9/29」の形で返す（未設定なら空文字）
+// 日付は「にをいがけデー役割」の画面で、年ごとに入力する
+function nioigakeDateText(category, reikiYear) {
+  const d = state.nioigakeDates.get(`${reikiYear}::${category}`);
+  if (!d) return '';
+  const [, m, day] = String(d).split('-');
+  return `${Number(m)}/${Number(day)}`;
 }
 
 function getCategoryMemberEntries(category) {
@@ -3594,6 +3608,7 @@ function renderHelpView(container) {
           <li>もう一度変更したいときは<strong>「解除」</strong>を押すと、チェックを付け直せるようになります。直したら、また「各役割のチェック済み」を押してください。</li>
           <li>「今年」の役割を保存すると、出欠入力の「役割」欄や、現場入力(スマホ)のバッジにも反映されます。</li>
           <li>「総」にチェックした人は、出欠入力と現場入力(スマホ)の「日全体」「課全体」で、名簿の一番先頭に表示されます。</li>
+          <li>各参加日の見出しの下の<strong>「日付」</strong>に、その年の実際の日付を入れてください(にをいがけデーは毎年9/28・9/29・9/30のうち2日で、年によって変わるため)。入力するとすぐ保存され、「チェック済み」のときでも変更できます。今年の日付は区分名簿・現場入力(スマホ)の区分名の横に、各年の日付は出欠入力の年の見出しの下に表示されます。</li>
           <li>ここに表示されるのは、「表示区分」タブで「神・責欄を使う」がオンになっている区分だけです。</li>
           <li>各見出しには参加人数が自動で表示されます。</li>
         </ul>
@@ -4187,7 +4202,7 @@ function buildCategoryMembersPanel(options) {
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
-      ${specialCatsInView.length > 0 ? '「にをいがけデー」欄は参加日をプルダウンで選びます。「神」「責」「総」「運」の設定は「にをいがけデー役割」で行います。' : ''}
+      ${specialCatsInView.length > 0 ? '「にをいがけデー」欄は参加日をプルダウンで選びます。「神」「責」「総」「運」の設定と、今年の日付の入力は「にをいがけデー役割」で行います。' : ''}
     </p>
     <div style="overflow-x:auto;">
       <div id="category-members-header-${sortByCategory}" style="display:flex;justify-content:space-between;font-size:11px;color:var(--color-ink-soft);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--color-line);background:var(--color-panel);position:sticky;top:0;z-index:1;min-width:840px;"></div>
@@ -4204,7 +4219,10 @@ function buildCategoryMembersPanel(options) {
     return `<span style="width:120px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
       <select class="nioigake-day-select" data-id="${m.id}" style="font-size:11px;max-width:110px;">
         <option value="">－</option>
-        ${specialCatsInView.map((c) => `<option value="${c}" ${activeCat === c ? 'selected' : ''}>${escapeHtml(shortenCategoryLabelForDay(CATEGORY_LABEL[c]))}</option>`).join('')}
+        ${specialCatsInView.map((c) => {
+          const dateText = nioigakeDateText(c, currentReikiYear());
+          return `<option value="${c}" ${activeCat === c ? 'selected' : ''}>${escapeHtml(shortenCategoryLabelForDay(CATEGORY_LABEL[c]))}${dateText ? ' ' + dateText : ''}</option>`;
+        }).join('')}
       </select>
     </span>`;
   }
@@ -4322,7 +4340,8 @@ function buildNioigakeRolesPanel() {
     <h2>にをいがけデーの役割区分</h2>
     <p class="modal-hint" style="margin-bottom:10px;">
       「区分名簿」で参加日を選んだ人だけがここに表示されます。
-      「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)、「運」はマイクロ運転手を表します。
+      「神」は神名流しなど特別な役割の人、「責」はそのリーダー(神責)、「総」はその日全体の責任者(1人だけ)、「運」はマイクロ運転手を表します。<br>
+      各区分の「日付」に、その年の実際の日付を入れると、区分名簿・出欠入力・現場入力に「1日目 9/29」のように表示されます（日付は入力するとすぐ保存されます。「チェック済み」でも変更できます）。
     </p>
     <div class="roles-toolbar">
       <label style="font-size:13px;color:var(--color-navy);">年
@@ -4423,10 +4442,33 @@ function buildNioigakeRolesPanel() {
       return `
         <div style="min-width:260px;flex:1;${index > 0 ? 'border-left:1px solid var(--color-line);padding-left:20px;' : ''}">
           <h3 style="margin:0 0 6px;font-size:14px;">${escapeHtml(CATEGORY_LABEL[category] || category)}　　<span style="color:var(--color-ink-soft);font-weight:500;">${members.length}名</span></h3>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-navy);margin:0 0 6px;">日付
+            <input type="date" class="nioigake-date-input" data-category="${category}" value="${escapeHtml(state.nioigakeDates.get(`${rs.year}::${category}`) || '')}" min="${rs.year + 1837}-01-01" max="${rs.year + 1837}-12-31" style="font-size:12px;" />
+          </label>
           <ul class="modal-list" data-category="${category}">${rows}</ul>
         </div>
       `;
     }).join('');
+
+    bodyEl.querySelectorAll('.nioigake-date-input').forEach((input) => {
+      input.addEventListener('change', async () => {
+        const category = input.dataset.category;
+        const year = rs.year;
+        const key = `${year}::${category}`;
+        const value = input.value || null;
+        const res = value
+          ? await sb.from(T_NIOIGAKE_DATES).upsert({ reiki_year: year, category, event_date: value, updated_at: new Date().toISOString() }, { onConflict: 'reiki_year,category' })
+          : await sb.from(T_NIOIGAKE_DATES).delete().eq('reiki_year', year).eq('category', category);
+        if (res.error) {
+          input.value = state.nioigakeDates.get(key) || '';
+          alert('日付を保存できませんでした: ' + res.error.message);
+          return;
+        }
+        if (value) state.nioigakeDates.set(key, value);
+        else state.nioigakeDates.delete(key);
+        alert(value ? `${CATEGORY_LABEL[category] || category} の日付を ${nioigakeDateText(category, year)} にしました。` : `${CATEGORY_LABEL[category] || category} の日付を消しました。`);
+      });
+    });
 
     bodyEl.querySelectorAll('.role-cb').forEach((cb) => {
       cb.addEventListener('change', () => {
@@ -5235,7 +5277,9 @@ function renderGridView(container) {
     ? sortedFiscalYears.map((fy) => activeCheckpoints.map((cp) =>
         useCheckpoints
           ? `<th style="text-align:center;font-size:11px;">立教${fy.start_reiki_year}年<br>${cp.label}</th>`
-          : `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`
+          : (isSpecialRoleCategory && nioigakeDateText(state.category, fy.start_reiki_year))
+            ? `<th style="text-align:center;">立教${fy.start_reiki_year}年<br><span style="font-size:11px;">${nioigakeDateText(state.category, fy.start_reiki_year)}</span></th>`
+            : `<th style="text-align:center;">立教${fy.start_reiki_year}年</th>`
       ).join('')).join('')
     : MONTH_SEQUENCE.map(m => `<th style="text-align:center;">${m}月</th>`).join('');
 
@@ -5529,9 +5573,10 @@ function renderFieldView(container) {
   const checkpointOptions = YEARLY_CHECKPOINTS.map((cp) =>
     `<option value="${cp.seq}" ${cp.seq === state.fieldCheckpoint ? 'selected' : ''}>${cp.label}</option>`
   ).join('');
-  const catOptions = FIELD_VISIBLE_CATEGORIES.map(c =>
-    `<option value="${c}" ${state.fieldCategory === c ? 'selected' : ''}>${CATEGORY_LABEL[c]}</option>`
-  ).join('');
+  const catOptions = FIELD_VISIBLE_CATEGORIES.map(c => {
+    const dateText = SPECIAL_ROLE_CATEGORIES.includes(c) ? nioigakeDateText(c, currentReikiYear()) : '';
+    return `<option value="${c}" ${state.fieldCategory === c ? 'selected' : ''}>${CATEGORY_LABEL[c]}${dateText ? ' ' + dateText : ''}</option>`;
+  }).join('');
 
   // 朝の神殿掃除では、当番日（実際の日にち表示）で名簿を絞り込める
   const showDutyDayFilter = state.fieldCategory === 'asagami';
