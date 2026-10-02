@@ -3561,6 +3561,7 @@ function renderHelpView(container) {
           <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
           <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
           <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
+          <li><strong>古いデータの整理</strong>：年度を選ぶと、それより前の年度の出欠記録と、その年度の設定（年度・会場外/会場内の時刻・にをいがけデー役割）をまとめて削除します。「対象を確認する」で件数を確かめてから削除してください（削除の直前に管理者パスワードが必要です）。慰労拝受・にをいがけデーの通算の出席・欠席の回数も、消した年度の分だけ減ります。元に戻せません。</li>
         </ul>
       </section>
 
@@ -3676,6 +3677,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
+        <button class="btn-dark" id="edit-cleanup-btn">古いデータの整理</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
     </div>
@@ -3699,6 +3701,10 @@ function renderMasterView(container) {
   });
   document.getElementById('edit-member-dept-btn').addEventListener('click', () => {
     state.masterOpen.memberDept = !state.masterOpen.memberDept;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-cleanup-btn').addEventListener('click', () => {
+    state.masterOpen.cleanup = !state.masterOpen.cleanup;
     renderMasterPanels();
   });
 
@@ -3783,7 +3789,255 @@ function renderMasterPanels() {
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
+  if (state.masterOpen.cleanup) panelsEl.appendChild(buildCleanupPanel());
 }
+
+// ==================== 古いデータの整理（マスター管理） ====================
+// 選んだ年度より前の年度について、次をまとめて削除する。
+// ・出欠記録（asagami_attendance）
+// ・年度そのもの（asagami_fiscal_years）
+// ・会場外/会場内の時刻（asagami_checkpoint_times）
+// ・にをいがけデー役割とその確定状態（asagami_nioigake_roles / asagami_nioigake_role_locks。立教年で判断）
+// 名簿・部署・立場・区分・参考資料・記録・資料作成などの土台のデータは消さない。
+// 件数は「数だけを数える」問い合わせで取るため、1000件の上限にかからない。
+// 削除はログイン中の⑥のアカウントで行うが、その前に管理者パスワード（②〜⑤と同じ管理者アカウント）を確認する。
+// （パスワードの確認だけを行い、⑥のログイン状態には影響させない）
+const ADMIN_EMAIL = 'admin@marusora-apps.example.com';
+let cleanupTargets = null; // { cutoff, years: [...], counts }
+
+function cleanupYearLabel(fy) {
+  return fy.label || `立教${fy.start_reiki_year}年度`;
+}
+
+function buildCleanupPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '520px';
+  const years = [...state.fiscalYears].sort((a, b) => a.start_reiki_year - b.start_reiki_year);
+  const oldest = years[0];
+  // 「この年度より前」を選ぶ欄なので、いちばん古い年度は選んでも対象が無い。2番目以降を並べる
+  const choices = years.slice(1);
+  panel.innerHTML = `
+    <h2>古いデータの整理</h2>
+    <p class="modal-hint" style="font-size:12px;line-height:1.6;">
+      選んだ年度より前の年度の、出欠記録と、その年度の設定（年度・会場外/会場内の時刻・にをいがけデー役割）をまとめて削除します。
+      名簿・部署・立場・区分・参考資料・記録・資料作成は消しません。削除したデータは元に戻せません。<br>
+      慰労拝受（中元・歳暮）・にをいがけデーの「通算の出席・欠席の回数」も、消した年度の分だけ減ります。
+    </p>
+    <p style="font-size:13px;margin:0 0 10px;">${oldest ? `いちばん古い年度：${escapeCleanup(cleanupYearLabel(oldest))}` : '年度がまだ登録されていません。'}</p>
+    <div id="cleanup-form"></div>
+    <div id="cleanup-result" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--color-paper);font-size:13px;line-height:1.7;white-space:pre-line;"></div>
+  `;
+  const form = panel.querySelector('#cleanup-form');
+  if (!choices.length) {
+    form.innerHTML = `<p style="font-size:13px;color:var(--color-ink-soft);margin:0;">年度が1つしか無いため、消せる古い年度はありません。</p>`;
+    return panel;
+  }
+  form.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="cleanup-year" style="border:1px solid var(--color-line);border-radius:8px;padding:8px 10px;font-size:14px;">
+        ${choices.map(fy => `<option value="${fy.start_reiki_year}">${escapeCleanup(cleanupYearLabel(fy))}</option>`).join('')}
+      </select>
+      <span style="font-size:13px;">より前の年度</span>
+      <button type="button" class="btn-light" id="cleanup-check-btn">対象を確認する</button>
+    </div>
+  `;
+  form.querySelector('#cleanup-year').addEventListener('change', () => resetCleanupResult());
+  form.querySelector('#cleanup-check-btn').addEventListener('click', () => checkCleanupTargets());
+  cleanupTargets = null;
+  return panel;
+}
+
+function escapeCleanup(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function resetCleanupResult() {
+  cleanupTargets = null;
+  const box = document.getElementById('cleanup-result');
+  if (box) { box.textContent = ''; box.style.display = 'none'; }
+}
+
+async function countCleanupRows(table, column, values) {
+  if (!values.length) return 0;
+  const { count, error } = await sb.from(table).select('*', { count: 'exact', head: true }).in(column, values);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+async function checkCleanupTargets() {
+  resetCleanupResult();
+  const box = document.getElementById('cleanup-result');
+  const sel = document.getElementById('cleanup-year');
+  if (!box || !sel) return;
+  box.style.display = 'block';
+  box.textContent = '対象を数えています…';
+  const cutoff = Number(sel.value);
+  try {
+    // 画面を開いたあとにほかの人が年度を追加・削除していることもあるため、年度の一覧を取り直す
+    const { data: fyData, error: fyError } = await sb.from(T_FISCAL_YEARS).select('*');
+    if (fyError) throw fyError;
+    const years = (fyData ?? []).filter(fy => fy.start_reiki_year < cutoff)
+      .sort((a, b) => a.start_reiki_year - b.start_reiki_year);
+    if (!years.length) { box.textContent = 'この年度より前の年度はありません。'; return; }
+    if (years.some(fy => fy.is_current)) {
+      box.textContent = '対象に「今年度」として設定されている年度が含まれているため、削除できません。';
+      return;
+    }
+    const ids = years.map(fy => fy.id);
+    const reikiYears = years.map(fy => fy.start_reiki_year);
+    const counts = {
+      attendance: await countCleanupRows(T_ATTENDANCE, 'fiscal_year_id', ids),
+      checkpoint: await countCleanupRows(T_CHECKPOINT_TIMES, 'fiscal_year_id', ids),
+      roles: await countCleanupRows(T_NIOIGAKE_ROLES, 'reiki_year', reikiYears),
+      locks: await countCleanupRows(T_NIOIGAKE_ROLE_LOCKS, 'reiki_year', reikiYears),
+    };
+    cleanupTargets = { cutoff, years, counts };
+    box.innerHTML = '';
+    const msg = document.createElement('div');
+    msg.textContent =
+      `対象の年度：${years.map(cleanupYearLabel).join('、')}（${years.length}年度分）\n` +
+      `・出欠記録：${counts.attendance}件\n` +
+      `・会場外/会場内の時刻：${counts.checkpoint}件\n` +
+      `・にをいがけデー役割：${counts.roles}件`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-dark';
+    btn.style.cssText = 'margin-top:10px;color:#b42318;border-color:#b42318;';
+    btn.textContent = `この${years.length}年度分を削除する`;
+    btn.addEventListener('click', () => runCleanup());
+    box.appendChild(msg);
+    box.appendChild(btn);
+  } catch (e) {
+    console.error(e);
+    box.textContent = '対象を数えられませんでした：' + (e.message || e);
+  }
+}
+
+// 管理者パスワードの入力画面（やめる＝null）
+function askCleanupAdminPassword(message) {
+  return new Promise(resolve => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:16px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;color:#222;border-radius:10px;padding:20px;max-width:360px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.3);font-size:15px;line-height:1.5;';
+    const title = document.createElement('div');
+    title.textContent = '管理者パスワード';
+    title.style.cssText = 'font-weight:bold;margin-bottom:6px;';
+    const msg = document.createElement('div');
+    msg.textContent = message;
+    msg.style.cssText = 'font-size:13px;margin-bottom:10px;';
+    const input = document.createElement('input');
+    input.type = 'password';
+    input.autocomplete = 'off';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:8px;font-size:16px;border:1px solid #999;border-radius:6px;';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:14px;';
+    const cancel = document.createElement('button');
+    cancel.type = 'button'; cancel.textContent = 'やめる';
+    cancel.style.cssText = 'padding:8px 16px;font-size:14px;border:1px solid #999;background:#f3f3f3;color:#222;border-radius:6px;cursor:pointer;';
+    const ok = document.createElement('button');
+    ok.type = 'button'; ok.textContent = 'OK';
+    ok.style.cssText = 'padding:8px 20px;font-size:14px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer;';
+    row.appendChild(cancel); row.appendChild(ok);
+    box.appendChild(title); box.appendChild(msg); box.appendChild(input); box.appendChild(row);
+    wrap.appendChild(box);
+    document.body.appendChild(wrap);
+    const done = v => { wrap.remove(); resolve(v); };
+    cancel.onclick = () => done(null);
+    ok.onclick = () => done(input.value);
+    input.onkeydown = e => {
+      if (e.key === 'Enter') { e.preventDefault(); done(input.value); }
+      if (e.key === 'Escape') { e.preventDefault(); done(null); }
+    };
+    setTimeout(() => input.focus(), 0);
+  });
+}
+
+// 管理者パスワードが正しいかを確かめる（正しければ true、やめたら false）。
+// ⑥のログイン（sb）とは別に直接問い合わせるため、⑥のログイン状態は変わらない。
+async function confirmCleanupAdminPassword() {
+  let message = '削除するには管理者パスワードを入力してください。';
+  for (;;) {
+    const pw = await askCleanupAdminPassword(message);
+    if (pw === null || pw === '') return false;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ADMIN_EMAIL, password: pw })
+      });
+      if (res.ok) return true;
+      if (res.status === 400) { message = 'パスワードが違います。もう一度入力してください。'; continue; }
+      alert('接続に失敗しました。しばらくしてからもう一度お試しください。');
+      return false;
+    } catch (e) {
+      console.error(e);
+      alert('接続に失敗しました。しばらくしてからもう一度お試しください。');
+      return false;
+    }
+  }
+}
+
+async function runCleanup() {
+  if (!cleanupTargets) return;
+  const sel = document.getElementById('cleanup-year');
+  if (!sel || Number(sel.value) !== cleanupTargets.cutoff) {
+    resetCleanupResult();
+    alert('年度が変わったため、もう一度「対象を確認する」を押してください。');
+    return;
+  }
+  const { years, counts } = cleanupTargets;
+  if (!(await confirmCleanupAdminPassword())) return;
+  if (!confirm(
+    `次の${years.length}年度分を削除します。\n${years.map(cleanupYearLabel).join('\n')}\n\n` +
+    `出欠記録 ${counts.attendance}件と、その年度の設定も削除されます。\n` +
+    `慰労拝受・にをいがけデーの通算の出席・欠席の回数も、この分だけ減ります。\n削除したデータは元に戻せません。\n\n本当に削除しますか？`
+  )) return;
+
+  const box = document.getElementById('cleanup-result');
+  box.textContent = '削除しています…（画面を閉じずにお待ちください）';
+  const ids = years.map(fy => fy.id);
+  const reikiYears = years.map(fy => fy.start_reiki_year);
+  let errorMsg = '';
+  try {
+    // 出欠記録は件数が多くなるため、年度ごとに分けて消す
+    for (const id of ids) {
+      const { error } = await sb.from(T_ATTENDANCE).delete().eq('fiscal_year_id', id);
+      if (error) throw error;
+    }
+    let r = await sb.from(T_CHECKPOINT_TIMES).delete().in('fiscal_year_id', ids);
+    if (r.error) throw r.error;
+    r = await sb.from(T_NIOIGAKE_ROLES).delete().in('reiki_year', reikiYears);
+    if (r.error) throw r.error;
+    r = await sb.from(T_NIOIGAKE_ROLE_LOCKS).delete().in('reiki_year', reikiYears);
+    if (r.error) throw r.error;
+    r = await sb.from(T_FISCAL_YEARS).delete().in('id', ids);
+    if (r.error) throw r.error;
+  } catch (e) {
+    console.error(e);
+    errorMsg = e.message || String(e);
+  }
+
+  // 本当に消えたかを数え直して確かめる
+  let remainAtt = -1, remainFy = -1;
+  try {
+    remainAtt = await countCleanupRows(T_ATTENDANCE, 'fiscal_year_id', ids);
+    remainFy = await countCleanupRows(T_FISCAL_YEARS, 'id', ids);
+  } catch (e) { console.error(e); }
+
+  cleanupTargets = null;
+  if (!errorMsg && remainAtt === 0 && remainFy === 0) {
+    alert(`${years.length}年度分（出欠記録 ${counts.attendance}件）を削除しました。\n画面を読み込み直します。`);
+    location.reload();
+    return;
+  }
+  box.textContent = '削除が途中で止まりました。' + (errorMsg ? `（${errorMsg}）` : '') +
+    (remainAtt > 0 ? `\n出欠記録が ${remainAtt}件 残っています。` : '') +
+    (remainFy > 0 ? `\n年度が ${remainFy}件 残っています。` : '') +
+    '\nもう一度「対象を確認する」から操作してください。';
+}
+// ==================== ここまで：古いデータの整理 ====================
 
 function buildDutyDayPanel() {
   const panel = document.createElement('div');
@@ -4966,7 +5220,6 @@ function renderGridView(container) {
         ${cells}
         <td style="text-align:center;color:var(--color-present);font-weight:500;">${s.present}</td>
         <td style="text-align:center;color:var(--color-absent);font-weight:500;">${s.absent}</td>
-        <td style="text-align:center;color:var(--color-ink-soft);">${s.rate != null ? Math.round(s.rate*100)+'%' : '—'}</td>
         <td style="text-align:center;">
           <div style="display:flex;gap:4px;justify-content:center;">
             <button class="icon-btn" data-action="move-up" data-member="${m.id}" ${index === 0 ? 'disabled' : ''} title="上へ">↑</button>
@@ -5032,7 +5285,6 @@ function renderGridView(container) {
               ${monthHeaders}
               <th style="text-align:center;">出席</th>
               <th style="text-align:center;">欠席</th>
-              <th style="text-align:center;">出席率</th>
               <th style="text-align:center;">操作</th>
             </tr>
           </thead>
@@ -5541,13 +5793,12 @@ async function toggleCell(memberId, seq, btnEl) {
   if (next === '○') btnEl.classList.add('present');
   if (next === '×') btnEl.classList.add('absent');
 
-  // 出席/欠席/出席率のセルを更新
+  // 出席/欠席のセルを更新（出席率の欄は2026年10月に廃止。右端は「操作」の欄）
   const row = btnEl.closest('tr');
   const s = computeSummary(memberId, state.category);
   const tds = row.querySelectorAll('td');
-  tds[tds.length - 4].textContent = s.present;
-  tds[tds.length - 3].textContent = s.absent;
-  tds[tds.length - 2].textContent = s.rate != null ? Math.round(s.rate * 100) + '%' : '—';
+  tds[tds.length - 3].textContent = s.present;
+  tds[tds.length - 2].textContent = s.absent;
 
   if (!state.fiscalYearId) return;
   let res;
