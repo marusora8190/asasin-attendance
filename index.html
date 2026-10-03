@@ -650,6 +650,7 @@ const state = {
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
   masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
+  gridCleanupOpen: false, // 出欠入力の上部の「古いデータの整理」を開いているか
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
   records: [], // asagami_records（にをいがけデーの要項などの記録）
@@ -3507,6 +3508,7 @@ function renderHelpView(container) {
         <h2>① 出欠入力</h2>
         <p>メンバーごとに、区分ごとの出欠(○×)を入力する画面です。</p>
         <ul>
+          <li>一番上の<strong>「古いデータの整理」</strong>を押すと、マスター管理と同じ「古いデータの整理」の画面が開きます(もう一度押すと閉じます)。使い方はマスター管理の説明と同じです。</li>
           <li>上部のタブ(朝の神殿掃除・月例参拝・慰労拝受(中元)・慰労拝受(歳暮)など)で、入力する区分を切り替えます。区分の種類は「表示区分」タブで追加・変更でき、出欠入力画面に表示するかどうかも区分ごとに選べます。</li>
           <li>「朝の神殿掃除」「月例参拝」など月ごとの区分は、各月のマスをクリックすると空欄→○→×→空欄の順に切り替わります。</li>
           <li>「年ごと」に設定された区分は、月の代わりに「立教○○○年」の列が並びます。「慰労拝受(中元)」「慰労拝受(歳暮)」のように「①事前調査 ②会場外 ③会場内」の3回チェックできる区分と、シンプルに年に1回だけの区分(例:にをいがけデー)があり、どちらにするかは区分ごとに設定できます。3回チェックできる区分では、事前調査で×だった人は、会場外・会場内の欄で氏名が赤く表示されます。</li>
@@ -5300,6 +5302,10 @@ function renderGridView(container) {
 
   container.innerHTML = `
     <div class="grid-wrap">
+      <div class="no-print" style="margin-bottom:12px;">
+        <button class="btn-dark" id="grid-cleanup-btn" style="width:auto;display:inline-block;white-space:nowrap;">古いデータの整理</button>
+      </div>
+      <div id="grid-cleanup-panel" class="no-print" style="margin-bottom:16px;"></div>
       <div class="grid-header no-print">
         <div id="grid-title-wrap" style="cursor:context-menu;">
           <h1 class="font-display" id="grid-title-h1">営繕課出欠記録</h1>
@@ -5339,6 +5345,15 @@ function renderGridView(container) {
   `;
 
   // イベント登録
+  // 「古いデータの整理」（マスター管理と同じ画面を、この画面の上部に開く・閉じる）
+  const gridCleanupPanelEl = document.getElementById('grid-cleanup-panel');
+  if (state.gridCleanupOpen) gridCleanupPanelEl.appendChild(buildCleanupPanel());
+  document.getElementById('grid-cleanup-btn').addEventListener('click', () => {
+    state.gridCleanupOpen = !state.gridCleanupOpen;
+    gridCleanupPanelEl.innerHTML = '';
+    if (state.gridCleanupOpen) gridCleanupPanelEl.appendChild(buildCleanupPanel());
+  });
+
   document.getElementById('fy-select').addEventListener('change', async (e) => {
     state.fiscalYearId = Number(e.target.value);
     await loadAttendanceForFiscalYear();
