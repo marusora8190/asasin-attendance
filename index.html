@@ -5346,12 +5346,20 @@ function renderGridView(container) {
 
   // イベント登録
   // 「古いデータの整理」（マスター管理と同じ画面を、この画面の上部に開く・閉じる）
+  // 開いたときは、画面の横幅いっぱいの横長で表示する
   const gridCleanupPanelEl = document.getElementById('grid-cleanup-panel');
-  if (state.gridCleanupOpen) gridCleanupPanelEl.appendChild(buildCleanupPanel());
+  const buildGridCleanupPanel = () => {
+    const panel = buildCleanupPanel();
+    panel.style.maxWidth = 'none';
+    panel.style.width = '100%';
+    panel.style.boxSizing = 'border-box';
+    return panel;
+  };
+  if (state.gridCleanupOpen) gridCleanupPanelEl.appendChild(buildGridCleanupPanel());
   document.getElementById('grid-cleanup-btn').addEventListener('click', () => {
     state.gridCleanupOpen = !state.gridCleanupOpen;
     gridCleanupPanelEl.innerHTML = '';
-    if (state.gridCleanupOpen) gridCleanupPanelEl.appendChild(buildCleanupPanel());
+    if (state.gridCleanupOpen) gridCleanupPanelEl.appendChild(buildGridCleanupPanel());
   });
 
   document.getElementById('fy-select').addEventListener('change', async (e) => {
