@@ -577,8 +577,8 @@ const GEPPAI_REPORT_DEPT_ORDER = ['庶務係', '現場第一班', '現場第二�
 const ROWS_PER_BLOCK = 19;
 
 // 区分ごとの表示順（部署でまとめ、各部署内は主任を先頭に）でメンバーを並べる
-function getOrderedMembersForCategory(category) {
-  const activeMembers = getCategoryMemberEntries(category);
+function getOrderedMembersForCategory(category, year = selectedRosterYear()) {
+  const activeMembers = getCategoryMemberEntries(category, year);
   if (category === 'geppai') {
     const deptOrder = new Map(GEPPAI_REPORT_DEPT_ORDER.map((name, i) => [name, i]));
     return activeMembers
@@ -666,7 +666,9 @@ const state = {
   yearlyAttendanceLoadedCategory: null,
   bulkActionFiscalYearId: null, // 慰労拝受の一括操作の対象年度
   bulkActionCheckpoint: 1, // 慰労拝受の一括操作の対象（事前調査/会場外/会場内）
-  categoryMembers: new Map(), // `${category}::${memberId}` -> {member_id, category, sort_order, is_active}
+  categoryMembers: new Map(), // `${立教年}::${category}::${memberId}` -> {member_id, category, reiki_year, sort_order, is_active}（区分名簿は年ごと）
+  rosterYears: [], // 区分名簿が保存されている年（立教）の一覧
+  catMembersYear: null, // 「区分名簿」画面で選んでいる年度・年（立教。nullなら出欠入力で選んでいる年度）
   ceremonyTimes: new Map(), // reiki_year -> {chugen_checkin, ...}
   ceremonyTimesYears: [],
   ceremonyTimesLoaded: false,
@@ -3387,8 +3389,9 @@ async function loadFiscalYearsAndMembers() {
   const { data: posData } = await sb.from(T_POSITIONS).select('*').order('sort_order', { ascending: true });
   state.positions = posData ?? [];
 
-  const { data: catMemberData } = await fetchAllPaged(() => sb.from(T_CATEGORY_MEMBERS).select('*').order('member_id').order('category'));
-  state.categoryMembers = new Map((catMemberData ?? []).map((r) => [`${r.category}::${r.member_id}`, r]));
+  const { data: catMemberData } = await fetchAllPaged(() => sb.from(T_CATEGORY_MEMBERS).select('*').order('reiki_year').order('member_id').order('category'));
+  state.categoryMembers = new Map((catMemberData ?? []).map((r) => [rosterKey(r.reiki_year, r.category, r.member_id), r]));
+  state.rosterYears = [...new Set((catMemberData ?? []).map((r) => r.reiki_year))].sort((a, b) => a - b);
 
   const { data: catData } = await sb.from(T_CATEGORIES).select('*').order('sort_order', { ascending: true });
   state.categories = catData ?? [];
@@ -3450,10 +3453,81 @@ function nioigakeDateText(category, reikiYear) {
   return `${Number(m)}/${Number(day)}`;
 }
 
-function getCategoryMemberEntries(category) {
+// ==================== 区分名簿（年度・年ごと） ====================
+// 区分名簿は、立教の年ごとに別々に保存する。朝の神殿掃除・月例参拝では「立教○年度」（4月〜翌3月）、
+// 慰労拝受・にをいがけデーでは「立教○年」の名簿として使う（どちらも年度の開始年の数字で管理する）。
+// その年の名簿がまだ無いときは、前の年（無ければ後の年）で一番近い年の名簿をそのまま使い、
+// 名簿を書き換えたときに初めて、その年の名簿を写して作る（元の年の名簿は変わらない）。
+const ROSTER_CONFLICT = 'member_id,category,reiki_year';
+
+function rosterKey(year, category, memberId) { return `${year}::${category}::${memberId}`; }
+
+// 出欠入力・報告書・現場入力などで選んでいる年度の立教年
+function selectedRosterYear() {
+  const fy = state.fiscalYears.find((y) => y.id === state.fiscalYearId);
+  return fy ? fy.start_reiki_year : currentReikiYear();
+}
+
+// その年の名簿として実際に使う年（その年の名簿が無ければ、一番近い年）
+function rosterBaseYear(year) {
+  const years = state.rosterYears;
+  if (years.includes(year)) return year;
+  const earlier = years.filter((y) => y < year);
+  if (earlier.length > 0) return earlier[earlier.length - 1];
+  const later = years.filter((y) => y > year);
+  return later.length > 0 ? later[0] : null;
+}
+
+function getRosterEntry(category, memberId, year) {
+  const base = rosterBaseYear(year);
+  if (base == null) return undefined;
+  return state.categoryMembers.get(rosterKey(base, category, memberId));
+}
+
+function alertIfRosterError(res) {
+  if (res && res.error) {
+    console.error(res.error);
+    alert('区分名簿を保存できませんでした。画面を読み込み直して、もう一度操作してください。\n（' + res.error.message + '）');
+    return true;
+  }
+  return false;
+}
+
+// 名簿を書き換える前に呼ぶ。その年の名簿がまだ無ければ、元にしている年の名簿を写して作る
+async function ensureRosterYear(year) {
+  if (state.rosterYears.includes(year)) return { error: null };
+  const base = rosterBaseYear(year);
+  const copies = [];
+  if (base != null) {
+    for (const r of state.categoryMembers.values()) {
+      if (r.reiki_year === base) copies.push({ ...r, reiki_year: year });
+    }
+  }
+  for (let i = 0; i < copies.length; i += 500) {
+    const res = await sb.from(T_CATEGORY_MEMBERS).upsert(copies.slice(i, i + 500), { onConflict: ROSTER_CONFLICT });
+    if (res.error) return res;
+  }
+  for (const c of copies) state.categoryMembers.set(rosterKey(year, c.category, c.member_id), c);
+  state.rosterYears = [...state.rosterYears, year].sort((a, b) => a - b);
+  return { error: null };
+}
+
+// 指定した年の区分名簿に、行（1人×1区分）を保存する
+async function writeRoster(year, rows) {
+  let res = await ensureRosterYear(year);
+  if (!res.error && rows.length > 0) {
+    const saved = rows.map((row) => ({ ...row, reiki_year: year }));
+    for (const r of saved) state.categoryMembers.set(rosterKey(year, r.category, r.member_id), r);
+    res = await sb.from(T_CATEGORY_MEMBERS).upsert(saved, { onConflict: ROSTER_CONFLICT });
+  }
+  alertIfRosterError(res);
+  return res;
+}
+
+function getCategoryMemberEntries(category, year = selectedRosterYear()) {
   return state.members
     .map((m) => {
-      const cm = state.categoryMembers.get(`${category}::${m.id}`);
+      const cm = getRosterEntry(category, m.id, year);
       const isActive = cm ? cm.is_active : true;
       const sortOrder = cm ? cm.sort_order : m.sort_order;
       return isActive ? { ...m, _catSortOrder: sortOrder, _isSpecial: !!cm?.is_special, _isSpecialLeader: !!cm?.is_special_leader, _isDayLeader: !!cm?.is_day_leader, _isTransport: !!cm?.is_transport } : null;
@@ -3597,6 +3671,10 @@ function renderHelpView(container) {
         <ul>
           <li>にをいがけデーは「参加日」を1つのプルダウンで選ぶ形式になっており、「神」「責」「総」「運」の設定は「にをいがけデー役割」で行います。</li>
           <li>見出し行は上部に固定されています。</li>
+          <li>上の<strong>「年度・年」</strong>で、どの年の名簿を見る・直すかを選べます。名簿は年ごとに別々に保存されます。朝の神殿掃除・月例参拝は「年度」(4月〜翌年3月)、慰労拝受・にをいがけデーは「年」の名簿として使われます。</li>
+          <li>出欠入力・報告書・現場入力(スマホ)では、それぞれの画面で選んでいる年度の名簿が使われます。にをいがけデー役割では、選んでいる年の名簿が使われます。</li>
+          <li>新しい年度の名簿は、はじめは前の年の名簿と同じ内容です。チェックなどを変えると、その年の名簿として保存され、前の年の名簿は変わりません。</li>
+          <li>「古いデータの整理」で古い年度を消しても、その年の区分名簿は消えずに残り、ここで選べます。</li>
         </ul>
       </section>
 
@@ -4196,11 +4274,27 @@ function buildCategoryMembersPanel(options) {
   const specialCatsInView = categoriesToShow.filter((c) => SPECIAL_ROLE_CATEGORIES.includes(c));
   const normalCatsInView = categoriesToShow.filter((c) => !SPECIAL_ROLE_CATEGORIES.includes(c));
 
+  // どの年度・年の名簿を見るか（立教の年）。年度の一覧にある年と、名簿が保存されている年から選べる
+  const yearChoices = [...new Set([...state.fiscalYears.map((fy) => fy.start_reiki_year), ...state.rosterYears])].sort((a, b) => a - b);
+  if (state.catMembersYear == null || !yearChoices.includes(state.catMembersYear)) state.catMembersYear = selectedRosterYear();
+  if (!yearChoices.includes(state.catMembersYear)) yearChoices.push(state.catMembersYear);
+  const year = state.catMembersYear;
+  const baseYear = rosterBaseYear(year);
+
   const panel = document.createElement('div');
   panel.className = 'master-panel';
   panel.style.maxWidth = '1300px';
   panel.innerHTML = `
     <h2>${escapeHtml(title)}</h2>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+      <label style="font-size:13px;color:var(--color-navy);">年度・年
+        <select id="category-members-year-select">${yearChoices.map((y) => `<option value="${y}" ${y === year ? 'selected' : ''}>立教${y}年度 ／ 立教${y}年</option>`).join('')}</select>
+      </label>
+    </div>
+    <p class="modal-hint" style="margin-bottom:6px;">
+      名簿は年ごとに別々に保存されます。朝の神殿掃除・月例参拝は「立教${year}年度」（4月〜翌年3月）、慰労拝受・にをいがけデーは「立教${year}年」の名簿として使われます。
+      ${baseYear != null && baseYear !== year ? `<br><strong>立教${year}年の名簿はまだ作られていないため、立教${baseYear}年の名簿と同じ内容を表示しています。</strong>チェックなどを変えると、立教${year}年の名簿が作られます（立教${baseYear}年の名簿は変わりません）。` : ''}
+    </p>
     <p class="modal-hint" style="margin-bottom:10px;">
       チェックを外すと、その人はその区分(出欠入力・報告書・当番表・現場入力など)の名簿から外れます。
       退職にはならず、記録も削除されません。チェックを入れ直せばいつでも名簿に戻せます。<br>
@@ -4213,7 +4307,7 @@ function buildCategoryMembersPanel(options) {
   `;
 
   function findActiveSpecialCat(memberId) {
-    return specialCatsInView.find((c) => state.categoryMembers.get(`${c}::${memberId}`)?.is_active);
+    return specialCatsInView.find((c) => getRosterEntry(c, memberId, year)?.is_active);
   }
 
   function buildNioigakeCell(m) {
@@ -4222,7 +4316,7 @@ function buildCategoryMembersPanel(options) {
       <select class="nioigake-day-select" data-id="${m.id}" style="font-size:11px;max-width:110px;">
         <option value="">－</option>
         ${specialCatsInView.map((c) => {
-          const dateText = nioigakeDateText(c, currentReikiYear());
+          const dateText = nioigakeDateText(c, year);
           return `<option value="${c}" ${activeCat === c ? 'selected' : ''}>${escapeHtml(shortenCategoryLabelForDay(CATEGORY_LABEL[c]))}${dateText ? ' ' + dateText : ''}</option>`;
         }).join('')}
       </select>
@@ -4239,8 +4333,8 @@ function buildCategoryMembersPanel(options) {
 
     // 表示順は、指定された区分（1つ目）での並び順に合わせる
     const membersInOrder = sortByCategory
-      ? getCategoryMemberEntries(sortByCategory).concat(
-          state.members.filter((m) => !getCategoryMemberEntries(sortByCategory).some((mm) => mm.id === m.id))
+      ? getCategoryMemberEntries(sortByCategory, year).concat(
+          state.members.filter((m) => !getCategoryMemberEntries(sortByCategory, year).some((mm) => mm.id === m.id))
         )
       : state.members;
 
@@ -4249,7 +4343,7 @@ function buildCategoryMembersPanel(options) {
       <li data-id="${m.id}" style="justify-content:space-between;">
         <span style="width:90px;min-width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(m.name)}</span>
         ${normalCatsInView.map((c) => {
-          const cm = state.categoryMembers.get(`${c}::${m.id}`);
+          const cm = getRosterEntry(c, m.id, year);
           const isActive = cm ? cm.is_active : true;
           return `<span style="min-width:44px;padding:0 4px;text-align:center;flex-shrink:0;">
             <input type="checkbox" class="category-member-checkbox" data-id="${m.id}" data-category="${c}" ${isActive ? 'checked' : ''} />
@@ -4262,9 +4356,10 @@ function buildCategoryMembersPanel(options) {
       cb.addEventListener('change', async () => {
         const memberId = Number(cb.dataset.id);
         const category = cb.dataset.category;
+        const yearWasNew = !state.rosterYears.includes(year);
         if (cb.checked) {
-          await addMemberToCategory(memberId, category);
-          renderList();
+          await addMemberToCategory(memberId, category, year);
+          if (yearWasNew) renderView(); else renderList();
         } else {
           const m = state.members.find((mm) => mm.id === memberId);
           const label = m && m.name.trim() ? m.name : 'このメンバー';
@@ -4272,12 +4367,10 @@ function buildCategoryMembersPanel(options) {
             cb.checked = true;
             return;
           }
-          const key = `${category}::${memberId}`;
-          const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
+          const existing = getRosterEntry(category, memberId, year) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
           const updated = { ...existing, member_id: memberId, category, is_active: false, is_special: false, is_special_leader: false, is_day_leader: false };
-          state.categoryMembers.set(key, updated);
-          await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
-          renderList();
+          await writeRoster(year, [updated]);
+          if (yearWasNew) renderView(); else renderList();
         }
       });
     });
@@ -4289,28 +4382,30 @@ function buildCategoryMembersPanel(options) {
         const oldCat = findActiveSpecialCat(memberId);
         if (oldCat === newCat) return;
         const m = state.members.find((mm) => mm.id === memberId);
+        const yearWasNew = !state.rosterYears.includes(year);
         const writes = [];
 
         if (oldCat) {
-          const key = `${oldCat}::${memberId}`;
-          const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category: oldCat, sort_order: (m?.sort_order ?? 9999) };
+          const existing = getRosterEntry(oldCat, memberId, year) ?? { member_id: memberId, category: oldCat, sort_order: (m?.sort_order ?? 9999) };
           const cleared = { ...existing, member_id: memberId, category: oldCat, is_active: false, is_special: false, is_special_leader: false, is_day_leader: false };
-          state.categoryMembers.set(key, cleared);
           writes.push(cleared);
         }
         if (newCat) {
-          const list = getCategoryMemberEntries(newCat);
+          const list = getCategoryMemberEntries(newCat, year);
           const maxOrder = list.length > 0 ? Math.max(...list.map((mm) => mm._catSortOrder)) : 0;
-          const key = `${newCat}::${memberId}`;
           const updated = { member_id: memberId, category: newCat, sort_order: maxOrder + 1, is_active: true };
-          state.categoryMembers.set(key, updated);
           writes.push(updated);
         }
-        if (writes.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(writes, { onConflict: 'member_id,category' });
-        renderList();
+        if (writes.length > 0) await writeRoster(year, writes);
+        if (yearWasNew) renderView(); else renderList();
       });
     });
   }
+
+  panel.querySelector('#category-members-year-select').addEventListener('change', (e) => {
+    state.catMembersYear = Number(e.target.value);
+    renderView();
+  });
 
   renderList();
   return panel;
@@ -4386,7 +4481,7 @@ function buildNioigakeRolesPanel() {
 
   function categoriesToShow() { return [...SPECIAL_ROLE_CATEGORIES, ...rs.extraCats]; }
   function membersFor(category) {
-    const list = [...getOrderedMembersForCategory(category)];
+    const list = [...getOrderedMembersForCategory(category, rs.year)];
     // 今の名簿にはいないが、その年に役割が付いていた人も表示する
     for (const key of rs.draft.keys()) {
       const [cat, idStr] = key.split('::');
@@ -4513,17 +4608,15 @@ function buildNioigakeRolesPanel() {
     if (!res.error && year === currentReikiYear()) {
       const updates = [];
       for (const category of SPECIAL_ROLE_CATEGORIES) {
-        for (const m of getOrderedMembersForCategory(category)) {
-          const key = `${category}::${m.id}`;
-          const existing = state.categoryMembers.get(key);
+        for (const m of getOrderedMembersForCategory(category, year)) {
+          const existing = getRosterEntry(category, m.id, year);
           if (!existing) continue;
           const f = getFlags(category, m.id);
           const updated = { ...existing, member_id: m.id, category, ...f };
-          state.categoryMembers.set(key, updated);
           updates.push(updated);
         }
       }
-      if (updates.length) res = await sb.from(T_CATEGORY_MEMBERS).upsert(updates, { onConflict: 'member_id,category' });
+      if (updates.length) res = await writeRoster(year, updates);
     }
     if (res.error) {
       btn.disabled = false;
@@ -4749,9 +4842,10 @@ function buildCategoriesPanel() {
     if (error) { alert('追加に失敗しました: ' + error.message); return; }
     state.categories.push(newCat);
     // 既存の全メンバーを、新しい区分の名簿にも登録する
+    // （区分名簿は年ごとのため、名簿が保存されているすべての年に登録する）
     const catInserts = state.members.map((m) => ({ member_id: m.id, category: key, sort_order: m.sort_order, is_active: true }));
-    if (catInserts.length > 0) await sb.from(T_CATEGORY_MEMBERS).upsert(catInserts, { onConflict: 'member_id,category' });
-    for (const ci of catInserts) state.categoryMembers.set(`${key}::${ci.member_id}`, ci);
+    const rosterYearsForNew = state.rosterYears.length > 0 ? [...state.rosterYears] : [selectedRosterYear()];
+    if (catInserts.length > 0) for (const y of rosterYearsForNew) await writeRoster(y, catInserts);
     applyCategoriesFromState();
     input.value = '';
     renderView();
@@ -5507,7 +5601,8 @@ function setupRowDragAndDrop() {
 async function reorderMember(draggedId, targetId, insertAfter) {
   if (draggedId === targetId) return;
   const category = state.category;
-  const list = getCategoryMemberEntries(category);
+  const year = selectedRosterYear();
+  const list = getCategoryMemberEntries(category, year);
   const fromIndex = list.findIndex((m) => m.id === draggedId);
   let toIndex = list.findIndex((m) => m.id === targetId);
   if (fromIndex === -1 || toIndex === -1) return;
@@ -5518,15 +5613,11 @@ async function reorderMember(draggedId, targetId, insertAfter) {
   reordered.splice(insertAfter ? toIndex + 1 : toIndex, 0, moved);
 
   const upserts = reordered.map((m, i) => {
-    const key = `${category}::${m.id}`;
-    const existing = state.categoryMembers.get(key) ?? { member_id: m.id, category, is_active: true };
-    const updated = { ...existing, member_id: m.id, category, sort_order: i + 1 };
-    state.categoryMembers.set(key, updated);
-    return updated;
+    const existing = getRosterEntry(category, m.id, year) ?? { member_id: m.id, category, is_active: true };
+    return { ...existing, member_id: m.id, category, sort_order: i + 1 };
   });
+  await writeRoster(year, upserts);
   renderView();
-
-  await sb.from(T_CATEGORY_MEMBERS).upsert(upserts, { onConflict: 'member_id,category' });
 }
 
 // 特定の区分の名簿からだけ外す（退職にはしない）
@@ -5534,22 +5625,20 @@ async function removeMemberFromCategory(memberId, category) {
   const m = state.members.find((mm) => mm.id === memberId);
   const label = m && m.name.trim() ? m.name : 'このメンバー';
   if (!confirm(`${label} を「${CATEGORY_LABEL[category]}」の名簿からだけ外します（退職にはなりません）。よろしいですか？`)) return;
-  const key = `${category}::${memberId}`;
-  const existing = state.categoryMembers.get(key) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
+  const year = selectedRosterYear();
+  const existing = getRosterEntry(category, memberId, year) ?? { member_id: memberId, category, sort_order: (m?.sort_order ?? 9999) };
   const updated = { ...existing, member_id: memberId, category, is_active: false };
-  state.categoryMembers.set(key, updated);
-  await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+  await writeRoster(year, [updated]);
   renderView();
 }
 
 // 一度外したメンバーを、特定の区分の名簿に戻す／追加する
-async function addMemberToCategory(memberId, category) {
-  const list = getCategoryMemberEntries(category);
+async function addMemberToCategory(memberId, category, year = selectedRosterYear()) {
+  const list = getCategoryMemberEntries(category, year);
   const maxOrder = list.length > 0 ? Math.max(...list.map((m) => m._catSortOrder)) : 0;
-  const key = `${category}::${memberId}`;
-  const updated = { member_id: memberId, category, sort_order: maxOrder + 1, is_active: true };
-  state.categoryMembers.set(key, updated);
-  await sb.from(T_CATEGORY_MEMBERS).upsert(updated, { onConflict: 'member_id,category' });
+  const existing = getRosterEntry(category, memberId, year) ?? {};
+  const updated = { ...existing, member_id: memberId, category, sort_order: maxOrder + 1, is_active: true };
+  await writeRoster(year, [updated]);
 }
 
 // ==================== 現場入力（スマホ用） ====================
@@ -5972,13 +6061,14 @@ async function addMember() {
     .select().single();
   if (!error && data) {
     state.members.push(data);
-    // 新しいメンバーは、既定で4区分すべての名簿に登録する
-    const catInserts = ALL_CATEGORIES.map((category) => {
-      const entry = { member_id: data.id, category, sort_order: nextOrder, is_active: true };
-      state.categoryMembers.set(`${category}::${data.id}`, entry);
-      return entry;
-    });
-    await sb.from(T_CATEGORY_MEMBERS).upsert(catInserts, { onConflict: 'member_id,category' });
+    // 新しいメンバーは、既定で全区分の名簿に登録する。
+    // 区分名簿は年ごとのため、いま選んでいる年度とそれより後の年では名簿に入れ、それより前の年では名簿から外しておく
+    const fromYear = selectedRosterYear();
+    const years = [...new Set([...state.rosterYears, fromYear])].sort((a, b) => a - b);
+    for (const y of years) {
+      const catInserts = ALL_CATEGORIES.map((category) => ({ member_id: data.id, category, sort_order: nextOrder, is_active: y >= fromYear }));
+      await writeRoster(y, catInserts);
+    }
     renderView();
   }
 }
@@ -5994,21 +6084,18 @@ async function removeMember(memberId) {
 
 async function moveMember(memberId, direction) {
   const category = state.category;
-  const list = getCategoryMemberEntries(category);
+  const year = selectedRosterYear();
+  const list = getCategoryMemberEntries(category, year);
   const index = list.findIndex((m) => m.id === memberId);
   const target = index + direction;
   if (target < 0 || target >= list.length) return;
   const a = list[index], b = list[target];
   const orderA = a._catSortOrder, orderB = b._catSortOrder;
 
-  const keyA = `${category}::${a.id}`, keyB = `${category}::${b.id}`;
-  const entryA = { ...(state.categoryMembers.get(keyA) ?? { member_id: a.id, category, is_active: true }), sort_order: orderB };
-  const entryB = { ...(state.categoryMembers.get(keyB) ?? { member_id: b.id, category, is_active: true }), sort_order: orderA };
-  state.categoryMembers.set(keyA, entryA);
-  state.categoryMembers.set(keyB, entryB);
+  const entryA = { ...(getRosterEntry(category, a.id, year) ?? { member_id: a.id, category, is_active: true }), sort_order: orderB };
+  const entryB = { ...(getRosterEntry(category, b.id, year) ?? { member_id: b.id, category, is_active: true }), sort_order: orderA };
+  await writeRoster(year, [entryA, entryB]);
   renderView();
-
-  await sb.from(T_CATEGORY_MEMBERS).upsert([entryA, entryB], { onConflict: 'member_id,category' });
 }
 
 async function addFiscalYear() {
