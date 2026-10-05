@@ -3582,7 +3582,7 @@ function renderHelpView(container) {
         <h2>① 出欠入力</h2>
         <p>メンバーごとに、区分ごとの出欠(○×)を入力する画面です。</p>
         <ul>
-          <li>一番上の<strong>「古いデータの整理」</strong>を押すと、マスター管理と同じ「古いデータの整理」の画面が開きます(もう一度押すと閉じます)。使い方はマスター管理の説明と同じです。</li>
+          <li>「Excelで書き出し」の右横の<strong>「古いデータの整理」</strong>を押すと、マスター管理と同じ「古いデータの整理」の画面が画面の上部に開きます(もう一度押すと閉じます)。使い方はマスター管理の説明と同じです。</li>
           <li>上部のタブ(朝の神殿掃除・月例参拝・慰労拝受(中元)・慰労拝受(歳暮)など)で、入力する区分を切り替えます。区分の種類は「表示区分」タブで追加・変更でき、出欠入力画面に表示するかどうかも区分ごとに選べます。</li>
           <li>「朝の神殿掃除」「月例参拝」など月ごとの区分は、各月のマスをクリックすると空欄→○→×→空欄の順に切り替わります。</li>
           <li>「年ごと」に設定された区分は、月の代わりに「立教○○○年」の列が並びます。「慰労拝受(中元)」「慰労拝受(歳暮)」のように「①事前調査 ②会場外 ③会場内」の3回チェックできる区分と、シンプルに年に1回だけの区分(例:にをいがけデー)があり、どちらにするかは区分ごとに設定できます。3回チェックできる区分では、事前調査で×だった人は、会場外・会場内の欄で氏名が赤く表示されます。</li>
@@ -5396,9 +5396,6 @@ function renderGridView(container) {
 
   container.innerHTML = `
     <div class="grid-wrap">
-      <div class="no-print" style="margin-bottom:12px;">
-        <button class="btn-dark" id="grid-cleanup-btn" style="width:auto;display:inline-block;white-space:nowrap;">古いデータの整理</button>
-      </div>
       <div id="grid-cleanup-panel" class="no-print" style="margin-bottom:16px;"></div>
       <div class="grid-header no-print">
         <div id="grid-title-wrap" style="cursor:context-menu;">
@@ -5411,6 +5408,7 @@ function renderGridView(container) {
           ${bulkActionsHtml}
           <button class="btn-light" id="add-member-btn">＋ メンバーを追加</button>
           <button class="btn-dark" id="export-excel-btn">Excelで書き出し</button>
+          <button class="btn-dark" id="grid-cleanup-btn" style="width:auto;display:inline-block;white-space:nowrap;">古いデータの整理</button>
         </div>
       </div>
 
