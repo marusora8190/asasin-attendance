@@ -700,7 +700,7 @@ const state = {
   rosterDay3: '23日',
   rosterShowMonth: true,
   dutyPositions: new Map(), // item_key -> {x, y}（mm単位、朝の神殿掃除当番表用）
-  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false },
+  masterOpen: { department: false, position: false, dutyDay: false, leader: false, memberDept: false, memberPos: false },
   gridCleanupOpen: false, // 出欠入力の上部の「古いデータの整理」を開いているか
   archiveFiscalYears: [], // 保管済み年度の一覧（asagami_fiscal_years からarchived=trueのもの）
   archiveFiscalYearId: null,
@@ -3747,6 +3747,7 @@ function renderHelpView(container) {
           <li><strong>担当日の個別設定</strong>：特定の人だけ、部署の既定と違う当番日にしたい場合に設定します。</li>
           <li><strong>主任の設定</strong>：チェックした人は、当番表・報告書でその部署の一番上に表示されます。</li>
           <li><strong>メンバーの部署を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの所属部署を変更できます。</li>
+          <li><strong>メンバーの立場を変更</strong>：出欠入力画面を開かなくても、ここから直接メンバーの立場を変更できます。区分の名簿に入っていない人も変更できます。</li>
           <li><strong>古いデータの整理</strong>：年度を選ぶと、それより前の年度の出欠記録と、その年度の設定（年度・会場外/会場内の時刻・にをいがけデー役割）をまとめて削除します。「対象を確認する」で件数を確かめてから削除してください（削除の直前に管理者パスワードが必要です）。慰労拝受・にをいがけデーの通算の出席・欠席の回数も、消した年度の分だけ減ります。元に戻せません。</li>
         </ul>
       </section>
@@ -4209,6 +4210,7 @@ function renderMasterView(container) {
         <button class="btn-dark" id="edit-duty-btn">担当日の個別設定</button>
         <button class="btn-dark" id="edit-leader-btn">主任の設定</button>
         <button class="btn-dark" id="edit-member-dept-btn">メンバーの部署を変更</button>
+        <button class="btn-dark" id="edit-member-pos-btn">メンバーの立場を変更</button>
         <button class="btn-dark" id="edit-cleanup-btn">古いデータの整理</button>
       </div>
       <div id="master-panels" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;"></div>
@@ -4233,6 +4235,10 @@ function renderMasterView(container) {
   });
   document.getElementById('edit-member-dept-btn').addEventListener('click', () => {
     state.masterOpen.memberDept = !state.masterOpen.memberDept;
+    renderMasterPanels();
+  });
+  document.getElementById('edit-member-pos-btn').addEventListener('click', () => {
+    state.masterOpen.memberPos = !state.masterOpen.memberPos;
     renderMasterPanels();
   });
   document.getElementById('edit-cleanup-btn').addEventListener('click', () => {
@@ -4321,6 +4327,7 @@ function renderMasterPanels() {
   if (state.masterOpen.dutyDay) panelsEl.appendChild(buildDutyDayPanel());
   if (state.masterOpen.leader) panelsEl.appendChild(buildLeaderPanel());
   if (state.masterOpen.memberDept) panelsEl.appendChild(buildMemberDeptPanel());
+  if (state.masterOpen.memberPos) panelsEl.appendChild(buildMemberPositionPanel());
   if (state.masterOpen.cleanup) panelsEl.appendChild(buildCleanupPanel());
 }
 
@@ -4694,6 +4701,64 @@ function buildMemberDeptPanel() {
         const m = state.members.find((mm) => mm.id === id);
         m.department = val;
         await sb.from(T_MEMBERS).update({ department: val }).eq('id', id);
+        renderView();
+      });
+    });
+  }
+
+  renderList();
+  return panel;
+}
+
+function buildMemberPositionPanel() {
+  const panel = document.createElement('div');
+  panel.className = 'master-panel';
+  panel.style.maxWidth = '480px';
+  panel.innerHTML = `
+    <h2>メンバーの立場を変更</h2>
+    <p class="modal-hint" style="margin-bottom:10px;">
+      部署の順に並んでいます。変更すると、出欠入力・報告書などの立場の表示も変わります。
+    </p>
+    <ul class="modal-list" id="member-pos-list" style="max-height:400px;overflow-y:auto;"></ul>
+  `;
+
+  function renderList() {
+    const listEl = panel.querySelector('#member-pos-list');
+    const deptOrder = new Map(state.departments.map((d, i) => [d.name, i]));
+    const sortedMembers = [...state.members].sort((a, b) => {
+      const orderA = deptOrder.get(a.department) ?? Infinity;
+      const orderB = deptOrder.get(b.department) ?? Infinity;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.is_leader ? 0 : 1) - (b.is_leader ? 0 : 1);
+    });
+    listEl.innerHTML = sortedMembers.map((m) => {
+      const hasCurrent = state.positions.some((p) => p.name === m.position);
+      const extra = (!hasCurrent && m.position) ? `<option value="${escapeHtml(m.position)}" selected>${escapeHtml(m.position)}（一覧に無い値）</option>` : '';
+      return `
+      <li data-id="${m.id}" style="justify-content:space-between;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${escapeHtml(m.name)}<span style="font-size:11px;color:var(--color-ink-soft);margin-left:6px;">${escapeHtml(m.department || '部署未設定')}</span></span>
+        <select class="member-pos-select" data-id="${m.id}" style="flex-shrink:0;min-width:170px;">
+          <option value="" ${!m.position ? 'selected' : ''}>（立場未設定）</option>
+          ${extra}
+          ${state.positions.map((p) => `<option value="${escapeHtml(p.name)}" ${m.position === p.name ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+        </select>
+      </li>`;
+    }).join('');
+
+    listEl.querySelectorAll('.member-pos-select').forEach((sel) => {
+      const id = Number(sel.dataset.id);
+      sel.addEventListener('change', async () => {
+        const val = sel.value || null;
+        const m = state.members.find((mm) => mm.id === id);
+        const before = m.position;
+        const { error } = await sb.from(T_MEMBERS).update({ position: val }).eq('id', id);
+        if (error) {
+          console.error(error);
+          alert('立場を保存できませんでした。画面を読み込み直して、もう一度操作してください。\n（' + error.message + '）');
+          sel.value = before || '';
+          return;
+        }
+        m.position = val;
         renderView();
       });
     });
