@@ -124,6 +124,14 @@ nav.app-nav .tab {
   border-left: 3px solid transparent; color: var(--color-ink-soft);
 }
 nav.app-nav .tab.active { border-color: var(--color-navy); color: var(--color-navy); font-weight: 500; background: var(--color-paper); }
+nav.app-nav .admin-menu-btn {
+  margin: 8px 12px 0; padding: 9px 10px; font-size: 13px; text-align: left;
+  background: var(--color-paper); border: 1px solid var(--color-line); border-radius: 8px; color: var(--color-navy);
+}
+nav.app-nav .admin-menu-btn:hover { border-color: var(--color-navy); }
+nav.app-nav .admin-tabs { display: flex; flex-direction: column; border-top: 1px dashed var(--color-line); margin-top: 8px; padding-top: 4px; }
+nav.app-nav .admin-tabs[hidden] { display: none; }
+nav.app-nav .admin-tabs-title { padding: 6px 20px 2px; font-size: 11px; color: var(--color-ink-soft); }
 nav.app-nav .sidebar-footer {
   padding: 16px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   border-top: 1px solid var(--color-line); margin-top: 8px;
@@ -845,6 +853,103 @@ function setupSidebarToggle() {
   refresh();
 }
 
+// ==================== 管理者メニュー（サイドバーの「マスター」〜「設定」） ====================
+// 画面の表示を分けるだけで、データベースの守り方は変わらない（ログインした人は今までどおり読み書きできる）。
+// パスワードはそのまま書かず、ハッシュ（元に戻せない形）だけを入れている。
+const ADMIN_MENU_VIEWS = new Set(['master', 'categories-page', 'category-members-page', 'nioigake-roles-page', 'docs', 'references', 'ceremony-times-page', 'settings']);
+const ADMIN_MENU_HASH = 'f02ed4224dacaddab24a0ba2953400ea3b39211d5a2272dddbb7bd1b591baf1c';
+const ADMIN_MENU_KEY = 'asagami_admin_menu_unlocked';
+function isAdminMenuUnlocked() {
+  try { return sessionStorage.getItem(ADMIN_MENU_KEY) === '1'; } catch (e) { return !!state.adminMenuUnlocked; }
+}
+function setAdminMenuUnlocked(on) {
+  state.adminMenuUnlocked = on;
+  try { if (on) sessionStorage.setItem(ADMIN_MENU_KEY, '1'); else sessionStorage.removeItem(ADMIN_MENU_KEY); } catch (e) { /* 保存できなくても、このページを開いている間は有効 */ }
+}
+async function checkAdminMenuPassword(pw) {
+  const data = new TextEncoder().encode('asagami-admin-menu:' + pw);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hex === ADMIN_MENU_HASH;
+}
+// パスワードを聞く小さな画面。正しければ true、やめたら false を返す
+function askAdminMenuPassword() {
+  return new Promise((resolve) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:16px;';
+    wrap.innerHTML = `
+      <div style="background:white;border-radius:12px;padding:20px;width:100%;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.25);">
+        <h3 style="margin:0 0 8px;font-size:16px;color:var(--color-navy);">🔑 管理者メニュー</h3>
+        <p style="margin:0 0 12px;font-size:13px;color:var(--color-ink-soft);">管理者メニューのパスワードを入れてください。</p>
+        <input type="password" id="admin-menu-pw" autocomplete="off" style="width:100%;box-sizing:border-box;padding:8px 10px;font-size:15px;border:1px solid var(--color-line);border-radius:6px;" />
+        <p id="admin-menu-pw-msg" style="margin:6px 0 0;min-height:18px;font-size:12px;color:var(--color-absent);"></p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+          <button type="button" id="admin-menu-pw-cancel" style="padding:8px 14px;border:1px solid var(--color-line);background:white;border-radius:6px;">やめる</button>
+          <button type="button" id="admin-menu-pw-ok" class="btn-dark">開く</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const input = wrap.querySelector('#admin-menu-pw');
+    const msg = wrap.querySelector('#admin-menu-pw-msg');
+    const finish = (ok) => { wrap.remove(); resolve(ok); };
+    const tryOpen = async () => {
+      let ok = false;
+      try { ok = await checkAdminMenuPassword(input.value); } catch (e) { console.error(e); }
+      if (ok) finish(true);
+      else { msg.textContent = 'パスワードが違います。'; input.select(); }
+    };
+    wrap.querySelector('#admin-menu-pw-ok').addEventListener('click', tryOpen);
+    wrap.querySelector('#admin-menu-pw-cancel').addEventListener('click', () => finish(false));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') tryOpen();
+      if (e.key === 'Escape') finish(false);
+    });
+    setTimeout(() => input.focus(), 0);
+  });
+}
+function refreshAdminMenu() {
+  const btn = document.getElementById('admin-menu-btn');
+  const tabs = document.getElementById('admin-tabs');
+  if (!btn || !tabs) return;
+  const on = isAdminMenuUnlocked();
+  tabs.hidden = !on;
+  btn.textContent = on ? '🔒 管理者メニューを閉じる' : '🔑 管理者メニュー';
+  btn.title = on ? '管理者メニューを隠します（次に開くときはパスワードが必要です）' : 'パスワードを入れると、マスター〜設定の画面が出ます';
+}
+async function openAdminMenu() {
+  if (isAdminMenuUnlocked()) return true;
+  const ok = await askAdminMenuPassword();
+  if (!ok) return false;
+  setAdminMenuUnlocked(true);
+  refreshAdminMenu();
+  return true;
+}
+function setupAdminMenu() {
+  const btn = document.getElementById('admin-menu-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (isAdminMenuUnlocked()) {
+      setAdminMenuUnlocked(false);
+      refreshAdminMenu();
+      if (ADMIN_MENU_VIEWS.has(state.view)) { state.view = 'grid'; updateNavActive(); renderView(); }
+    } else {
+      await openAdminMenu();
+    }
+  });
+  refreshAdminMenu();
+}
+function renderAdminMenuLockedView(container) {
+  container.innerHTML = `
+    <div class="grid-wrap">
+      <div class="grid-header"><div><p class="eyebrow">出欠管理システム</p><h1 class="font-display">管理者用の画面です</h1></div></div>
+      <p class="hint-text">この画面は管理者メニューの中にあります。左のメニューの「🔑 管理者メニュー」でパスワードを入れると開けます。</p>
+      <button class="btn-dark" id="admin-locked-open-btn" style="margin-top:12px;">🔑 パスワードを入れて開く</button>
+    </div>`;
+  container.querySelector('#admin-locked-open-btn').addEventListener('click', async () => {
+    if (await openAdminMenu()) renderView();
+  });
+}
+
 // ==================== 全体シェル（ナビ＋各画面） ====================
 async function renderMainShell() {
   restoreViewStateAfterUpdate();
@@ -872,15 +977,19 @@ async function renderMainShell() {
             <button class="tab" data-view="report">神殿掃除報告書</button>
             <button class="tab" data-view="roster">神殿掃除当番表</button>
             <button class="tab" data-view="report-geppai">月例参拝報告書</button>
-            <button class="tab" data-view="master">マスター</button>
-            <button class="tab" data-view="categories-page">表示区分</button>
-            <button class="tab" data-view="category-members-page">区分名簿</button>
-            <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
-            <button class="tab" data-view="docs">資料作成</button>
-            <button class="tab" data-view="references">参考資料</button>
-            <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
             <button class="tab" data-view="help">使い方</button>
-            <button class="tab" data-view="settings">設　定</button>
+            <button class="admin-menu-btn" id="admin-menu-btn" type="button"></button>
+            <div class="admin-tabs" id="admin-tabs" hidden>
+              <div class="admin-tabs-title">管理者メニュー</div>
+              <button class="tab" data-view="master">マスター</button>
+              <button class="tab" data-view="categories-page">表示区分</button>
+              <button class="tab" data-view="category-members-page">区分名簿</button>
+              <button class="tab" data-view="nioigake-roles-page">にをいがけデー役割</button>
+              <button class="tab" data-view="docs">資料作成</button>
+              <button class="tab" data-view="references">参考資料</button>
+              <button class="tab" data-view="ceremony-times-page">慰労拝受記録</button>
+              <button class="tab" data-view="settings">設　定</button>
+            </div>
           </div>
           <div class="sidebar-footer" id="sidebar-footer">
             ${renderUpdateButtonHtml()}
@@ -892,6 +1001,7 @@ async function renderMainShell() {
   `;
 
   setupSidebarToggle();
+  setupAdminMenu();
 
   document.querySelectorAll('.tab').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1011,6 +1121,8 @@ function renderView() {
   if (state.view === 'archive') { state.view = 'grid'; updateNavActive(); }
   // 資料作成の画面から離れるときは、未保存の変更をすぐ保存する
   if (state.view !== 'docs' && typeof docsState !== 'undefined' && docsState.dirty) flushDocSave();
+  // 管理者メニューの画面は、管理者メニューのパスワードを入れるまで開けない
+  if (ADMIN_MENU_VIEWS.has(state.view) && !isAdminMenuUnlocked()) { renderAdminMenuLockedView(container); return; }
   if (state.view === 'docs') renderDocsView(container);
   else if (state.view === 'references') renderRefsView(container);
   else if (state.view === 'grid') renderGridView(container);
@@ -3838,7 +3950,7 @@ function renderHelpView(container) {
 
       <section class="help-section">
         <h2>⑬ 設定</h2>
-        <p>左のメニューのいちばん下の「設　定」で、このアプリの管理に必要なこと(URL・バックアップ・困ったときの対処など)を確かめられます。</p>
+        <p>左のメニューの「🔑 管理者メニュー」の中のいちばん下の「設　定」で、このアプリの管理に必要なこと(URL・バックアップ・困ったときの対処など)を確かめられます。</p>
         <ul>
           <li>項目の見出しを押すと開き、もう一度押すと閉じます。URLの横の「コピー」で、URLをコピーできます。</li>
           <li>「⬇ GitHubから最新のファイルをダウンロードするときのURL」では、GitHubに入っているいちばん新しいアプリのファイル(index.html)を保存できます。</li>
@@ -3849,6 +3961,7 @@ function renderHelpView(container) {
       <section class="help-section">
         <h2>年度・ログインについて</h2>
         <ul>
+          <li>左のメニューの「マスター」「表示区分」「区分名簿」「にをいがけデー役割」「資料作成」「参考資料」「慰労拝受記録」「設　定」(⑥〜⑬)は、「🔑 管理者メニュー」の中にあります。押して管理者メニューのパスワードを入れると出ます。一度入れると、そのタブ(画面)を閉じるか「🔒 管理者メニューを閉じる」を押すまで出たままです。</li>
           <li>左のメニューの一番上にある「« メニューを隠す」を押すと、メニューが細くたたまれて画面を広く使えます。たたんだ後は、左端の「»」を押すと元に戻ります。この状態は次に開いたときも覚えています。</li>
           <li>左下の「Update」ボタンを押すと、最新版を読み込み直します。<strong>押す前に開いていた画面(開いていた資料も含む)にそのまま戻ります。</strong>資料作成で入力中の内容も、読み込み直す前に保存されます。</li>
           <li>出欠データは年度ごとに分かれて保存されます。年度が変わっても、過去の年度のデータは消えず、「年度」のプルダウンでいつでも見返せます。</li>
