@@ -3871,6 +3871,7 @@ function renderHelpView(container) {
           <li>名前の変更、出欠入力への表示・非表示、現場入力(スマホ)のリストへの表示・非表示、月ごと/年ごとの切り替え、「神・責欄を使う」の切り替え、新しい区分の追加・削除ができます。</li>
           <li>並び順は「出欠入力の並び順」「現場入力の並び順」でそれぞれ別々に設定できます。</li>
           <li>「スマホのリストに表示」をオフにした区分は、現場入力(スマホ)のプルダウンから消え、選べなくなります。</li>
+          <li>「出欠入力に表示」をオフにすると、「スマホのリストに表示」も一緒にオフになります（スマホにだけ出したいときは、あとで「スマホのリストに表示」だけをオンにします）。</li>
         </ul>
       </section>
 
@@ -5360,7 +5361,11 @@ function buildCategoriesPanel() {
         const key = cb.dataset.key;
         const c = state.categories.find((cc) => cc.key === key);
         if (c) c.show_in_grid = cb.checked;
-        await sb.from(T_CATEGORIES).update({ show_in_grid: cb.checked }).eq('key', key);
+        // 「出欠入力に表示」を外したときは「スマホのリストに表示」も一緒に外す
+        // （PCで外したのにスマホにだけ出てしまうのを防ぐ）
+        const alsoHideField = !cb.checked && !!(c && c.show_in_field);
+        if (alsoHideField) c.show_in_field = false;
+        await sb.from(T_CATEGORIES).update(alsoHideField ? { show_in_grid: false, show_in_field: false } : { show_in_grid: cb.checked }).eq('key', key);
         applyCategoriesFromState();
         renderView();
       });
