@@ -4017,7 +4017,7 @@ function renderHelpView(container) {
           <li>「対象月」で出欠結果を反映する月を選べます。「テンプレ」を選ぶと、○×を一切表示しない空欄の状態で印刷できます(配布用の当番表として使えます)。</li>
           <li>「『○月』を表示する」のチェックを外すと、表題から月の表示だけを消せます。</li>
           <li>各部署の枠は、クリックしたまま掴んで少しずらして配置を調整できます(自動保存されます)。「配置をリセット」で元の並びに戻せます。</li>
-          <li><strong>矢印キーで微調整</strong>:部署の枠をクリックすると青い枠で囲まれます。そのままキーボードの矢印キー(↑↓←→)を押すと、少しずつ(約0.6mm)動きます。Shiftキーを押しながらだと大きく(約5mm)動きます。押し終わって少しすると自動で保存されます。枠の外をクリックするか、Escキーを押すと選ぶのをやめます(青い枠は印刷されません)。</li>
+          <li><strong>矢印キーで微調整</strong>:部署の枠をクリックすると青い枠で囲まれます。そのままキーボードの矢印キー(↑↓←→)を押すと、少しずつ(約0.6mm)動きます。Shiftキーを押しながらだと大きく(約5mm)動きます。押し終わって少しすると自動で保存されます。通信が切れて保存できなかったときは、画面の説明の行に赤い文字でお知らせが出て、つながると自動でもう一度保存します(お知らせも消えます)。枠の外をクリックするか、Escキーを押すと選ぶのをやめます(青い枠は印刷されません)。</li>
           <li>担当日を個別に変えたい人は、「マスター」タブの「担当日の個別設定」で設定します。</li>
         </ul>
       </section>
@@ -7314,7 +7314,7 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
       </div>
       <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
         班の枠をクリックしたまま掴むと、位置をずらして配置できます(自動的に保存されます)。<br>
-        班の枠をクリックすると青い枠で囲まれ、キーボードの矢印キー(↑↓←→)で少しずつ動かせます(Shiftを押しながらだと大きく動きます)。枠の外をクリックするか、Escキーで選ぶのをやめます。
+        班の枠をクリックすると青い枠で囲まれ、キーボードの矢印キー(↑↓←→)で少しずつ動かせます(Shiftを押しながらだと大きく動きます)。枠の外をクリックするか、Escキーで選ぶのをやめます。<span id="piece-save-note" style="color:var(--color-absent);font-weight:700;"></span>
       </p>
       <div class="roster-doc">
         <h1 id="roster-title-display">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>
@@ -7362,6 +7362,40 @@ let pieceKeySaveTimer = null;
 let pieceKeyHandlersAttached = false;
 const PIECE_GRID_MM = 0.625; // 1回で動く量（マウスで動かすときのマス目と同じ）
 
+// 矢印キーで動かした位置の保存。通信が切れて保存できなかったときは、メッセージの箱を出さずに
+// 画面に一言出して、5秒ごとに自動でもう一度保存する（つながれば自動で消える）
+const pendingPieceSaves = new Set();
+let pieceRetryTimer = null;
+let pieceSaving = false;
+function setPieceSaveNote(failed) {
+  const el = document.getElementById('piece-save-note');
+  if (el) el.textContent = failed ? '※班の位置を保存できませんでした（通信が切れているようです）。つながると自動でもう一度保存します。' : '';
+}
+async function flushPieceSaves() {
+  if (pieceSaving) return;
+  clearTimeout(pieceRetryTimer);
+  pieceSaving = true;
+  let failed = false;
+  try {
+    for (const key of [...pendingPieceSaves]) {
+      const pos = state.dutyPositions.get(key);
+      if (!pos) { pendingPieceSaves.delete(key); continue; }
+      const res = await sb.from(T_DUTY_POSITIONS).upsert({ item_key: key, x: pos.x, y: pos.y }, { onConflict: 'item_key' });
+      if (res.error) { console.error(res.error); failed = true; break; }
+      // 保存中にさらに動かしていたら、もう一度保存する
+      const now = state.dutyPositions.get(key);
+      if (now && now.x === pos.x && now.y === pos.y) pendingPieceSaves.delete(key);
+    }
+  } catch (err) {
+    console.error(err);
+    failed = true;
+  } finally {
+    pieceSaving = false;
+  }
+  setPieceSaveNote(failed);
+  if (pendingPieceSaves.size) pieceRetryTimer = setTimeout(flushPieceSaves, failed ? 5000 : 500);
+}
+
 function findSelectedPiece() {
   if (!selectedPieceKey) return null;
   return [...document.querySelectorAll('.piece-draggable')].find((b) => b.dataset.dragKey === selectedPieceKey) || null;
@@ -7391,14 +7425,10 @@ function attachPieceKeyHandlers() {
     box.style.transform = `translate(${x}mm, ${y}mm)`;
     const key = box.dataset.dragKey;
     state.dutyPositions.set(key, { x, y });
+    pendingPieceSaves.add(key);
     // 続けて押しているあいだは保存を待ち、指を離して少したったら保存する
     clearTimeout(pieceKeySaveTimer);
-    pieceKeySaveTimer = setTimeout(async () => {
-      const pos = state.dutyPositions.get(key);
-      if (!pos) return;
-      const res = await sb.from(T_DUTY_POSITIONS).upsert({ item_key: key, x: pos.x, y: pos.y }, { onConflict: 'item_key' });
-      if (res.error) alert('班の位置を保存できませんでした: ' + res.error.message);
-    }, 500);
+    pieceKeySaveTimer = setTimeout(flushPieceSaves, 500);
   });
   // 班の枠の外をクリックしたら、選ぶのをやめる
   document.addEventListener('mousedown', (e) => {
