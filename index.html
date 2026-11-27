@@ -1836,6 +1836,121 @@ function sheetShiftFormulaRefs(formula, mapRC) {
   }).join('');
 }
 
+// ---- にをいがけデー参加表の自動作成 ----
+// 出欠入力（○の人）・区分名簿・「にをいがけデー役割」から、参加日ごとの名簿の表を新しく作る。
+// 作った表には印（data.auto）を付け、開くたびに最新の内容で作り直す（openDoc）。
+function nioigakeLongDateText(category, year) {
+  const d = state.nioigakeDates.get(`${year}::${category}`);
+  if (!d) return shortenCategoryLabelForDay(CATEGORY_LABEL[category] || category);
+  const [y, m, day] = String(d).split('-').map(Number);
+  const wd = '日月火水木金土'[new Date(Date.UTC(y, m - 1, day)).getUTCDay()];
+  return `${m}月${day}日（${wd}）`;
+}
+
+async function buildNioigakeParticipantSheet(year, who, quiet = false) {
+  // quiet：開いたときの自動の作り直しでは、お知らせを出さない
+  const say = (text) => { if (!quiet) alert(text); };
+  const cats = SPECIAL_ROLE_CATEGORIES.slice();
+  if (!cats.length) { say('「表示区分」で「神・責欄を使う」がオンになっている区分がありません。'); return null; }
+
+  // 出欠（にをいがけデーは年に1回の記録。○＝出席）
+  const presentSet = new Set();
+  if (who === 'present') {
+    const fy = state.fiscalYears.find((f) => f.start_reiki_year === year);
+    if (!fy) { say(`立教${year}年の年度がまだ無いので、出欠を読み込めません。「区分名簿の全員」で作ってください。`); return null; }
+    const res = await fetchAllPaged(() => sb.from(T_ATTENDANCE).select('member_id,category,status')
+      .eq('fiscal_year_id', fy.id).in('category', cats).eq('month_seq', 1).order('id'));
+    if (res.error) throw new Error(res.error.message);
+    for (const a of res.data || []) if (a.status === '○') presentSet.add(`${a.category}::${a.member_id}`);
+    if (presentSet.size === 0) { say(`立教${year}年のにをいがけデーには、まだ「○」の人がいません。行事の前なら「区分名簿の全員」で作ってください。`); return null; }
+  }
+
+  // 役割（その年の「にをいがけデー役割」）
+  const rolesRes = await sb.from(T_NIOIGAKE_ROLES).select('*').eq('reiki_year', year);
+  if (rolesRes.error) throw new Error(rolesRes.error.message);
+  const roles = new Map((rolesRes.data || []).map((r) => [`${r.category}::${r.member_id}`, r]));
+
+  const days = cats.map((category) => {
+    const roleOf = (m) => roles.get(`${category}::${m.id}`) || {};
+    let list = getOrderedMembersForCategory(category, year);
+    if (who === 'present') {
+      list = list.filter((m) => presentSet.has(`${category}::${m.id}`));
+      // 名簿にはいないが「○」が付いている人も入れる
+      for (const key of presentSet) {
+        const [cat, idStr] = key.split('::');
+        const id = Number(idStr);
+        if (cat !== category || list.some((m) => m.id === id)) continue;
+        const m = state.members.find((mm) => mm.id === id);
+        if (m) list.push(m);
+      }
+    }
+    // 出欠入力と同じく、その日全体の責任者（総）を一番上にする
+    list = [...list.filter((m) => roleOf(m).is_day_leader), ...list.filter((m) => !roleOf(m).is_day_leader)];
+    return {
+      dateText: nioigakeLongDateText(category, year),
+      list,
+      roleOf,
+      leaders: list.filter((m) => roleOf(m).is_day_leader).map((m) => m.name),
+      drivers: list.filter((m) => roleOf(m).is_transport).map((m) => m.name),
+    };
+  });
+
+  const n = days.length;
+  const maxLen = Math.max(1, ...days.map((d) => d.list.length));
+  const usedCols = 1 + n * 4; // 左の余白1列 ＋ 1日につき「番号・氏名・神名流し・すき間」
+  const headRow = 5, firstRow = 6;
+  const hasStar = days.some((d) => d.list.some((m) => d.roleOf(m).is_special_leader));
+  const lastRow = firstRow + maxLen + (hasStar ? 0 : -1);
+  const rows = Math.max(lastRow + 3, SHEET_DEFAULT_ROWS);
+  const cols = Math.max(usedCols, SHEET_DEFAULT_COLS);
+
+  const colWidths = Array(cols).fill(SHEET_DEFAULT_COL_WIDTH);
+  colWidths[0] = 20;
+  days.forEach((_, i) => {
+    const c = 1 + i * 4;
+    colWidths[c] = 54; colWidths[c + 1] = 181; colWidths[c + 2] = 67; colWidths[c + 3] = i < n - 1 ? 66 : 20;
+  });
+  const rowHeights = { 2: 35, 3: 35, 4: 35 };
+  for (let r = firstRow; r < firstRow + maxLen; r++) rowHeights[r] = 30;
+
+  const noLine = () => ({ bd: { t: 0, r: 0, b: 0, l: 0 }, fs: 12 });
+  const cells = {};
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells[sheetKey(r, c)] = noLine();
+  const put = (r, c, cell) => { cells[sheetKey(r, c)] = cell; };
+  const merges = [];
+
+  put(0, 1, { ...noLine(), v: '参加日と参加人数' });
+  days.forEach((d, i) => {
+    const c = 1 + i * 4;
+    put(2, c, { ...noLine(), a: 'left', v: `${d.dateText}　${d.list.length}名` });
+    put(3, c, { ...noLine(), a: 'left', v: `責任者　：${d.leaders.join('・')}` });
+    put(4, c, { ...noLine(), a: 'left', v: `マイクロ：${d.drivers.join('・')}` });
+    for (const r of [2, 3, 4]) merges.push({ r, c, rs: 1, cs: 2 });
+    put(headRow, c, { a: 'center', bx: 1, fs: 12 });
+    put(headRow, c + 1, { a: 'left', v: '氏　名', bx: 1, fs: 12, ind: 2 });
+    put(headRow, c + 2, { a: 'center', v: '神名流し', bx: 1, fs: 9 });
+    for (let k = 0; k < maxLen; k++) {
+      const m = d.list[k];
+      const role = m ? d.roleOf(m) : {};
+      const mark = role.is_special_leader ? '☆' : role.is_special ? '○' : '';
+      put(firstRow + k, c, m ? { a: 'center', v: String(k + 1), bx: 1, fs: 12 } : { a: 'center', bx: 1, fs: 12 });
+      put(firstRow + k, c + 1, m ? { v: m.name, bx: 1, fs: 12, ind: 1 } : { bx: 1, fs: 12, ind: 1 });
+      put(firstRow + k, c + 2, mark ? { a: 'center', v: mark, bx: 1, fs: 12 } : { a: 'center', bx: 1, fs: 12 });
+    }
+  });
+  if (hasStar) put(firstRow + maxLen, 1, { ...noLine(), v: '※神名流し欄で☆印の方は責任者をお願いいたします' });
+
+  const label = who === 'present' ? '出欠から' : '名簿から';
+  return {
+    title: `立教${year}年にをいがけデー営繕課参加者（${label}自動作成）`,
+    data: {
+      auto: { type: 'nioigake', year, who }, // この印がある表は、開くたびに作り直す
+      rows, cols, colWidths, rowHeights, cells, merges,
+      print: { area: { r1: 0, c1: 0, r2: lastRow, c2: usedCols - 1 }, paper: 'A4', orient: 'portrait', fit: n > 2 },
+    },
+  };
+}
+
 // ---- データベース ----
 async function loadDocsList() {
   const { data, error } = await sb.from(T_DOCUMENTS).select('id,title,updated_at,sort_order')
@@ -1862,7 +1977,28 @@ async function openDoc(id) {
     renderView();
     return;
   }
-  docsState.doc = { id: data.id, title: data.title, data: normalizeSheetData(data.data) };
+  let sheetData = data.data;
+  // にをいがけデー参加表（自動作成）は、開くたびに最新の出欠・名簿・役割から作り直して保存する
+  const auto = sheetData && sheetData.auto;
+  if (auto && auto.type === 'nioigake') {
+    try {
+      const rebuilt = await buildNioigakeParticipantSheet(Number(auto.year), auto.who, true);
+      if (rebuilt) {
+        const old = normalizeSheetData(sheetData);
+        // 列の幅と用紙の設定は、手で変えたものを残す
+        if (old.colWidths.length === rebuilt.data.cols) rebuilt.data.colWidths = old.colWidths.slice();
+        if (old.print) {
+          for (const k of ['paper', 'orient', 'fit']) if (old.print[k] !== undefined) rebuilt.data.print[k] = old.print[k];
+        }
+        sheetData = rebuilt.data;
+        const res = await sb.from(T_DOCUMENTS).update({ data: sheetData, updated_at: new Date().toISOString() }).eq('id', id);
+        if (res.error) console.error(res.error);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  docsState.doc = { id: data.id, title: data.title, data: normalizeSheetData(sheetData) };
   docsState.sel = { ar: 0, ac: 0, fr: 0, fc: 0 };
   docsState.undo = [];
   docsState.editing = false;
@@ -1964,7 +2100,19 @@ async function renderDocsListView(container) {
           Excelファイルを読み込む
           <input type="file" id="doc-import-input" accept=".xlsx,.xls,.csv" style="display:none;" />
         </label>
+        <button class="btn-light" id="doc-nioigake-btn">にをいがけデー参加表を自動で作る</button>
         <span id="doc-list-msg" style="font-size:13px;color:var(--color-ink-soft);"></span>
+      </div>
+      <div id="doc-nioigake-box" style="display:none;border:1px solid var(--color-line);border-radius:8px;padding:12px 14px;margin:0 0 16px;max-width:720px;">
+        <p style="margin:0 0 8px;font-size:13px;">出欠入力・区分名簿・「にをいがけデー役割」の内容から、参加日ごとの名簿（人数・責任者・マイクロ・神名流し）の表を新しく作ります。作った表は、開くたびに最新の出欠・名簿・役割で自動で作り直されます（表の中を手で直した所は、次に開いたときに消えます）。</p>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:13px;">
+          <label>年
+            <select id="doc-nioigake-year">${nioigakeRoleYearChoices().map((c) => `<option value="${c.year}">${c.label}</option>`).join('')}</select>
+          </label>
+          <label><input type="radio" name="doc-nioigake-who" value="present" checked /> 出欠入力で「○」の人だけ</label>
+          <label><input type="radio" name="doc-nioigake-who" value="roster" /> 区分名簿の全員（行事の前に作るとき）</label>
+          <button class="btn-dark" id="doc-nioigake-make">作成する</button>
+        </div>
       </div>
       <p class="hint-text">エクセルのような表を作って保存できます。作った表はこの一覧に並び、いつでも開いて続きを編集できます(自動で保存されます)。</p>
       ${docsState.list.length ? `
@@ -1980,6 +2128,31 @@ async function renderDocsListView(container) {
     if (title === null) return;
     const row = await createDoc(title.trim() || '無題の資料', newSheetData());
     if (row) { docsState.loaded = false; openDoc(row.id); }
+  });
+
+  document.getElementById('doc-nioigake-btn').addEventListener('click', () => {
+    const box = document.getElementById('doc-nioigake-box');
+    box.style.display = box.style.display === 'none' ? '' : 'none';
+  });
+  document.getElementById('doc-nioigake-make').addEventListener('click', async () => {
+    const btn = document.getElementById('doc-nioigake-make');
+    const msg = document.getElementById('doc-list-msg');
+    const year = Number(document.getElementById('doc-nioigake-year').value);
+    const who = (document.querySelector('input[name="doc-nioigake-who"]:checked') || {}).value || 'present';
+    btn.disabled = true;
+    msg.textContent = '作成中…';
+    try {
+      const result = await buildNioigakeParticipantSheet(year, who);
+      if (!result) { msg.textContent = ''; return; }
+      const row = await createDoc(result.title, result.data);
+      msg.textContent = '';
+      if (row) { docsState.loaded = false; openDoc(row.id); }
+    } catch (err) {
+      console.error(err);
+      msg.textContent = '作成できませんでした: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   document.getElementById('doc-import-input').addEventListener('change', async (e) => {
@@ -2017,7 +2190,10 @@ async function renderDocsListView(container) {
       if (btn.dataset.act === 'dup') {
         const { data: src, error } = await sb.from(T_DOCUMENTS).select('*').eq('id', id).maybeSingle();
         if (error || !src) { alert('複製できませんでした'); return; }
-        const row = await createDoc(`${src.title}のコピー`, src.data);
+        // 自動作成の表のコピーは、自動で作り直さない（手で直せる）ふつうの表にする
+        const copyData = src.data && typeof src.data === 'object' ? { ...src.data } : src.data;
+        if (copyData && copyData.auto) delete copyData.auto;
+        const row = await createDoc(`${src.title}のコピー`, copyData);
         if (row) { docsState.loaded = false; renderView(); }
         return;
       }
@@ -2186,6 +2362,7 @@ function renderDocEditorView(container) {
         <button class="btn-dark" id="sheet-save-btn" title="今の内容をすぐに保存します (Ctrl+S)">保存</button>
         <span id="sheet-save-status" class="sheet-save-status">✓ 保存済み</span>
       </div>
+      ${doc.data.auto && doc.data.auto.type === 'nioigake' ? `<p class="no-print" style="margin:4px 0 8px;padding:6px 10px;border-radius:6px;background:var(--color-absent-bg);font-size:13px;">この表は、開くたびに最新の出欠・区分名簿・にをいがけデー役割から自動で作り直されます（${doc.data.auto.who === 'roster' ? '区分名簿の全員' : '出欠で「○」の人'}）。<strong>表の中を手で直しても、次に開いたときに消えます。</strong>人や役割を変えるときは、出欠入力・区分名簿・「にをいがけデー役割」の方を直してください（列の幅と用紙の設定は残ります）。</p>` : ''}
       <div class="sheet-toolbar no-print">
         <label class="sheet-size-label" title="文字の大きさ（ポイント）。リストから選ぶか、数字を入れてEnter">文字サイズ
           <input type="number" id="sheet-font-size-input" class="sheet-size-input" list="sheet-font-size-list" min="${SHEET_FONT_PT_MIN}" max="${SHEET_FONT_PT_MAX}" step="1" />
@@ -3925,6 +4102,8 @@ function renderHelpView(container) {
           <li>「印刷」を押すと、入力のある範囲だけが印刷されます(資料名の見出し・行番号・列の記号は印刷されません)。印刷画面の上下に日付やURLが出る場合は、印刷画面の「詳細設定」で「ヘッダーとフッター」のチェックを外すと消せます。</li>
           <li>「行を挿入」「行を削除」「列を挿入」「列を削除」は、選んでいる行・列に対して行います。計算式の中のセル番地も自動で合わせて書き換わります。一番下の行でEnterを押すと、行が自動で1行増えます。</li>
           <li>1つの資料につきシートは1枚です。同じ資料を2人が同時に編集した場合は、後から保存した内容が残ります。</li>
+          <li><strong>にをいがけデー参加表を自動で作る</strong>:一覧の上のボタンを押し、年と「出欠入力で『○』の人だけ」か「区分名簿の全員(行事の前に作るとき)」を選んで「作成する」を押すと、参加日ごとの表(日付と人数・責任者・マイクロ・氏名・神名流し)が新しく作られます。責任者は「にをいがけデー役割」の「総」、マイクロは「運」、神名流しの○は「神」、☆は「責」の人です。並び順は出欠入力と同じです(責任者が一番上)。日付は「にをいがけデー役割」で入れた日付を使います。<strong>作った表は、開くたびに最新の出欠・区分名簿・役割から自動で作り直されます。</strong>あとで出欠を変えても、表を開き直せば変わります。そのかわり、表の中を手で直した所は、次に開いたときに消えます(列の幅と用紙の設定は残ります)。人や役割を変えるときは、出欠入力・区分名簿・「にをいがけデー役割」の方を直してください。手で直したいときは、一覧の「複製」を押してください。コピーは自動で作り直されない、ふつうの表になります(その時点の内容のまま)。</li>
+          <li>それ以外の表(「＋ 新しい表を作成」やExcelから作った表)は、手で入力した内容のままで、出欠入力とはつながっていません。</li>
         </ul>
       </section>
 
@@ -4053,7 +4232,7 @@ function renderSettingsView(container) {
           <p><span class="settings-code">LOGIN_EMAIL</span> ／ <span class="settings-code">signInWithPassword</span> ／ <span class="settings-code">getSession</span></p>
           <p class="settings-sub">データベースは、⑥のアカウントでログインした人だけが出欠などを読み書きできる設定です。これが消えると、画面に何も出ず、保存もできなくなります。2026年9月30日〜10月1日に、古いファイルでの上書きで一度消えたことがあります。</p>
           <h3 class="settings-h3">1000件対策の部品</h3>
-          <p><span class="settings-code">fetchAllPaged</span>（区分名簿・にをいがけデーの日付・年度ごとの出欠・年をまたいだ出欠の、合わせて4か所の読み込みで使用）／ <span class="settings-code">fetchAllRows</span>（Excel書き出しの2か所で使用）</p>
+          <p><span class="settings-code">fetchAllPaged</span>（区分名簿・にをいがけデーの日付・年度ごとの出欠・年をまたいだ出欠・資料作成の「にをいがけデー参加表を自動で作る」の、合わせて5か所の読み込みで使用）／ <span class="settings-code">fetchAllRows</span>（Excel書き出しの2か所で使用）</p>
           <p class="settings-sub">データベースは1回に1000件までしか返さないため、1000件ずつ区切ってすべて読み込みます。これが消えると、件数が1000件を超えたときに出欠や名簿の一部が欠けてしまいます。新しく読み込みを追加するときも、これらの部品を使います。</p>
           <h3 class="settings-h3">「古いデータの整理」の管理者パスワード確認</h3>
           <p><span class="settings-code">ADMIN_EMAIL</span> ／ <span class="settings-code">confirmCleanupAdminPassword</span></p>
@@ -4149,6 +4328,7 @@ function renderSettingsView(container) {
             <li>データベース（Supabase）は、②③④⑤と同じ「スパーベース」プロジェクトを共用しています。</li>
             <li>左のメニューは、出欠入力・神殿掃除報告書・神殿掃除当番表・月例参拝報告書・使い方がいつも出ていて、その下の「🔑 管理者メニュー」の中に、マスター・表示区分・区分名簿・にをいがけデー役割・資料作成・参考資料・慰労拝受記録・設定があります（2026年10月14日〜）。</li>
             <li>「マスター」には、メンバーの部署と立場を、区分の名簿に関係なく全員分まとめて変えられる画面があります（「メンバーの部署を変更」「メンバーの立場を変更」。立場は2026年10月14日〜）。出欠入力の部署・立場の欄と同じ名簿を書き換えます。</li>
+            <li>「資料作成」の表は、手で入力する表で、出欠とはつながっていません。ただし「にをいがけデー参加表を自動で作る」を押すと、その時点の出欠（○の人。または区分名簿の全員）・区分名簿の並び順・「にをいがけデー役割」（総＝責任者、運＝マイクロ、神＝○、責＝☆）・日付から、新しい表を1つ作ります（2026年11月27日〜）。作った表には印（data.auto）が付いていて、開くたびに最新の内容で作り直して保存します（表の中を手で直した所は消え、列の幅と用紙の設定は残ります）。「複製」したコピーは印を外し、作り直さないふつうの表になります。</li>
           </ul>
         </div>
       </details>
