@@ -548,6 +548,8 @@ tr[data-row-member].drag-over-bottom { box-shadow: inset 0 -2px 0 0 var(--color-
 .duty-subcolumn { flex: 0 1 auto; min-width:38mm; display:flex; flex-direction:column; gap:14px; }
 .duty-subcolumn .piece-draggable { cursor: grab; position: relative; z-index: 1; background: var(--color-paper); }
 .duty-subcolumn .piece-draggable.dragging-piece { cursor: grabbing; z-index: 20; opacity: 0.85; }
+.duty-subcolumn .piece-draggable.piece-selected { outline: 2px solid var(--color-accent); outline-offset: 2px; z-index: 10; }
+@media print { .duty-subcolumn .piece-draggable.piece-selected { outline: none; } }
 .duty-dept-label { font-size:12px; font-weight:500; color: var(--color-ink-soft); margin:0 0 4px; }
 .duty-dept-box {
   list-style:none; margin:0; padding:0; border:1px solid #333; border-radius:2px; background:white;
@@ -4015,6 +4017,7 @@ function renderHelpView(container) {
           <li>「対象月」で出欠結果を反映する月を選べます。「テンプレ」を選ぶと、○×を一切表示しない空欄の状態で印刷できます(配布用の当番表として使えます)。</li>
           <li>「『○月』を表示する」のチェックを外すと、表題から月の表示だけを消せます。</li>
           <li>各部署の枠は、クリックしたまま掴んで少しずらして配置を調整できます(自動保存されます)。「配置をリセット」で元の並びに戻せます。</li>
+          <li><strong>矢印キーで微調整</strong>:部署の枠をクリックすると青い枠で囲まれます。そのままキーボードの矢印キー(↑↓←→)を押すと、少しずつ(約0.6mm)動きます。Shiftキーを押しながらだと大きく(約5mm)動きます。押し終わって少しすると自動で保存されます。枠の外をクリックするか、Escキーを押すと選ぶのをやめます(青い枠は印刷されません)。</li>
           <li>担当日を個別に変えたい人は、「マスター」タブの「担当日の個別設定」で設定します。</li>
         </ul>
       </section>
@@ -4328,6 +4331,7 @@ function renderSettingsView(container) {
             <li>データベース（Supabase）は、②③④⑤と同じ「スパーベース」プロジェクトを共用しています。</li>
             <li>左のメニューは、出欠入力・神殿掃除報告書・神殿掃除当番表・月例参拝報告書・使い方がいつも出ていて、その下の「🔑 管理者メニュー」の中に、マスター・表示区分・区分名簿・にをいがけデー役割・資料作成・参考資料・慰労拝受記録・設定があります（2026年10月14日〜）。</li>
             <li>「マスター」には、メンバーの部署と立場を、区分の名簿に関係なく全員分まとめて変えられる画面があります（「メンバーの部署を変更」「メンバーの立場を変更」。立場は2026年10月14日〜）。出欠入力の部署・立場の欄と同じ名簿を書き換えます。</li>
+            <li>神殿掃除当番表の部署の枠は、マウスで動かすほか、クリックで選んで矢印キーで少しずつ動かせます（Shiftで大きく。2026年11月27日〜）。位置は asagami_duty_positions に保存します。</li>
             <li>「資料作成」の表は、手で入力する表で、出欠とはつながっていません。ただし「にをいがけデー参加表を自動で作る」を押すと、その時点の出欠（○の人。または区分名簿の全員）・区分名簿の並び順・「にをいがけデー役割」（総＝責任者、運＝マイクロ、神＝○、責＝☆）・日付から、新しい表を1つ作ります（2026年11月27日〜）。作った表には印（data.auto）が付いていて、開くたびに最新の内容で作り直して保存します（表の中を手で直した所は消え、列の幅と用紙の設定は残ります）。「複製」したコピーは印を外し、作り直さないふつうの表になります。</li>
           </ul>
         </div>
@@ -7309,7 +7313,8 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
         </div>
       </div>
       <p class="no-print hint-text" style="margin-top:0;margin-bottom:16px;">
-        班の枠をクリックしたまま掴むと、位置をずらして配置できます(自動的に保存されます)。
+        班の枠をクリックしたまま掴むと、位置をずらして配置できます(自動的に保存されます)。<br>
+        班の枠をクリックすると青い枠で囲まれ、キーボードの矢印キー(↑↓←→)で少しずつ動かせます(Shiftを押しながらだと大きく動きます)。枠の外をクリックするか、Escキーで選ぶのをやめます。
       </p>
       <div class="roster-doc">
         <h1 id="roster-title-display">${escapeHtml(state.rosterOrgName)}　朝の神殿掃除出欠表　${escapeHtml(dateSummary)}</h1>
@@ -7351,15 +7356,70 @@ const dayLabels = [state.rosterDay1, state.rosterDay2, state.rosterDay3];
   setupPieceDragAndDrop();
 }
 
+// 神殿掃除当番表：クリックで選んだ班の枠（矢印キーで少しずつ動かす）
+let selectedPieceKey = null;
+let pieceKeySaveTimer = null;
+let pieceKeyHandlersAttached = false;
+const PIECE_GRID_MM = 0.625; // 1回で動く量（マウスで動かすときのマス目と同じ）
+
+function findSelectedPiece() {
+  if (!selectedPieceKey) return null;
+  return [...document.querySelectorAll('.piece-draggable')].find((b) => b.dataset.dragKey === selectedPieceKey) || null;
+}
+function selectPiece(box) {
+  document.querySelectorAll('.piece-draggable.piece-selected').forEach((b) => b.classList.remove('piece-selected'));
+  selectedPieceKey = box ? box.dataset.dragKey : null;
+  if (box) box.classList.add('piece-selected');
+}
+function attachPieceKeyHandlers() {
+  if (pieceKeyHandlersAttached) return;
+  pieceKeyHandlersAttached = true;
+  document.addEventListener('keydown', (e) => {
+    const box = findSelectedPiece();
+    if (!box) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.key === 'Escape') { selectPiece(null); return; }
+    const dir = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+    if (!dir) return;
+    e.preventDefault(); // 画面がスクロールしないようにする
+    const step = PIECE_GRID_MM * (e.shiftKey ? 8 : 1);
+    const m = /translate\(([-\d.]+)mm,\s*([-\d.]+)mm\)/.exec(box.style.transform || '');
+    const round = (v) => Math.round(v / PIECE_GRID_MM) * PIECE_GRID_MM;
+    const x = round((m ? parseFloat(m[1]) : 0) + dir[0] * step);
+    const y = round((m ? parseFloat(m[2]) : 0) + dir[1] * step);
+    box.style.transform = `translate(${x}mm, ${y}mm)`;
+    const key = box.dataset.dragKey;
+    state.dutyPositions.set(key, { x, y });
+    // 続けて押しているあいだは保存を待ち、指を離して少したったら保存する
+    clearTimeout(pieceKeySaveTimer);
+    pieceKeySaveTimer = setTimeout(async () => {
+      const pos = state.dutyPositions.get(key);
+      if (!pos) return;
+      const res = await sb.from(T_DUTY_POSITIONS).upsert({ item_key: key, x: pos.x, y: pos.y }, { onConflict: 'item_key' });
+      if (res.error) alert('班の位置を保存できませんでした: ' + res.error.message);
+    }, 500);
+  });
+  // 班の枠の外をクリックしたら、選ぶのをやめる
+  document.addEventListener('mousedown', (e) => {
+    if (selectedPieceKey && !(e.target.closest && e.target.closest('.piece-draggable'))) selectPiece(null);
+  });
+}
+
 function setupPieceDragAndDrop() {
   const pieces = document.querySelectorAll('.piece-draggable');
   if (pieces.length === 0) return;
   const refCol = document.querySelector('.duty-subcolumn');
   const GRID_MM = 0.625;
+  attachPieceKeyHandlers();
+  // 画面を描き直したあとも、選んでいた枠を選んだままにする
+  const keep = findSelectedPiece();
+  if (keep) keep.classList.add('piece-selected'); else selectedPieceKey = null;
 
   pieces.forEach((box) => {
     box.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      selectPiece(box);
       const key = box.dataset.dragKey;
       const refRect = (refCol || box).getBoundingClientRect();
       const mmPerPx = 38 / refRect.width; // .duty-subcolumn の min-width: 38mm を基準に換算
@@ -7391,6 +7451,9 @@ function setupPieceDragAndDrop() {
         const finalX = m ? parseFloat(m[1]) : 0;
         const finalY = m ? parseFloat(m[2]) : 0;
         state.dutyPositions.set(key, { x: finalX, y: finalY });
+        // 入力欄に文字カーソルが残っていると矢印キーがそちらに行くので、外しておく
+        const active = document.activeElement;
+        if (active && active !== document.body && typeof active.blur === 'function') active.blur();
         await sb.from(T_DUTY_POSITIONS).upsert({ item_key: key, x: finalX, y: finalY }, { onConflict: 'item_key' });
       }
 
